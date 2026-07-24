@@ -1,0 +1,189 @@
+product_id,name,category,price,cost,supplier,shelf_life_days,unit
+P0001,Whole Milk 1L,Dairy,3.3,1.78,Nature's Harvest,7,piece
+P0002,Skim Milk 1L,Dairy,3.3,1.76,Daily Dairy Ltd.,7,kg
+P0003,Cheddar Cheese 200g,Dairy,4.86,2.86,Daily Dairy Ltd.,14,pack
+P0004,Greek Yogurt 500g,Dairy,5.27,2.79,Daily Dairy Ltd.,10,piece
+P0005,Butter 250g,Dairy,3.91,2.16,Nature's Harvest,21,piece
+P0006,Cream Cheese 200g,Dairy,4.46,2.1,Nature's Harvest,14,liter
+P0007,Mozzarella 300g,Dairy,6.0,3.41,Daily Dairy Ltd.,10,piece
+P0008,Cottage Cheese 250g,Dairy,3.52,2.17,Daily Dairy Ltd.,10,pack
+P0009,Heavy Cream 500ml,Dairy,4.29,2.08,Daily Dairy Ltd.,7,piece
+P0010,Parmesan Wedge 150g,Dairy,7.26,4.5,Nature's Harvest,30,pack
+P0011,Flavored Yogurt 4pk,Dairy,4.48,2.19,Nature's Harvest,14,liter
+P0012,Goat Cheese 150g,Dairy,5.25,3.22,Daily Dairy Ltd.,14,liter
+P0013,Almond Milk 1L,Dairy,4.45,2.13,Nature's Harvest,14,kg
+P0014,Oat Milk 1L,Dairy,4.99,2.28,Daily Dairy Ltd.,14,pack
+P0015,White Bread Loaf,Bakery,2.74,1.25,Quality Foods Dist.,5,kg
+P0016,Whole Wheat Bread,Bakery,3.09,1.53,Quality Foods Dist.,5,pack
+P0017,Croissants 4pk,Bakery,4.5,2.51,Baker's Best,3,kg
+P0018,Bagels 6pk,Bakery,3.8,2.57,Baker's Best,4,piece
+P0019,Sourdough Loaf,Bakery,5.16,3.18,Quality Foods Dist.,5,piece
+P0020,Muffins 4pk,Bakery,5.73,3.13,Quality Foods Dist.,3,kg
+P0021,Dinner Rolls 8pk,Bakery,3.74,1.63,Quality Foods Dist.,4,piece
+P0022,Ciabatta Bread,Bakery,3.81,1.83,Quality Foods Dist.,3,piece
+P0023,Rye Bread Loaf,Bakery,3.39,1.84,Quality Foods Dist.,5,piece
+P0024,Pita Bread 6pk,Bakery,2.85,1.84,Quality Foods Dist.,5,kg
+P0025,Tortillas 10pk,Bakery,3.2,1.67,Baker's Best,7,piece
+P0026,Brioche Buns 4pk,Bakery,5.02,2.39,Baker's Best,3,pack
+P0027,Banana Bread Loaf,Bakery,6.17,2.78,Quality Foods Dist.,4,piece
+P0028,Focaccia Bread,Bakery,4.78,2.71,Baker's Best,3,piece
+P0029,Orange Juice 1L,Beverages,3.81,1.8,Global Foods Inc.,14,kg
+P0030,Cola 2L,Beverages,2.68,1.47,Global Foods Inc.,180,kg
+P0031,Sparkling Water 1L,Beverages,2.13,1.2,Pacific Beverages,365,kg
+P0032,Green Tea 20pk,Beverages,4.23,2.34,Global Foods Inc.,365,pack
+P0033,Coffee Beans 500g,Beverages,9.76,6.22,Global Foods Inc.,180,piece
+P0034,Energy Drink 250ml,Beverages,3.06,1.54,Pacific Beverages,365,pack
+P0035,Apple Juice 1L,Beverages,3.23,1.79,Pacific Beverages,14,liter
+P0036,Coconut Water 500ml,Beverages,3.19,1.96,Global Foods Inc.,180,kg
+P0037,Lemonade 1L,Beverages,3.07,1.88,Pacific Beverages,14,kg
+P0038,Iced Tea 1L,Beverages,2.77,1.32,Pacific Beverages,14,pack
+P0039,Kombucha 330ml,Beverages,4.12,2.4,Pacific Beverages,30,kg
+P0040,Protein Shake 4pk,Beverages,9.03,5.43,Global Foods Inc.,180,kg
+P0041,Craft Root Beer 330ml,Beverages,2.49,1.38,Pacific Beverages,365,pack
+P0042,Mineral Water 6pk,Beverages,5.95,2.73,Global Foods Inc.,365,pack
+P0043,Potato Chips 150g,Snacks,3.25,1.59,Quality Foods Dist.,90,liter
+P0044,Chocolate Bar 100g,Snacks,3.07,1.53,Quality Foods Dist.,180,pack
+P0045,Mixed Nuts 200g,Snacks,6.0,3.78,Quality Foods Dist.,120,pack
+P0046,Granola Bars 6pk,Snacks,4.34,2.39,SnackMaster Corp.,180,kg
+P0047,Popcorn 100g,Snacks,2.64,1.23,Quality Foods Dist.,90,liter
+P0048,Pretzels 200g,Snacks,3.04,1.67,Quality Foods Dist.,120,pack
+P0049,Trail Mix 250g,Snacks,5.29,3.49,SnackMaster Corp.,120,liter
+P0050,Rice Cakes 12pk,Snacks,3.47,1.9,SnackMaster Corp.,180,piece
+P0051,Cheese Crackers 200g,Snacks,4.01,2.31,SnackMaster Corp.,90,pack
+P0052,Dark Chocolate 85% 100g,Snacks,4.8,3.14,SnackMaster Corp.,365,liter
+P0053,Fruit Snacks 10pk,Snacks,4.31,2.62,SnackMaster Corp.,180,liter
+P0054,Tortilla Chips 200g,Snacks,3.73,1.79,Quality Foods Dist.,90,liter
+P0055,Protein Bars 4pk,Snacks,6.76,3.46,Quality Foods Dist.,180,piece
+P0056,Veggie Straws 150g,Snacks,3.95,2.45,SnackMaster Corp.,90,kg
+P0057,Bananas 1kg,Produce,2.21,0.9,Nature's Harvest,5,kg
+P0058,Apples 1kg,Produce,3.5,1.86,Green Valley Produce,10,kg
+P0059,Tomatoes 500g,Produce,2.82,1.42,FreshFarms Co.,7,pack
+P0060,Lettuce Head,Produce,1.89,1.27,FreshFarms Co.,5,piece
+P0061,Carrots 1kg,Produce,2.38,1.38,Nature's Harvest,14,kg
+P0062,Potatoes 2kg,Produce,4.11,2.09,Nature's Harvest,21,pack
+P0063,Onions 1kg,Produce,2.57,1.47,Nature's Harvest,21,piece
+P0064,Avocados 3pk,Produce,4.84,2.74,Nature's Harvest,5,kg
+P0065,Bell Peppers 3pk,Produce,3.87,2.02,Nature's Harvest,7,pack
+P0066,Cucumbers 2pk,Produce,2.21,1.42,Green Valley Produce,7,kg
+P0067,Spinach 250g,Produce,3.49,1.61,Green Valley Produce,5,piece
+P0068,Broccoli Head,Produce,2.86,1.89,Nature's Harvest,7,kg
+P0069,Sweet Potatoes 1kg,Produce,3.33,1.67,FreshFarms Co.,14,piece
+P0070,Mushrooms 200g,Produce,3.28,2.13,Green Valley Produce,5,kg
+P0071,Garlic 3pk,Produce,1.84,1.16,FreshFarms Co.,21,pack
+P0072,Strawberries 250g,Produce,5.15,2.48,Green Valley Produce,3,pack
+P0073,Blueberries 125g,Produce,4.13,2.09,Nature's Harvest,5,piece
+P0074,Lemons 6pk,Produce,3.07,1.72,Green Valley Produce,14,liter
+P0075,Chicken Breast 500g,Meat,8.01,3.74,Prime Meats,3,pack
+P0076,Ground Beef 500g,Meat,8.69,4.37,Prime Meats,3,liter
+P0077,Pork Chops 400g,Meat,6.8,3.2,Prime Meats,3,kg
+P0078,Salmon Fillet 300g,Meat,12.04,7.02,FreshFarms Co.,2,pack
+P0079,Turkey Slices 200g,Meat,5.2,3.03,Prime Meats,5,kg
+P0080,Bacon 200g,Meat,5.83,3.47,FreshFarms Co.,7,kg
+P0081,Italian Sausage 4pk,Meat,7.29,4.41,FreshFarms Co.,5,liter
+P0082,Lamb Chops 400g,Meat,12.92,8.28,Prime Meats,3,pack
+P0083,Shrimp 300g,Meat,9.77,5.18,Prime Meats,2,piece
+P0084,Deli Ham 200g,Meat,4.76,3.17,FreshFarms Co.,7,piece
+P0085,Beef Steak 300g,Meat,14.22,7.02,Prime Meats,3,pack
+P0086,Chicken Wings 500g,Meat,6.59,3.98,Prime Meats,3,piece
+P0087,Ground Turkey 500g,Meat,8.02,4.44,Prime Meats,3,pack
+P0088,Tilapia Fillets 400g,Meat,8.34,3.98,Prime Meats,2,piece
+P0089,Frozen Pizza,Frozen,6.23,3.77,Global Foods Inc.,180,piece
+P0090,Ice Cream 1L,Frozen,6.57,3.36,Arctic Frozen Foods,365,kg
+P0091,Frozen Vegetables 500g,Frozen,3.4,2.08,Global Foods Inc.,365,pack
+P0092,Fish Sticks 400g,Frozen,5.23,3.13,Arctic Frozen Foods,180,liter
+P0093,Frozen Berries 300g,Frozen,5.66,3.18,Arctic Frozen Foods,365,liter
+P0094,Frozen Fries 1kg,Frozen,3.74,1.92,Global Foods Inc.,365,pack
+P0095,Frozen Burritos 4pk,Frozen,6.23,3.42,Arctic Frozen Foods,180,piece
+P0096,Frozen Waffles 8pk,Frozen,4.2,2.11,Global Foods Inc.,180,kg
+P0097,Ice Cream Bars 6pk,Frozen,7.59,3.38,Global Foods Inc.,365,liter
+P0098,Frozen Dumplings 400g,Frozen,6.29,3.63,Global Foods Inc.,180,piece
+P0099,Frozen Mac & Cheese,Frozen,5.11,2.9,Arctic Frozen Foods,180,piece
+P0100,Frozen Chicken Nuggets 500g,Frozen,6.82,4.14,Global Foods Inc.,180,kg
+P0101,Paper Towels 6pk,Household,7.83,4.12,HomeClean Supplies,730,pack
+P0102,Dish Soap 500ml,Household,3.64,2.02,HomeClean Supplies,730,pack
+P0103,Laundry Detergent 1L,Household,9.2,5.23,Quality Foods Dist.,730,pack
+P0104,Trash Bags 30pk,Household,6.03,2.81,Quality Foods Dist.,730,pack
+P0105,Sponges 4pk,Household,2.91,1.5,Quality Foods Dist.,730,liter
+P0106,All-Purpose Cleaner 750ml,Household,4.34,2.89,HomeClean Supplies,730,piece
+P0107,Toilet Paper 12pk,Household,9.93,6.28,Quality Foods Dist.,730,piece
+P0108,Aluminum Foil 30m,Household,4.07,2.43,HomeClean Supplies,730,piece
+P0109,Plastic Wrap 60m,Household,3.49,1.97,HomeClean Supplies,730,pack
+P0110,Glass Cleaner 750ml,Household,3.99,1.95,HomeClean Supplies,730,liter
+P0111,Bleach 1L,Household,3.12,1.51,Quality Foods Dist.,730,liter
+P0112,Dryer Sheets 80pk,Household,4.7,2.89,HomeClean Supplies,730,liter
+P0113,Shampoo 400ml,Personal Care,5.8,3.82,HomeClean Supplies,730,pack
+P0114,Conditioner 400ml,Personal Care,6.26,3.79,WellLife Nutrition,730,piece
+P0115,Body Wash 500ml,Personal Care,4.91,2.26,WellLife Nutrition,730,kg
+P0116,Toothpaste 150g,Personal Care,3.75,1.87,WellLife Nutrition,730,kg
+P0117,Deodorant 75g,Personal Care,4.77,2.89,WellLife Nutrition,730,liter
+P0118,Hand Soap 250ml,Personal Care,3.2,1.52,HomeClean Supplies,730,pack
+P0119,Moisturizer 200ml,Personal Care,7.92,4.96,WellLife Nutrition,730,pack
+P0120,Sunscreen SPF50 100ml,Personal Care,9.88,4.83,HomeClean Supplies,730,piece
+P0121,Razor Blades 4pk,Personal Care,9.02,5.73,WellLife Nutrition,730,piece
+P0122,Lip Balm 2pk,Personal Care,3.11,1.69,HomeClean Supplies,730,liter
+P0123,Dental Floss 50m,Personal Care,2.25,1.43,HomeClean Supplies,730,piece
+P0124,Face Wash 150ml,Personal Care,7.28,3.34,HomeClean Supplies,730,pack
+P0125,Diapers Size 3 40pk,Baby & Kids,15.0,9.38,BabyCare Direct,730,piece
+P0126,Baby Wipes 80pk,Baby & Kids,4.13,2.35,BabyCare Direct,730,liter
+P0127,Baby Formula 400g,Baby & Kids,20.11,10.43,BabyCare Direct,365,pack
+P0128,Baby Food Puree 4pk,Baby & Kids,4.87,3.05,BabyCare Direct,180,piece
+P0129,Sippy Cup,Baby & Kids,6.18,3.73,Quality Foods Dist.,730,kg
+P0130,Baby Lotion 200ml,Baby & Kids,5.24,2.76,Quality Foods Dist.,730,pack
+P0131,Kids Cereal 300g,Baby & Kids,4.49,2.74,Quality Foods Dist.,180,pack
+P0132,Juice Boxes 8pk,Baby & Kids,4.08,2.36,Quality Foods Dist.,180,liter
+P0133,Animal Crackers 200g,Baby & Kids,3.47,2.07,BabyCare Direct,180,kg
+P0134,Kids Toothpaste 75g,Baby & Kids,2.89,1.57,Quality Foods Dist.,730,kg
+P0135,Dog Food 2kg,Pet Supplies,12.75,7.35,PetPals Wholesale,365,piece
+P0136,Cat Food 1.5kg,Pet Supplies,10.71,5.97,Quality Foods Dist.,365,piece
+P0137,Dog Treats 200g,Pet Supplies,5.02,2.53,PetPals Wholesale,180,pack
+P0138,Cat Litter 5kg,Pet Supplies,9.04,4.1,Quality Foods Dist.,730,pack
+P0139,Pet Shampoo 250ml,Pet Supplies,5.71,3.68,Quality Foods Dist.,730,piece
+P0140,Dog Chew Toys,Pet Supplies,3.91,1.9,PetPals Wholesale,730,kg
+P0141,Cat Treats 100g,Pet Supplies,3.5,2.11,Quality Foods Dist.,180,pack
+P0142,Pet Vitamins 60ct,Pet Supplies,9.82,5.74,Quality Foods Dist.,365,kg
+P0143,Dog Leash,Pet Supplies,7.74,3.68,PetPals Wholesale,730,kg
+P0144,Cat Scratching Post,Pet Supplies,15.01,8.37,PetPals Wholesale,730,pack
+P0145,Ketchup 500ml,Condiments & Sauces,3.07,1.78,Nature's Harvest,180,piece
+P0146,Mustard 250ml,Condiments & Sauces,2.78,1.38,Global Foods Inc.,180,pack
+P0147,Mayonnaise 400ml,Condiments & Sauces,3.88,2.43,Nature's Harvest,180,kg
+P0148,Soy Sauce 250ml,Condiments & Sauces,3.35,1.88,Global Foods Inc.,365,kg
+P0149,Hot Sauce 150ml,Condiments & Sauces,3.74,1.82,Global Foods Inc.,365,kg
+P0150,BBQ Sauce 500ml,Condiments & Sauces,4.27,2.46,Nature's Harvest,180,kg
+P0151,Olive Oil 500ml,Condiments & Sauces,8.11,4.25,Global Foods Inc.,365,piece
+P0152,Balsamic Vinegar 250ml,Condiments & Sauces,5.79,2.88,Nature's Harvest,365,kg
+P0153,Salad Dressing 350ml,Condiments & Sauces,3.34,1.95,Global Foods Inc.,120,piece
+P0154,Pasta Sauce 500ml,Condiments & Sauces,4.12,2.32,Nature's Harvest,365,pack
+P0155,Ranch Dressing 350ml,Condiments & Sauces,3.36,2.24,Nature's Harvest,120,pack
+P0156,Maple Syrup 250ml,Condiments & Sauces,7.13,3.92,Nature's Harvest,365,liter
+P0157,Canned Tomatoes 400g,Canned Goods,2.06,1.06,Global Foods Inc.,730,piece
+P0158,Canned Beans 400g,Canned Goods,1.34,0.78,Global Foods Inc.,730,pack
+P0159,Canned Corn 340g,Canned Goods,1.94,0.81,Global Foods Inc.,730,kg
+P0160,Canned Tuna 170g,Canned Goods,2.26,1.14,Global Foods Inc.,730,liter
+P0161,Canned Soup 400ml,Canned Goods,2.71,1.86,Global Foods Inc.,730,piece
+P0162,Canned Chickpeas 400g,Canned Goods,1.81,0.92,Quality Foods Dist.,730,kg
+P0163,Coconut Milk 400ml,Canned Goods,2.25,1.37,Global Foods Inc.,730,kg
+P0164,Canned Pineapple 400g,Canned Goods,2.27,1.11,Global Foods Inc.,730,pack
+P0165,Canned Sardines 120g,Canned Goods,2.95,1.58,Global Foods Inc.,730,kg
+P0166,Canned Peaches 400g,Canned Goods,2.56,1.44,Quality Foods Dist.,730,pack
+P0167,Spaghetti 500g,Pasta & Grains,1.72,1.04,Global Foods Inc.,730,pack
+P0168,Penne 500g,Pasta & Grains,2.07,1.1,Global Foods Inc.,730,liter
+P0169,Brown Rice 1kg,Pasta & Grains,3.7,2.03,Global Foods Inc.,730,pack
+P0170,White Rice 2kg,Pasta & Grains,4.79,2.32,Nature's Harvest,730,liter
+P0171,Quinoa 500g,Pasta & Grains,6.08,2.73,Global Foods Inc.,730,kg
+P0172,Oats 1kg,Pasta & Grains,4.04,2.55,Global Foods Inc.,365,piece
+P0173,Couscous 500g,Pasta & Grains,3.04,1.58,Nature's Harvest,730,piece
+P0174,Egg Noodles 500g,Pasta & Grains,2.58,1.35,Nature's Harvest,365,pack
+P0175,Fusilli 500g,Pasta & Grains,2.02,1.27,Global Foods Inc.,730,liter
+P0176,Basmati Rice 1kg,Pasta & Grains,4.42,2.88,Nature's Harvest,730,kg
+P0177,Flour 1kg,Pasta & Grains,2.23,0.97,Global Foods Inc.,730,pack
+P0178,Cornmeal 500g,Pasta & Grains,2.23,1.17,Global Foods Inc.,730,pack
+P0179,Multivitamins 60ct,Health & Wellness,12.7,6.09,Nature's Harvest,730,kg
+P0180,Vitamin C 1000mg 30ct,Health & Wellness,8.1,3.71,Nature's Harvest,730,piece
+P0181,Fish Oil 60ct,Health & Wellness,9.88,6.18,Nature's Harvest,730,kg
+P0182,Probiotics 30ct,Health & Wellness,14.7,9.19,Nature's Harvest,365,kg
+P0183,Protein Powder 500g,Health & Wellness,19.86,9.47,WellLife Nutrition,365,piece
+P0184,Electrolyte Powder 20pk,Health & Wellness,9.11,5.18,Nature's Harvest,365,pack
+P0185,Melatonin 5mg 30ct,Health & Wellness,6.22,3.58,Nature's Harvest,730,piece
+P0186,Zinc 50mg 60ct,Health & Wellness,7.17,3.54,WellLife Nutrition,730,liter
+P0187,Collagen Powder 300g,Health & Wellness,16.8,10.2,Nature's Harvest,365,kg
+P0188,Turmeric Capsules 60ct,Health & Wellness,12.17,7.77,Nature's Harvest,730,piece

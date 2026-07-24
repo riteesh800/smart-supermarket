@@ -1,0 +1,610 @@
+================================================================================
+   SMARTMART AI — COMPREHENSIVE PROJECT REPORT
+   AI-Driven Smart Supermarket Inventory & Intelligence System
+================================================================================
+
+   Project  : SmartMart AI
+   Version  : 3.0.0 (Portable Edition)
+   Date     : May 2026
+   Type     : Full-Stack AI-Powered Retail Management Dashboard
+
+================================================================================
+   TABLE OF CONTENTS
+================================================================================
+
+   1. Project Overview
+   2. What the Project Does
+   3. Project Architecture & Structure
+   4. Technologies Used
+   5. Data Layer (Synthetic Data Generation)
+   6. Backend — FastAPI REST API
+   7. Frontend — React Dashboard
+   8. Machine Learning Modules
+   9. Data Flow — How It All Works Together
+  10. Portable Data Upload System
+  11. How to Run the Project
+  12. Summary
+
+================================================================================
+   1. PROJECT OVERVIEW
+================================================================================
+
+   SmartMart AI is an AI-driven supermarket management system that combines
+   a React dashboard frontend, a FastAPI backend, and five machine learning
+   modules to provide intelligent inventory management, demand forecasting,
+   customer segmentation, product recommendations, anomaly detection, and
+   dynamic pricing.
+
+   The system is designed as a "Portable Edition" — it can work with any
+   retail/supermarket CSV dataset, not just its own synthetic data. Users
+   can upload their own CSV files through a Data Setup panel, and the system
+   auto-detects column mappings and adapts all features accordingly.
+
+   The project demonstrates a complete end-to-end AI pipeline: from raw
+   data generation, through ML model training, to interactive visualization
+   in a modern web dashboard.
+
+
+================================================================================
+   2. WHAT THE PROJECT DOES
+================================================================================
+
+   SmartMart AI provides the following capabilities:
+
+   A) DASHBOARD OVERVIEW
+      - Displays key performance indicators (KPIs): total revenue, total
+        orders, active customers, products in stock
+      - Revenue trend charts showing sales over time
+      - Real-time alerts for low stock and anomalies
+
+   B) INVENTORY MANAGEMENT
+      - View all products with current stock levels
+      - Low-stock alerts (products below reorder point)
+      - Add new products to the system
+      - Track warehouse locations and restock dates
+
+   C) SALES INSIGHTS
+      - Revenue trends over time (line charts)
+      - Best-selling products ranking
+      - Category-wise sales breakdown
+      - Payment method distribution
+
+   D) CUSTOMER ANALYTICS
+      - AI-powered customer segmentation (Champions, Loyal, Potential,
+        At Risk, Lost)
+      - RFM scatter plot visualization
+      - Top customers by spending
+      - Add new customers to the system
+
+   E) DEMAND FORECASTING
+      - 30-day demand predictions per product category
+      - Historical vs. predicted demand comparison charts
+      - Uses Holt-Winters / SARIMAX time-series models
+
+   F) PRODUCT RECOMMENDATIONS
+      - "Frequently bought together" suggestions
+      - Association rules with support, confidence, and lift metrics
+      - Cross-selling strategy support
+
+   G) ANOMALY DETECTION
+      - Flags unusual sales days (spikes or drops)
+      - Classifies anomalies by type and severity
+      - Daily sales summary visualization
+
+   H) DYNAMIC PRICING
+      - AI-suggested price adjustments (Increase/Decrease/Hold)
+      - Based on demand velocity, stock health, and shelf life
+      - Each suggestion includes confidence score and plain-English reason
+
+   I) SUPPLIER MANAGEMENT
+      - View supplier details, lead times, and reliability scores
+
+   J) SALES HEATMAP
+      - Visual heatmap of sales activity across time dimensions
+
+   K) DATA SETUP (Portable Upload)
+      - Upload custom CSV files (sales, products, customers)
+      - Auto-detect column mappings via regex pattern matching
+      - Preview data before importing
+      - Feature flags auto-enable/disable dashboard panels based on
+        available data
+
+
+================================================================================
+   3. PROJECT ARCHITECTURE & STRUCTURE
+================================================================================
+
+   The project follows a Client-Server SPA + REST API architecture:
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │                        PROJECT STRUCTURE                         │
+   ├──────────────────────────────────────────────────────────────────┤
+   │                                                                  │
+   │  project/                                                        │
+   │  ├── data/                        # Data layer                   │
+   │  │   ├── generate_data.py         # Synthetic data generator     │
+   │  │   ├── products.csv             # 200+ products, 15 categories │
+   │  │   ├── customers.csv            # 2000 customers               │
+   │  │   ├── sales.csv                # ~50,000 transactions         │
+   │  │   ├── inventory.csv            # Stock levels per product     │
+   │  │   └── suppliers.csv            # 15 suppliers                 │
+   │  │                                                               │
+   │  ├── ml_models/                   # Machine learning layer       │
+   │  │   ├── demand_forecast.py       # Holt-Winters / SARIMAX      │
+   │  │   ├── customer_segmentation.py # RFM + K-Means               │
+   │  │   ├── recommender.py           # Apriori association rules    │
+   │  │   ├── anomaly_detection.py     # Isolation Forest             │
+   │  │   ├── dynamic_pricing.py       # Rule-based pricing engine    │
+   │  │   ├── train_all.py             # Training orchestrator        │
+   │  │   └── saved/                   # Serialized .joblib models    │
+   │  │                                                               │
+   │  ├── backend/                     # API server layer             │
+   │  │   ├── main.py                  # FastAPI app entry point      │
+   │  │   ├── database.py              # SQLite ORM models + init     │
+   │  │   ├── upload_handler.py        # CSV auto-detect & normalize  │
+   │  │   ├── supermarket.db           # SQLite database file         │
+   │  │   └── routes/                  # API route modules            │
+   │  │       ├── inventory.py         # /api/inventory endpoints     │
+   │  │       ├── sales.py             # /api/sales endpoints         │
+   │  │       ├── customers.py         # /api/customers endpoints     │
+   │  │       ├── ml.py                # /api/forecast, anomalies etc │
+   │  │       ├── suppliers.py         # /api/suppliers endpoints     │
+   │  │       └── upload.py            # /api/upload endpoints        │
+   │  │                                                               │
+   │  ├── frontend/                    # Dashboard UI layer           │
+   │  │   ├── vite.config.js           # Vite build config + proxy    │
+   │  │   ├── package.json             # npm dependencies             │
+   │  │   └── src/                                                    │
+   │  │       ├── App.jsx              # Main app with panel routing  │
+   │  │       ├── main.jsx             # React entry point            │
+   │  │       ├── index.css            # Global design system (CSS)   │
+   │  │       ├── services/                                           │
+   │  │       │   └── api.js           # API client (fetch wrapper)   │
+   │  │       └── components/          # Dashboard panel components   │
+   │  │           ├── Sidebar.jsx             # Navigation sidebar    │
+   │  │           ├── DashboardOverview.jsx   # KPI overview panel    │
+   │  │           ├── InventoryPanel.jsx      # Stock management      │
+   │  │           ├── SalesInsightsPanel.jsx  # Revenue & best sellers│
+   │  │           ├── CustomerAnalyticsPanel.jsx # Segments & RFM     │
+   │  │           ├── DemandForecastPanel.jsx # Forecast charts       │
+   │  │           ├── RecommendationsPanel.jsx # Product suggestions  │
+   │  │           ├── AnomaliesPanel.jsx      # Anomaly alerts        │
+   │  │           ├── DynamicPricingPanel.jsx # Price intelligence    │
+   │  │           ├── SupplierPanel.jsx       # Supplier info         │
+   │  │           ├── SalesHeatmapPanel.jsx   # Activity heatmap      │
+   │  │           └── DataSetupPanel.jsx      # CSV upload & mapping  │
+   │  │                                                               │
+   │  ├── README.md                                                   │
+   │  ├── technologies_used.txt                                       │
+   │  └── ml_technologies_report.txt                                  │
+   │                                                                  │
+   └──────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+   4. TECHNOLOGIES USED
+================================================================================
+
+   ┌─────────────────────┬──────────────────────────────────────────────┐
+   │ Layer               │ Technologies                                 │
+   ├─────────────────────┼──────────────────────────────────────────────┤
+   │ Frontend            │ React (JSX), Vite 8, Recharts, Vanilla CSS  │
+   │ Backend             │ Python, FastAPI, Uvicorn (ASGI)              │
+   │ Database            │ SQLite, SQLAlchemy (ORM)                     │
+   │ ML / AI             │ scikit-learn, statsmodels, joblib             │
+   │ Data Processing     │ pandas, numpy                                │
+   │ Data Format         │ CSV (input), JSON (API), SQLite (storage)    │
+   │ API Style           │ RESTful JSON, Swagger/OpenAPI auto-docs      │
+   │ Dev Tooling         │ npm, pip, Vite dev server with API proxy     │
+   └─────────────────────┴──────────────────────────────────────────────┘
+
+   FRONTEND DETAILS:
+   - React with JSX for component-based UI
+   - Vite as the build tool and dev server (port 5173)
+   - Recharts library for all data visualizations (line charts, bar
+     charts, pie charts, scatter plots, heatmaps)
+   - Vanilla CSS with a custom design system (index.css)
+   - Vite proxy routes /api/* requests to the backend at localhost:8000
+
+   BACKEND DETAILS:
+   - FastAPI framework for high-performance async REST API
+   - Uvicorn ASGI server
+   - CORS middleware enabled for frontend communication
+   - Modular router-based architecture (one router per domain)
+   - SQLAlchemy ORM with declarative models for Products, Customers,
+     Sales, Inventory, and Suppliers
+   - SQLite as the database engine (zero-config, file-based)
+   - Swagger UI auto-generated at /docs
+
+   ML / DATA SCIENCE DETAILS:
+   - scikit-learn: KMeans clustering, IsolationForest, StandardScaler
+   - statsmodels: ExponentialSmoothing (Holt-Winters), SARIMAX
+   - pandas: All data manipulation, CSV loading, aggregations
+   - numpy: Numerical operations, array math, random generation
+   - joblib: Model serialization to .joblib files
+
+
+================================================================================
+   5. DATA LAYER (SYNTHETIC DATA GENERATION)
+================================================================================
+
+   File: data/generate_data.py
+
+   The project includes a comprehensive synthetic data generator that
+   creates realistic supermarket datasets:
+
+   WHAT IT GENERATES:
+   ┌─────────────────┬────────┬───────────────────────────────────────┐
+   │ File            │ Count  │ Description                           │
+   ├─────────────────┼────────┼───────────────────────────────────────┤
+   │ products.csv    │ 200+   │ Products across 15 categories         │
+   │ customers.csv   │ 2,000  │ Customers with demographics           │
+   │ sales.csv       │ 50,000 │ Transactions spanning ~16 months      │
+   │ inventory.csv   │ 200+   │ Stock levels per product              │
+   │ suppliers.csv   │ 15     │ Supplier details with reliability     │
+   └─────────────────┴────────┴───────────────────────────────────────┘
+
+   15 PRODUCT CATEGORIES:
+   Dairy, Bakery, Beverages, Snacks, Produce, Meat, Frozen, Household,
+   Personal Care, Baby & Kids, Pet Supplies, Condiments & Sauces,
+   Canned Goods, Pasta & Grains, Health & Wellness
+
+   REALISTIC PATTERNS BUILT INTO SALES DATA:
+   - Seasonal multipliers (summer boost, holiday season surge)
+   - Weekend shopping boost (1.2x)
+   - Holiday spikes (Thanksgiving 1.8x, Christmas 1.8x, July 4th 1.5x)
+   - Shopping hour distribution (peak 11am-2pm)
+   - Basket-grouped purchases (avg ~3 items per basket)
+   - Category popularity weights (Produce highest, Pet Supplies lowest)
+   - Realistic discount distribution (50% no discount, rest 5-15%)
+   - Payment method mix (Credit 35%, Debit 25%, Digital 25%, Cash 15%)
+   - Customer demographics with age distribution and loyalty tiers
+
+
+================================================================================
+   6. BACKEND — FASTAPI REST API
+================================================================================
+
+   Entry Point: backend/main.py
+   Database: backend/database.py
+   Routes: backend/routes/
+
+── 6.1 STARTUP FLOW ──────────────────────────────────────────────────
+
+   1. FastAPI app initializes with CORS middleware (allows all origins)
+   2. Six routers are registered (inventory, sales, customers, ml,
+      suppliers, upload)
+   3. On startup, init_db() creates SQLite tables via SQLAlchemy and
+      loads CSV data into the database if tables are empty
+
+── 6.2 DATABASE MODELS (ORM) ─────────────────────────────────────────
+
+   Five SQLAlchemy models map to database tables:
+   - Product: product_id, name, category, price, cost, supplier, etc.
+   - Customer: customer_id, first/last name, age, gender, tier, etc.
+   - Sale: sale_id, basket_id, product_id, customer_id, quantity, etc.
+   - Inventory: product_id, current_stock, max_stock, reorder_point
+   - Supplier: supplier_id, name, email, lead_time, reliability_score
+
+── 6.3 API ENDPOINTS ─────────────────────────────────────────────────
+
+   INVENTORY:
+   - GET  /api/inventory           — All products with stock levels
+   - GET  /api/inventory/low-stock — Products below reorder point
+   - POST /api/inventory           — Add new product
+
+   SALES:
+   - GET  /api/sales/revenue       — Revenue data over time
+   - GET  /api/sales/best-sellers  — Top products by sales
+
+   CUSTOMERS:
+   - GET  /api/customers/segments  — Customer segments from ML
+   - POST /api/customers           — Add new customer
+
+   ML (served from pre-trained .joblib files):
+   - GET  /api/forecast            — Demand forecasts (all categories)
+   - GET  /api/forecast/{category} — Forecast for specific category
+   - GET  /api/recommendations     — Product recommendations
+   - GET  /api/anomalies           — Detected anomalies
+   - GET  /api/pricing             — Dynamic pricing suggestions
+   - POST /api/ml/retrain          — Retrain all ML models
+
+   UPLOAD:
+   - POST /api/upload/preview      — Preview CSV + auto-detect columns
+   - POST /api/upload/import       — Import CSV into database
+   - GET  /api/upload/status       — Feature flags for available data
+
+   SUPPLIERS:
+   - GET  /api/suppliers           — All supplier information
+
+   DASHBOARD:
+   - GET  /api/dashboard/summary   — Aggregated KPI summary
+
+
+================================================================================
+   7. FRONTEND — REACT DASHBOARD
+================================================================================
+
+   Entry Point: frontend/src/main.jsx → App.jsx
+   Styling: frontend/src/index.css
+   API Client: frontend/src/services/api.js
+
+── 7.1 APPLICATION STRUCTURE ─────────────────────────────────────────
+
+   The React app is a Single Page Application (SPA) with a sidebar
+   navigation and a main content area. The App.jsx component manages:
+
+   - Active panel state (which panel is displayed)
+   - Feature flags (which panels are enabled based on available data)
+   - Panel routing (maps panel names to React components)
+
+   On startup, the app checks /api/upload/status to determine which
+   features are available. If no data exists, it redirects to the
+   Data Setup panel.
+
+── 7.2 DASHBOARD PANELS (12 COMPONENTS) ──────────────────────────────
+
+   1.  Sidebar.jsx             — Left navigation with icons and labels.
+                                  Dynamically shows/hides panels based
+                                  on feature flags.
+
+   2.  DashboardOverview.jsx   — KPI cards (revenue, orders, customers,
+                                  products), revenue trend chart, alerts.
+
+   3.  InventoryPanel.jsx      — Product table with stock levels, search,
+                                  low-stock warnings, add product form.
+
+   4.  SalesInsightsPanel.jsx  — Revenue line chart, best sellers bar
+                                  chart, category breakdown.
+
+   5.  CustomerAnalyticsPanel.jsx — Segment pie chart, RFM scatter plot,
+                                    top customers table, add customer.
+
+   6.  DemandForecastPanel.jsx — Category selector, forecast vs actual
+                                  line chart, 30-day predictions.
+
+   7.  RecommendationsPanel.jsx — Product suggestions cards with
+                                   confidence scores and reasons.
+
+   8.  AnomaliesPanel.jsx      — Anomaly list with date, type (Spike/
+                                  Drop), severity (High/Medium), metrics.
+
+   9.  DynamicPricingPanel.jsx — Price suggestion cards: product name,
+                                  current price, suggested action,
+                                  confidence, justification.
+
+   10. SupplierPanel.jsx       — Supplier table with contact info,
+                                  lead times, reliability scores.
+
+   11. SalesHeatmapPanel.jsx   — Visual heatmap of sales patterns
+                                  across time dimensions.
+
+   12. DataSetupPanel.jsx      — CSV upload interface with drag-and-drop,
+                                  column mapping preview, import button,
+                                  feature flag display.
+
+── 7.3 API CLIENT ────────────────────────────────────────────────────
+
+   File: frontend/src/services/api.js
+
+   A centralized fetch wrapper that provides methods for every API
+   endpoint. Uses the Vite proxy (/api → localhost:8000) so no
+   hardcoded backend URLs in the frontend code.
+
+
+================================================================================
+   8. MACHINE LEARNING MODULES
+================================================================================
+
+   All models live in ml_models/ and are orchestrated by train_all.py.
+   Trained models are serialized to ml_models/saved/ as .joblib files.
+
+── 8.1 DEMAND FORECASTING ───────────────────────────────────────────
+
+   File: ml_models/demand_forecast.py
+   Algorithm: Holt-Winters (primary), SARIMAX (fallback), Seasonal
+              Naive (last resort)
+   Library: statsmodels
+
+   - Aggregates sales by category per day
+   - Fits Holt-Winters with weekly seasonality (period=7)
+   - Produces 30-day forecasts per category
+   - Cascading fallback ensures a forecast is always returned
+
+── 8.2 CUSTOMER SEGMENTATION ────────────────────────────────────────
+
+   File: ml_models/customer_segmentation.py
+   Algorithm: RFM Analysis + K-Means Clustering (k=5)
+   Library: scikit-learn
+
+   - Computes Recency, Frequency, Monetary per customer
+   - Scales features with StandardScaler
+   - Clusters into 5 segments via K-Means
+   - Labels clusters by monetary value: Champions → Lost
+
+── 8.3 PRODUCT RECOMMENDATIONS ──────────────────────────────────────
+
+   File: ml_models/recommender.py
+   Algorithm: Apriori-style Association Rule Mining (custom)
+   Library: Custom Python (itertools + collections)
+
+   - Groups transactions into baskets
+   - Counts item frequencies and pair co-occurrences
+   - Generates rules with Support, Confidence, and Lift
+   - Returns top 100 rules ranked by Lift
+
+── 8.4 ANOMALY DETECTION ────────────────────────────────────────────
+
+   File: ml_models/anomaly_detection.py
+   Algorithm: Isolation Forest (contamination=0.05)
+   Library: scikit-learn
+
+   - Engineers 8+ daily features (sales, quantity, transactions,
+     rolling averages, deviation from 7-day mean)
+   - Isolation Forest flags top 5% most unusual days
+   - Classifies each anomaly as Spike/Drop with High/Medium severity
+
+── 8.5 DYNAMIC PRICING ──────────────────────────────────────────────
+
+   File: ml_models/dynamic_pricing.py
+   Algorithm: Rule-Based Pricing Engine (not ML)
+   Library: pandas + numpy
+
+   - Computes demand velocity, stock health, days remaining
+   - Evaluates 4 priority rules:
+     Rule 1: Low Stock + High Demand → Increase 5-15%
+     Rule 2: Critical Stock → Premium Pricing (+12%)
+     Rule 3: Overstocked + Low Demand → Markdown 5-20%
+     Rule 4: Short Shelf Life → Clearance (-15%)
+   - Each suggestion includes confidence and justification
+
+── 8.6 TRAINING PIPELINE ────────────────────────────────────────────
+
+   File: ml_models/train_all.py
+
+   Orchestrates training of all 5 modules in sequence:
+   1. Demand Forecasting → demand_forecasts.joblib
+   2. Customer Segmentation → customer_segments.joblib
+   3. Product Recommendations → recommendations.joblib
+   4. Anomaly Detection → anomaly_detection.joblib
+   5. Dynamic Pricing → dynamic_pricing.joblib
+
+   Training can be triggered:
+   - Manually: python ml_models/train_all.py
+   - Via API: POST /api/ml/retrain
+   - Automatically after data upload through the frontend
+
+
+================================================================================
+   9. DATA FLOW — HOW IT ALL WORKS TOGETHER
+================================================================================
+
+   STEP 1: DATA GENERATION / UPLOAD
+   ─────────────────────────────────
+   Option A: Run generate_data.py → creates 5 CSV files in data/
+   Option B: Upload custom CSVs via the Data Setup panel in the dashboard
+
+   STEP 2: DATABASE LOADING
+   ────────────────────────
+   On backend startup, init_db() reads CSVs and loads them into SQLite
+   via pandas .to_sql(). SQLAlchemy ORM models provide typed access.
+
+   STEP 3: ML MODEL TRAINING
+   ─────────────────────────
+   train_all.py reads CSV data, trains all 5 models, and saves results
+   as .joblib files in ml_models/saved/.
+
+   STEP 4: API SERVING
+   ───────────────────
+   FastAPI loads pre-computed results from .joblib files and database
+   queries. Responses are JSON. No inference at request time — results
+   are precomputed for instant response.
+
+   STEP 5: DASHBOARD VISUALIZATION
+   ────────────────────────────────
+   React frontend calls API endpoints via the api.js service layer.
+   Recharts renders the data as interactive charts, tables, and cards.
+
+   COMPLETE DATA FLOW DIAGRAM:
+
+   CSV Files ──→ SQLite DB ──→ FastAPI ──→ JSON ──→ React Dashboard
+       │                          ↑                      │
+       └──→ ML Training ──→ .joblib files ───┘           │
+                                                         ↓
+                                              Recharts Visualizations
+
+
+================================================================================
+  10. PORTABLE DATA UPLOAD SYSTEM
+================================================================================
+
+   File: backend/upload_handler.py
+
+   The Portable Edition's key innovation is dataset-agnostic operation.
+   Users can upload any retail CSV and the system adapts automatically.
+
+   HOW IT WORKS:
+
+   1. COLUMN AUTO-DETECTION
+      - 40+ regex patterns match common column name variations
+      - Examples: "product_id" matches "prod_id", "item_id", "sku",
+        "barcode", "article_no", etc.
+      - Case-insensitive, whitespace/underscore normalized
+
+   2. FILE TYPE DETECTION
+      - Scoring system determines if a CSV contains sales, products,
+        customers, or inventory data based on matched fields
+
+   3. DATA NORMALIZATION
+      - Separate normalizers for sales, products, and customers
+      - Handles missing fields with intelligent defaults
+      - Auto-generates product/customer tables from sales data if
+        separate files aren't provided
+
+   4. FEATURE FLAGS
+      - compute_feature_flags() determines which dashboard panels to
+        enable based on available data columns
+      - Example: Forecast panel requires sales + timestamps + categories
+      - Example: Recommendations panel requires sales + basket_id
+      - Sidebar dynamically shows/hides panels based on flags
+
+
+================================================================================
+  11. HOW TO RUN THE PROJECT
+================================================================================
+
+   PREREQUISITES:
+   - Python 3.8+
+   - Node.js 16+
+   - pip (Python package manager)
+   - npm (Node package manager)
+
+   STEP 1: Generate Data (optional if uploading own data)
+   > python data/generate_data.py
+
+   STEP 2: Install Python Dependencies
+   > pip install pandas numpy scikit-learn statsmodels joblib fastapi uvicorn sqlalchemy
+
+   STEP 3: Train ML Models
+   > python ml_models/train_all.py
+
+   STEP 4: Start Backend (port 8000)
+   > cd backend
+   > uvicorn main:app --reload --port 8000
+
+   STEP 5: Start Frontend (port 5173)
+   > cd frontend
+   > npm install
+   > npm run dev
+
+   STEP 6: Open Dashboard
+   > Navigate to http://localhost:5173
+
+
+================================================================================
+  12. SUMMARY
+================================================================================
+
+   SmartMart AI is a full-stack AI-powered supermarket management system
+   that combines:
+
+   • A React + Vite frontend with 12 interactive dashboard panels
+   • A FastAPI + SQLite backend with 15+ REST API endpoints
+   • 5 machine learning modules (forecasting, segmentation,
+     recommendations, anomaly detection, dynamic pricing)
+   • A synthetic data generator producing 50,000+ realistic transactions
+   • A portable CSV upload system with auto-detection and feature flags
+
+   The system demonstrates practical application of machine learning in
+   retail: from time-series forecasting with Holt-Winters, to customer
+   clustering with K-Means, to anomaly detection with Isolation Forest.
+   Every ML suggestion is served through a REST API and visualized in
+   an interactive React dashboard.
+
+   Architecture: Offline Training → Precomputed Results → Instant API
+   Design: Dataset-Agnostic (works with any supermarket CSV data)
+   Stack: Python + JavaScript, zero GPU required, runs on any OS
+
+================================================================================
+   END OF REPORT
+================================================================================

@@ -1,0 +1,174 @@
+"""
+Product Recommendation using Association Rule Mining (Apriori)
+Finds frequently co-purchased products using basket_id
+"""
+
+import pandas as pd
+import numpy as np
+from itertools import combinations
+from collections import defaultdict
+import joblib
+import os
+import sqlite3
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(os.path.dirname(BASE_DIR), "data")
+SAVE_DIR = os.path.join(BASE_DIR, "saved")
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+
+def load_table(table_name):
+    db_path = os.path.join(os.path.dirname(BASE_DIR), "backend", "supermarket.db")
+    if os.path.exists(db_path):
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT count(*) FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+            if cursor.fetchone()[0] > 0:
+                df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
+                if len(df) > 0:
+                    conn.close()
+                    return df
+            conn.close()
+        except Exception as e:
+            print(f"Error loading {table_name} from database: {e}")
+    # Fallback to CSV
+    csv_path = os.path.join(DATA_DIR, f"{table_name}.csv")
+    if os.path.exists(csv_path):
+        return pd.read_csv(csv_path)
+    return pd.DataFrame()
+
+
+def build_baskets(sales_df):
+    """Group products by basket_id (preferred) or by customer+date."""
+    sales_df = sales_df.copy()
+
+    if "basket_id" in sales_df.columns:
+        baskets = sales_df.groupby("basket_id")["product_id"].apply(list).reset_index()
+    else:
+        sales_df["date"] = pd.to_datetime(sales_df["timestamp"]).dt.date
+        baskets = sales_df.groupby(["customer_id", "date"])["product_id"].apply(list).reset_index()
+
+    baskets = baskets[baskets["product_id"].apply(len) >= 2]
+    return baskets["product_id"].tolist()
+
+
+def compute_item_frequencies(baskets, min_support_count=20):
+    """Count individual item frequencies."""
+    item_counts = defaultdict(int)
+    for basket in baskets:
+        for item in set(basket):
+            item_counts[item] += 1
+    return {k: v for k, v in item_counts.items() if v >= min_support_count}
+
+
+def compute_pair_frequencies(baskets, frequent_items, min_support_count=10):
+    """Count pair frequencies for frequent items only."""
+    pair_counts = defaultdict(int)
+    freq_set = set(frequent_items.keys())
+    for basket in baskets:
+        items = sorted(set(basket) & freq_set)
+        for pair in combinations(items, 2):
+            pair_counts[pair] += 1
+    return {k: v for k, v in pair_counts.items() if v >= min_support_count}
+
+
+def compute_association_rules(item_freq, pair_freq, n_baskets, min_confidence=0.15):
+    """Generate association rules with confidence and lift."""
+    rules = []
+    if n_baskets == 0:
+        return rules
+    for (item_a, item_b), pair_count in pair_freq.items():
+        support = pair_count / n_baskets
+
+        # A -> B
+        conf_ab = pair_count / item_freq[item_a]
+        lift_ab = conf_ab / (item_freq[item_b] / n_baskets) if item_freq[item_b] > 0 else 0
+        if conf_ab >= min_confidence:
+            rules.append({
+                "antecedent": item_a,
+                "consequent": item_b,
+                "support": round(support, 4),
+                "confidence": round(conf_ab, 4),
+                "lift": round(lift_ab, 4)
+            })
+
+        # B -> A
+        conf_ba = pair_count / item_freq[item_b]
+        lift_ba = conf_ba / (item_freq[item_a] / n_baskets) if item_freq[item_a] > 0 else 0
+        if conf_ba >= min_confidence:
+            rules.append({
+                "antecedent": item_b,
+                "consequent": item_a,
+                "support": round(support, 4),
+                "confidence": round(conf_ba, 4),
+                "lift": round(lift_ba, 4)
+            })
+
+    return sorted(rules, key=lambda x: x["lift"], reverse=True)
+
+
+def train():
+    sales = load_table("sales")
+    products = load_table("products")
+
+    if sales.empty:
+        print("  No sales data available for recommendations.")
+        return {"rules": [], "suggestions": [], "total_rules": 0, "total_baskets": 0}
+
+    product_names = dict(zip(products["product_id"], products["name"])) if not products.empty else {}
+    product_categories = dict(zip(products["product_id"], products["category"])) if not products.empty else {}
+
+    baskets = build_baskets(sales)
+    print(f"  Built {len(baskets)} baskets")
+
+    n_baskets = len(baskets)
+    # Dynamically scale thresholds to avoid empty rules on small datasets
+    min_support = max(1, int(n_baskets * 0.05)) if n_baskets > 0 else 15
+    min_pair_support = max(1, int(n_baskets * 0.02)) if n_baskets > 0 else 5
+    min_conf = 0.05 if n_baskets < 100 else 0.1
+
+    item_freq = compute_item_frequencies(baskets, min_support_count=min_support)
+    pair_freq = compute_pair_frequencies(baskets, item_freq, min_support_count=min_pair_support)
+    rules = compute_association_rules(item_freq, pair_freq, n_baskets, min_confidence=min_conf)
+
+    # Enrich rules with product names
+    for rule in rules:
+        rule["antecedent_name"] = product_names.get(rule["antecedent"], rule["antecedent"])
+        rule["consequent_name"] = product_names.get(rule["consequent"], rule["consequent"])
+        rule["antecedent_category"] = product_categories.get(rule["antecedent"], "Unknown")
+        rule["consequent_category"] = product_categories.get(rule["consequent"], "Unknown")
+
+    # Top restock/promote suggestions based on high-lift rules
+    suggestions = []
+    seen = set()
+    for rule in rules[:50]:
+        pid = rule["consequent"]
+        if pid not in seen:
+            seen.add(pid)
+            suggestions.append({
+                "product_id": pid,
+                "product_name": rule["consequent_name"],
+                "category": rule["consequent_category"],
+                "reason": f"Frequently bought with {rule['antecedent_name']}",
+                "lift": rule["lift"]
+            })
+
+    result = {
+        "rules": rules[:100],
+        "suggestions": suggestions[:20],
+        "total_rules": len(rules),
+        "total_baskets": len(baskets)
+    }
+
+    joblib.dump(result, os.path.join(SAVE_DIR, "recommendations.joblib"))
+    print(f"  Found {len(rules)} association rules")
+    print(f"  Top {len(suggestions)} product suggestions generated")
+    return result
+
+
+if __name__ == "__main__":
+    print("Training recommendation model...")
+    train()
+    print("Done!")
+

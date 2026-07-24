@@ -1,0 +1,125 @@
+================================================================================
+        TECHNOLOGIES USED — SmartMart AI Supermarket System
+================================================================================
+
+PROJECT: AI-Driven Smart Supermarket Inventory & Intelligence System
+VERSION: 3.0.0 (Portable Edition)
+
+================================================================================
+  1. FRONTEND
+================================================================================
+
+  Language         : JavaScript (ES6+)
+  UI Library       : React (via JSX)
+  Build Tool       : Vite 8.0.4
+  Dev Server       : Vite Dev Server (port 5173, with API proxy)
+  Charting         : Recharts 3.8.1
+  Styling          : Vanilla CSS (custom design system)
+  Type Checking    : TypeScript 6.0.2
+  Module System    : ES Modules
+  Plugin           : @vitejs/plugin-react 6.0.1
+
+================================================================================
+  2. BACKEND
+================================================================================
+
+  Language         : Python
+  Web Framework    : FastAPI
+  ASGI Server      : Uvicorn
+  Middleware       : CORS (FastAPI CORSMiddleware)
+  API Style        : RESTful JSON API
+  API Docs         : Swagger UI (auto-generated at /docs)
+
+================================================================================
+  3. DATABASE
+================================================================================
+
+  Database Engine  : SQLite
+  ORM              : SQLAlchemy (declarative base)
+  Session Mgmt     : SQLAlchemy sessionmaker
+  Data Format      : CSV (initial data loading via Pandas)
+
+================================================================================
+  4. MACHINE LEARNING / AI
+================================================================================
+
+  4a. Demand Forecasting
+  ──────────────────────
+  - Exponential Smoothing (Holt-Winters) — statsmodels
+  - SARIMAX (Seasonal ARIMA with Exogenous) — statsmodels
+  - Seasonal Naive fallback
+
+  4b. Customer Segmentation
+  ─────────────────────────
+  - RFM Analysis (Recency, Frequency, Monetary)
+  - K-Means Clustering — scikit-learn
+  - StandardScaler — scikit-learn
+
+  4c. Product Recommendations
+  ───────────────────────────
+  - Association Rule Mining (Apriori-style)
+  - Custom pair-frequency / confidence / lift computation
+
+  4d. Anomaly Detection
+  ──────────────────────
+  - Isolation Forest — scikit-learn
+
+  4e. Dynamic Pricing
+  ───────────────────
+  - Rule-based pricing engine (demand velocity, stock health, shelf life)
+
+================================================================================
+  5. DATA SCIENCE LIBRARIES
+================================================================================
+
+  - pandas          — Data manipulation & CSV loading
+  - numpy           — Numerical computation
+  - scikit-learn    — KMeans, IsolationForest, StandardScaler
+  - statsmodels     — ExponentialSmoothing, SARIMAX
+  - joblib          — Model serialization / persistence
+
+================================================================================
+  6. DATA LAYER
+================================================================================
+
+  Synthetic Data   : Custom Python generator (data/generate_data.py)
+  Data Files       : CSV (products, customers, sales, inventory, suppliers)
+  Transactions     : ~15,000+ sale records
+  Model Storage    : .joblib files (ml_models/saved/)
+
+================================================================================
+  7. DEV TOOLS & INFRASTRUCTURE
+================================================================================
+
+  Package Manager  : npm (frontend), pip (backend)
+  Version Control  : Git
+  OS Compatibility : Windows / macOS / Linux
+  Proxy            : Vite dev proxy (/api → localhost:8000)
+
+================================================================================
+  8. PROJECT ARCHITECTURE
+================================================================================
+
+  Pattern          : Client-Server (SPA + REST API)
+  Frontend         : Single Page Application (React)
+  Backend          : Modular route-based (FastAPI routers)
+  ML Pipeline      : Offline training → joblib save → API serve
+  Data Flow        : CSV → SQLite → API → React Dashboard
+
+================================================================================
+  SUMMARY TABLE
+================================================================================
+
+  ┌─────────────────────┬──────────────────────────────────────────┐
+  │ Layer               │ Technologies                             │
+  ├─────────────────────┼──────────────────────────────────────────┤
+  │ Frontend            │ React, Vite, Recharts, CSS, TypeScript   │
+  │ Backend             │ FastAPI, Uvicorn, Python                 │
+  │ Database            │ SQLite, SQLAlchemy                       │
+  │ ML / AI             │ scikit-learn, statsmodels, joblib         │
+  │ Data Processing     │ pandas, numpy                            │
+  │ Data Format         │ CSV, JSON, SQLite (.db)                  │
+  │ API                 │ REST (JSON), Swagger/OpenAPI              │
+  └─────────────────────┴──────────────────────────────────────────┘
+
+================================================================================
