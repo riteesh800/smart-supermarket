@@ -123,6 +123,27 @@ COLUMN_PATTERNS = {
         r"reorder", r"reorder.?point", r"reorder.?level", r"min.?stock",
         r"safety.?stock",
     ],
+    "last_restock_date": [
+        r"last.?restock.?date", r"restock.?date", r"last.?replenishment.?date",
+    ],
+    "warehouse_location": [
+        r"warehouse.?location", r"storage.?location", r"location", r"aisle",
+    ],
+
+    # Supplier fields
+    "supplier_id": [
+        r"supplier.?id", r"vendor.?id", r"supplier.?code",
+    ],
+    "contact_email": [
+        r"contact.?email", r"supplier.?email", r"vendor.?email",
+    ],
+    "lead_time_days": [
+        r"lead.?time", r"lead.?time.?days", r"delivery.?days", r"delivery.?time",
+    ],
+    "reliability_score": [
+        r"reliability", r"reliability.?score", r"rating", r"vendor.?rating",
+        r"supplier.?rating", r"performance.?score",
+    ],
 }
 
 
@@ -158,12 +179,13 @@ def detect_column_mapping(columns):
 
 
 def detect_file_type(columns, mapping):
-    """Detect if a CSV is sales, products, customers, or inventory based on detected columns."""
+    """Detect if a CSV is sales, products, customers, inventory, or suppliers based on detected columns."""
     # Count how many fields of each type we found
     sales_fields = {"sale_id", "basket_id", "quantity", "total_price", "timestamp", "payment_method", "discount"}
     product_fields = {"product_id", "name", "category", "price", "cost", "supplier", "shelf_life_days", "unit"}
     customer_fields = {"customer_id", "first_name", "last_name", "customer_name", "age", "gender", "membership_tier", "email"}
     inventory_fields = {"current_stock", "max_stock", "reorder_point"}
+    supplier_fields = {"supplier_id", "contact_email", "lead_time_days", "reliability_score"}
 
     mapped_set = set(mapping.keys())
 
@@ -172,6 +194,7 @@ def detect_file_type(columns, mapping):
         "products": len(mapped_set & product_fields) + (2 if "name" in mapped_set else 0),
         "customers": len(mapped_set & customer_fields) + (2 if "customer_name" in mapped_set or "first_name" in mapped_set else 0),
         "inventory": len(mapped_set & inventory_fields) + (2 if "current_stock" in mapped_set else 0),
+        "suppliers": len(mapped_set & supplier_fields) + (2 if "supplier_id" in mapped_set else 0) + (2 if "lead_time_days" in mapped_set else 0),
     }
 
     best = max(scores, key=scores.get)
@@ -354,6 +377,54 @@ def normalize_customers(df, mapping):
     return result
 
 
+def normalize_inventory(df, mapping):
+    """Normalize an inventory DataFrame to the database inventory schema."""
+    if "product_id" not in mapping:
+        raise ValueError("Inventory data requires a product ID column.")
+
+    result = pd.DataFrame()
+    result["product_id"] = df[mapping["product_id"]].astype(str)
+    for field in ("current_stock", "max_stock", "reorder_point"):
+        if field in mapping:
+            result[field] = pd.to_numeric(df[mapping[field]], errors="coerce").fillna(0).astype(int)
+        else:
+            result[field] = 0
+
+    if "last_restock_date" in mapping:
+        dates = pd.to_datetime(df[mapping["last_restock_date"]], errors="coerce")
+        result["last_restock_date"] = dates.dt.strftime("%Y-%m-%d")
+    else:
+        result["last_restock_date"] = None
+
+    if "warehouse_location" in mapping:
+        result["warehouse_location"] = df[mapping["warehouse_location"]].fillna("").astype(str)
+    else:
+        result["warehouse_location"] = ""
+
+    return result
+
+
+def normalize_suppliers(df, mapping):
+    """Normalize a suppliers DataFrame to our internal schema."""
+    result = pd.DataFrame()
+
+    if "supplier_id" in mapping:
+        result["supplier_id"] = df[mapping["supplier_id"]].astype(str)
+    else:
+        result["supplier_id"] = [f"SUP{i:03d}" for i in range(1, len(df) + 1)]
+
+    if "name" in mapping:
+        result["name"] = df[mapping["name"]].astype(str)
+    else:
+        result["name"] = result["supplier_id"]
+
+    result["contact_email"] = df[mapping["contact_email"]].fillna("").astype(str) if "contact_email" in mapping else ""
+    result["lead_time_days"] = pd.to_numeric(df[mapping["lead_time_days"]], errors="coerce").fillna(7).astype(int) if "lead_time_days" in mapping else 7
+    result["reliability_score"] = pd.to_numeric(df[mapping["reliability_score"]], errors="coerce").fillna(0.5) if "reliability_score" in mapping else 0.5
+
+    return result
+
+
 def extract_products_from_sales(sales_df):
     """Auto-generate products table from sales data when no products CSV provided."""
     products = sales_df.groupby("product_id").agg(
@@ -397,14 +468,14 @@ def extract_customers_from_sales(sales_df):
 def generate_inventory_from_products(products_df):
     """Auto-generate inventory table."""
     import random
-    random.seed(42)
+    rng = random.Random(42)
     inventory = pd.DataFrame()
     inventory["product_id"] = products_df["product_id"]
-    inventory["current_stock"] = [random.randint(10, 200) for _ in range(len(products_df))]
-    inventory["max_stock"] = [random.randint(200, 400) for _ in range(len(products_df))]
-    inventory["reorder_point"] = [random.randint(10, 50) for _ in range(len(products_df))]
+    inventory["current_stock"] = [rng.randint(10, 200) for _ in range(len(products_df))]
+    inventory["max_stock"] = [rng.randint(200, 400) for _ in range(len(products_df))]
+    inventory["reorder_point"] = [rng.randint(10, 50) for _ in range(len(products_df))]
     inventory["last_restock_date"] = datetime.now().strftime("%Y-%m-%d")
-    inventory["warehouse_location"] = [f"Aisle-{random.randint(1,30)}-Shelf-{chr(65+random.randint(0,7))}" for _ in range(len(products_df))]
+    inventory["warehouse_location"] = [f"Aisle-{rng.randint(1,30)}-Shelf-{chr(65+rng.randint(0,7))}" for _ in range(len(products_df))]
     return inventory
 
 
@@ -418,6 +489,7 @@ def compute_feature_flags(mapping_info):
     has_sales = "sales" in mapping_info
     has_products = "products" in mapping_info
     has_customers = "customers" in mapping_info
+    has_suppliers = "suppliers" in mapping_info
     has_customer_ids = "customer_id" in all_fields and has_sales
     has_cost = "cost" in all_fields
     has_categories = "category" in all_fields
@@ -440,7 +512,7 @@ def compute_feature_flags(mapping_info):
         "enable_inventory": has_data,
         "enable_sales": has_sales,
         "enable_customers": has_customers or has_customer_ids,
-        "enable_suppliers": has_products and "supplier" in all_fields,
+        "enable_suppliers": has_suppliers or (has_products and "supplier" in all_fields),
         "enable_forecast": has_sales,
         "enable_recommendations": has_sales,
         "enable_pricing": has_sales,

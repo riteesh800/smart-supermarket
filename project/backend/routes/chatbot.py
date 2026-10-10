@@ -9,9 +9,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from difflib import SequenceMatcher
+from collections import OrderedDict
+from typing import Optional
 import re
 import sys
 import os
+import time as _time
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
@@ -19,12 +22,35 @@ from database import get_db
 
 router = APIRouter(prefix="/api/chat", tags=["chatbot"])
 
-# ── In-memory conversation context (per-session, simple) ──
-_context = {"last_intent": None, "last_entity": None, "last_data": None, "history": []}
+# ── Per-session conversation context with LRU eviction ──
+_MAX_SESSIONS = 100
+_SESSION_TTL = 1800  # 30 minutes
+_sessions: OrderedDict = OrderedDict()
+
+
+def _get_context(session_id: str) -> dict:
+    """Get or create session context. LRU eviction if too many sessions."""
+    now = _time.time()
+    if session_id in _sessions:
+        ctx = _sessions[session_id]
+        ctx["last_access"] = now
+        _sessions.move_to_end(session_id)
+        return ctx
+    # Evict expired sessions
+    expired = [k for k, v in _sessions.items() if now - v.get("last_access", 0) > _SESSION_TTL]
+    for k in expired:
+        del _sessions[k]
+    # Evict oldest if over max
+    while len(_sessions) >= _MAX_SESSIONS:
+        _sessions.popitem(last=False)
+    ctx = {"last_intent": None, "last_entity": None, "last_data": None, "history": [], "last_access": now}
+    _sessions[session_id] = ctx
+    return ctx
 
 
 class ChatMessage(BaseModel):
     message: str
+    session_id: Optional[str] = None
 
 
 # ── Helpers ──
@@ -72,51 +98,60 @@ def extract_number(msg, default=5):
 
 
 def extract_time_filter(msg):
-    """Extract time period from message. Returns (sql_where, label) or (None, None)."""
-    msg = msg.lower()
+    """Extract time period from message.
+    Returns (sql_fragment, params_dict, label, matched_text) or (None, {}, None, None).
+    Uses parameterized SQL to prevent injection."""
+    msg_lower = msg.lower()
     now = datetime.now()
 
-    if any(k in msg for k in ["today", "today's"]):
+    if any(k in msg_lower for k in ["today", "today's"]):
         date = now.strftime("%Y-%m-%d")
-        return f"DATE(timestamp) = '{date}'", "today"
+        matched = next(k for k in ["today's", "today"] if k in msg_lower)
+        return "DATE(timestamp) = :tf_date", {"tf_date": date}, "today", matched
 
-    if any(k in msg for k in ["yesterday"]):
+    if "yesterday" in msg_lower:
         date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
-        return f"DATE(timestamp) = '{date}'", "yesterday"
+        return "DATE(timestamp) = :tf_date", {"tf_date": date}, "yesterday", "yesterday"
 
-    if any(k in msg for k in ["this week", "current week"]):
+    if any(k in msg_lower for k in ["this week", "current week"]):
         start = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
-        return f"DATE(timestamp) >= '{start}'", "this week"
+        matched = next(k for k in ["this week", "current week"] if k in msg_lower)
+        return "DATE(timestamp) >= :tf_start", {"tf_start": start}, "this week", matched
 
-    if any(k in msg for k in ["last week", "previous week"]):
+    if any(k in msg_lower for k in ["last week", "previous week"]):
         end = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
         start = (now - timedelta(days=now.weekday() + 7)).strftime("%Y-%m-%d")
-        return f"DATE(timestamp) >= '{start}' AND DATE(timestamp) < '{end}'", "last week"
+        matched = next(k for k in ["last week", "previous week"] if k in msg_lower)
+        return "DATE(timestamp) >= :tf_start AND DATE(timestamp) < :tf_end", {"tf_start": start, "tf_end": end}, "last week", matched
 
-    if any(k in msg for k in ["this month", "current month"]):
+    if any(k in msg_lower for k in ["this month", "current month"]):
         month = now.strftime("%Y-%m")
-        return f"strftime('%Y-%m', timestamp) = '{month}'", "this month"
+        matched = next(k for k in ["this month", "current month"] if k in msg_lower)
+        return "strftime('%Y-%m', timestamp) = :tf_month", {"tf_month": month}, "this month", matched
 
-    if any(k in msg for k in ["last month", "previous month"]):
+    if any(k in msg_lower for k in ["last month", "previous month"]):
         first = now.replace(day=1)
         prev = first - timedelta(days=1)
         month = prev.strftime("%Y-%m")
-        return f"strftime('%Y-%m', timestamp) = '{month}'", "last month"
+        matched = next(k for k in ["last month", "previous month"] if k in msg_lower)
+        return "strftime('%Y-%m', timestamp) = :tf_month", {"tf_month": month}, "last month", matched
 
-    if any(k in msg for k in ["this year", "current year"]):
+    if any(k in msg_lower for k in ["this year", "current year"]):
         year = now.strftime("%Y")
-        return f"strftime('%Y', timestamp) = '{year}'", "this year"
+        matched = next(k for k in ["this year", "current year"] if k in msg_lower)
+        return "strftime('%Y', timestamp) = :tf_year", {"tf_year": year}, "this year", matched
 
-    if any(k in msg for k in ["last year", "previous year"]):
+    if any(k in msg_lower for k in ["last year", "previous year"]):
         year = str(now.year - 1)
-        return f"strftime('%Y', timestamp) = '{year}'", "last year"
+        matched = next(k for k in ["last year", "previous year"] if k in msg_lower)
+        return "strftime('%Y', timestamp) = :tf_year", {"tf_year": year}, "last year", matched
 
     # "last N days"
-    m = re.search(r'last\s+(\d+)\s+days?', msg)
+    m = re.search(r'last\s+(\d+)\s+days?', msg_lower)
     if m:
         days = int(m.group(1))
         date = (now - timedelta(days=days)).strftime("%Y-%m-%d")
-        return f"DATE(timestamp) >= '{date}'", f"last {days} days"
+        return "DATE(timestamp) >= :tf_date", {"tf_date": date}, f"last {days} days", m.group(0)
 
     # Specific month name
     months = {"january": "01", "february": "02", "march": "03", "april": "04",
@@ -126,13 +161,12 @@ def extract_time_filter(msg):
               "jun": "06", "jul": "07", "aug": "08", "sep": "09",
               "oct": "10", "nov": "11", "dec": "12"}
     for name, num in months.items():
-        if name in msg:
-            # Check for year
-            yr_match = re.search(r'20\d{2}', msg)
+        if name in msg_lower:
+            yr_match = re.search(r'20\d{2}', msg_lower)
             year = yr_match.group(0) if yr_match else str(now.year)
-            return f"strftime('%Y-%m', timestamp) = '{year}-{num}'", f"{name.capitalize()} {year}"
+            return "strftime('%Y-%m', timestamp) = :tf_month", {"tf_month": f"{year}-{num}"}, f"{name.capitalize()} {year}", name
 
-    return None, None
+    return None, {}, None, None
 
 
 def get_categories(db):
@@ -348,14 +382,25 @@ def score_intent(msg):
 
 # ── Response Generators ──
 
-def respond(intent, msg, db):
+def respond(intent, msg, db, session_id="default"):
     """Generate response for detected intent."""
-    global _context
-    n = extract_number(msg)
-    time_where, time_label = extract_time_filter(msg)
+    _context = _get_context(session_id)
+    # Extract time filter first, then strip it from msg to avoid number conflicts
+    time_where, time_params, time_label, time_matched = extract_time_filter(msg)
+    msg_for_number = msg
+    if time_matched:
+        msg_for_number = msg.lower().replace(time_matched, "").strip()
+    n = extract_number(msg_for_number)
     time_suffix = f" ({time_label})" if time_label else ""
     time_clause = f"WHERE {time_where}" if time_where else ""
     time_and = f"AND {time_where}" if time_where else ""
+
+    def tq(sql, extra_params=None):
+        """Time-aware query: automatically merges time_params into query_db calls."""
+        params = dict(time_params) if time_params else {}
+        if extra_params:
+            params.update(extra_params)
+        return query_db(db, sql, params)
 
     # ── Greeting ──
     if intent == "greeting":
@@ -397,22 +442,22 @@ def respond(intent, msg, db):
 
     # ── Summary / Overview ──
     if intent == "summary":
-        rev = query_db(db, f"SELECT SUM(total_price) as revenue, COUNT(*) as txns, COUNT(DISTINCT customer_id) as customers, COUNT(DISTINCT basket_id) as baskets FROM sales {time_clause}")
-        prod = query_db(db, "SELECT COUNT(*) as cnt, COUNT(DISTINCT category) as cats FROM products")
-        low = query_db(db, "SELECT COUNT(*) as cnt FROM inventory WHERE current_stock <= reorder_point")
+        rev = tq(f"SELECT SUM(total_price) as revenue, COUNT(*) as txns, COUNT(DISTINCT customer_id) as customers, COUNT(DISTINCT basket_id) as baskets FROM sales {time_clause}")
+        prod = tq("SELECT COUNT(*) as cnt, COUNT(DISTINCT category) as cats FROM products")
+        low = tq("SELECT COUNT(*) as cnt FROM inventory WHERE current_stock <= reorder_point")
         r, p, l = rev[0], prod[0], low[0]
         profit_suffix = ""
-        has_cost_check = query_db(db, "SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")
+        has_cost_check = tq("SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")
         has_cost = has_cost_check[0]['cnt'] > 0
         if has_cost:
-            profit_data = query_db(db, f"""
+            profit_data = tq(f"""
                 SELECT SUM(s.total_price) - SUM(s.quantity * p.cost) as profit
                 FROM sales s JOIN products p ON s.product_id = p.product_id
-                WHERE p.cost IS NOT NULL AND p.cost > 0 {time_and.replace('WHERE', '')}
+                WHERE p.cost IS NOT NULL AND p.cost > 0 {time_and}
             """)
             profit = profit_data[0]['profit'] or 0
         else:
-            profit_data = query_db(db, f"""
+            profit_data = tq(f"""
                 SELECT SUM(s.total_price) - SUM(s.quantity * (p.price * 0.65)) as profit
                 FROM sales s JOIN products p ON s.product_id = p.product_id
                 {time_clause.replace('timestamp', 's.timestamp')}
@@ -432,7 +477,7 @@ def respond(intent, msg, db):
 
     # ── Total Revenue ──
     if intent == "total_revenue":
-        data = query_db(db, f"SELECT SUM(total_price) as revenue, COUNT(*) as txns, COUNT(DISTINCT customer_id) as custs FROM sales {time_clause}")
+        data = tq(f"SELECT SUM(total_price) as revenue, COUNT(*) as txns, COUNT(DISTINCT customer_id) as custs FROM sales {time_clause}")
         r = data[0]
         avg = r['revenue'] / r['txns'] if r['txns'] else 0
         return {"reply": f"💰 **Total Revenue{time_suffix}**: {fmt(r['revenue'])}\n📋 Transactions: {r['txns']:,}\n👥 Unique Customers: {r['custs']:,}\n🧾 Avg per transaction: {fmt(avg)}", "type": "metric"}
@@ -440,7 +485,7 @@ def respond(intent, msg, db):
     # ── Daily Revenue ──
     if intent == "daily_revenue":
         today = datetime.now().strftime("%Y-%m-%d")
-        data = query_db(db, f"SELECT SUM(total_price) as revenue, COUNT(*) as txns FROM sales WHERE DATE(timestamp) = '{today}'")
+        data = tq("SELECT SUM(total_price) as revenue, COUNT(*) as txns FROM sales WHERE DATE(timestamp) = :today", {"today": today})
         r = data[0]
         if not r['revenue']:
             return {"reply": "📅 No sales recorded for today yet.", "type": "text"}
@@ -448,7 +493,7 @@ def respond(intent, msg, db):
 
     # ── Monthly Revenue ──
     if intent == "monthly_revenue":
-        data = query_db(db, """
+        data = tq("""
             SELECT strftime('%Y-%m', timestamp) as month, SUM(total_price) as revenue, COUNT(*) as txns
             FROM sales GROUP BY month ORDER BY month DESC LIMIT 6
         """)
@@ -467,7 +512,7 @@ def respond(intent, msg, db):
 
     # ── Category Revenue ──
     if intent == "category_revenue":
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT p.category, SUM(s.total_price) as revenue, SUM(s.quantity) as qty
             FROM sales s JOIN products p ON s.product_id = p.product_id
             {time_clause.replace('timestamp', 's.timestamp')}
@@ -484,7 +529,7 @@ def respond(intent, msg, db):
     # ── Best Sellers ──
     if intent == "best_sellers":
         limit = min(extract_number(msg, 5), 20)
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT p.name, p.category, SUM(s.total_price) as revenue, SUM(s.quantity) as qty
             FROM sales s JOIN products p ON s.product_id = p.product_id
             {time_clause.replace('timestamp', 's.timestamp')}
@@ -500,7 +545,7 @@ def respond(intent, msg, db):
     # ── Worst Sellers ──
     if intent == "worst_sellers":
         limit = min(extract_number(msg, 5), 20)
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT p.name, p.category, SUM(s.total_price) as revenue, SUM(s.quantity) as qty
             FROM sales s JOIN products p ON s.product_id = p.product_id
             {time_clause.replace('timestamp', 's.timestamp')}
@@ -513,7 +558,7 @@ def respond(intent, msg, db):
 
     # ── Low Stock ──
     if intent == "low_stock":
-        data = query_db(db, """
+        data = tq("""
             SELECT p.name, p.category, i.current_stock, i.reorder_point, i.max_stock,
                    ROUND(i.current_stock * 100.0 / i.max_stock, 1) as fill_pct
             FROM inventory i JOIN products p ON i.product_id = p.product_id
@@ -530,7 +575,7 @@ def respond(intent, msg, db):
 
     # ── Inventory Summary ──
     if intent == "inventory_summary":
-        data = query_db(db, """
+        data = tq("""
             SELECT COUNT(*) as products,
                    SUM(current_stock) as total_stock,
                    SUM(CASE WHEN current_stock <= reorder_point THEN 1 ELSE 0 END) as low_stock,
@@ -551,13 +596,13 @@ def respond(intent, msg, db):
 
     # ── Total Products ──
     if intent == "total_products":
-        data = query_db(db, "SELECT COUNT(*) as cnt, COUNT(DISTINCT category) as cats, COUNT(DISTINCT supplier) as sups FROM products")
+        data = tq("SELECT COUNT(*) as cnt, COUNT(DISTINCT category) as cats, COUNT(DISTINCT supplier) as sups FROM products")
         r = data[0]
         return {"reply": f"📦 **{r['cnt']}** products across **{r['cats']}** categories from **{r['sups']}** suppliers", "type": "metric"}
 
     # ── Total Customers ──
     if intent == "total_customers":
-        data = query_db(db, """
+        data = tq("""
             SELECT COUNT(*) as total,
                    SUM(CASE WHEN membership_tier = 'Platinum' THEN 1 ELSE 0 END) as platinum,
                    SUM(CASE WHEN membership_tier = 'Gold' THEN 1 ELSE 0 END) as gold,
@@ -578,7 +623,7 @@ def respond(intent, msg, db):
     # ── Top Customers ──
     if intent == "top_customers":
         limit = min(extract_number(msg, 5), 20)
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT c.first_name || ' ' || c.last_name as name, c.membership_tier,
                    SUM(s.total_price) as spent, COUNT(DISTINCT s.basket_id) as visits,
                    COUNT(s.sale_id) as items_bought
@@ -594,7 +639,7 @@ def respond(intent, msg, db):
 
     # ── Customer Segments ──
     if intent == "customer_segments":
-        data = query_db(db, "SELECT membership_tier, COUNT(*) as cnt FROM customers GROUP BY membership_tier ORDER BY cnt DESC")
+        data = tq("SELECT membership_tier, COUNT(*) as cnt FROM customers GROUP BY membership_tier ORDER BY cnt DESC")
         total = sum(d['cnt'] for d in data)
         lines = ["👥 **Customer Segments**:\n"]
         for d in data:
@@ -604,16 +649,16 @@ def respond(intent, msg, db):
 
     # ── Profit ──
     if intent == "profit":
-        has_cost_check = query_db(db, "SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")
+        has_cost_check = tq("SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")
         has_cost = has_cost_check[0]['cnt'] > 0
         
         if has_cost:
-            data = query_db(db, f"""
+            data = tq(f"""
                 SELECT SUM(s.total_price) as revenue,
                        SUM(s.quantity * p.cost) as cost,
                        SUM(s.total_price) - SUM(s.quantity * p.cost) as profit
                 FROM sales s JOIN products p ON s.product_id = p.product_id
-                WHERE p.cost IS NOT NULL AND p.cost > 0 {time_and.replace('WHERE', '')}
+                WHERE p.cost IS NOT NULL AND p.cost > 0 {time_and}
             """)
             r = data[0]
             revenue = r['revenue'] or 0
@@ -621,16 +666,16 @@ def respond(intent, msg, db):
             profit = r['profit'] or 0
             margin = round(profit / revenue * 100, 1) if revenue else 0
             
-            cat_profit = query_db(db, f"""
+            cat_profit = tq(f"""
                 SELECT p.category, SUM(s.total_price) - SUM(s.quantity * p.cost) as profit,
                        ROUND((SUM(s.total_price) - SUM(s.quantity * p.cost)) / SUM(s.total_price) * 100, 1) as margin
                 FROM sales s JOIN products p ON s.product_id = p.product_id
-                WHERE p.cost IS NOT NULL AND p.cost > 0 {time_and.replace('WHERE', '')}
+                WHERE p.cost IS NOT NULL AND p.cost > 0 {time_and}
                 GROUP BY p.category ORDER BY profit DESC LIMIT 3
             """)
             note = ""
         else:
-            data = query_db(db, f"""
+            data = tq(f"""
                 SELECT SUM(s.total_price) as revenue,
                        SUM(s.quantity * (p.price * 0.65)) as cost,
                        SUM(s.total_price) - SUM(s.quantity * (p.price * 0.65)) as profit
@@ -643,7 +688,7 @@ def respond(intent, msg, db):
             profit = r['profit'] or 0
             margin = round(profit / revenue * 100, 1) if revenue else 0
             
-            cat_profit = query_db(db, f"""
+            cat_profit = tq(f"""
                 SELECT p.category, SUM(s.total_price) - SUM(s.quantity * (p.price * 0.65)) as profit,
                        35.0 as margin
                 FROM sales s JOIN products p ON s.product_id = p.product_id
@@ -668,7 +713,7 @@ def respond(intent, msg, db):
 
     # ── Categories ──
     if intent == "categories":
-        data = query_db(db, """
+        data = tq("""
             SELECT p.category, COUNT(*) as products,
                    ROUND(AVG(p.price), 2) as avg_price,
                    SUM(i.current_stock) as total_stock
@@ -682,7 +727,7 @@ def respond(intent, msg, db):
 
     # ── Suppliers ──
     if intent == "suppliers":
-        data = query_db(db, """
+        data = tq("""
             SELECT s.name, s.lead_time_days, s.reliability_score,
                    COUNT(p.product_id) as products, GROUP_CONCAT(DISTINCT p.category) as categories
             FROM suppliers s LEFT JOIN products p ON p.supplier = s.name
@@ -700,7 +745,7 @@ def respond(intent, msg, db):
 
     # ── Payment Methods ──
     if intent == "payment_methods":
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT payment_method, COUNT(*) as cnt, SUM(total_price) as revenue,
                    ROUND(AVG(total_price), 2) as avg_txn
             FROM sales {time_clause} GROUP BY payment_method ORDER BY revenue DESC
@@ -714,7 +759,7 @@ def respond(intent, msg, db):
 
     # ── Expiring ──
     if intent == "expiring":
-        data = query_db(db, """
+        data = tq("""
             SELECT p.name, p.category, p.shelf_life_days, i.current_stock, i.last_restock_date,
                    ROUND(julianday(DATE(i.last_restock_date, '+' || p.shelf_life_days || ' days')) - julianday('now')) as days_left
             FROM inventory i JOIN products p ON i.product_id = p.product_id
@@ -732,7 +777,7 @@ def respond(intent, msg, db):
 
     # ── Average Order ──
     if intent == "avg_order":
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT ROUND(AVG(basket_total), 2) as avg_basket,
                    ROUND(AVG(items_count), 1) as avg_items,
                    ROUND(MAX(basket_total), 2) as max_basket,
@@ -754,7 +799,7 @@ def respond(intent, msg, db):
 
     # ── Peak Hours ──
     if intent == "peak_hours":
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT CAST(strftime('%H', timestamp) AS INTEGER) as hour,
                    COUNT(*) as cnt, SUM(total_price) as revenue
             FROM sales {time_clause} GROUP BY hour ORDER BY cnt DESC LIMIT 5
@@ -774,7 +819,7 @@ def respond(intent, msg, db):
         term = extract_product_term(msg)
         if not term:
             return {"reply": "🔍 What product? Try: \"tell me about milk\" or \"find cheese\"", "type": "text"}
-        data = query_db(db, """
+        data = tq("""
             SELECT p.product_id, p.name, p.category, p.price, p.cost, p.supplier, p.shelf_life_days,
                    i.current_stock, i.reorder_point, i.max_stock, i.warehouse_location
             FROM products p LEFT JOIN inventory i ON p.product_id = i.product_id
@@ -805,12 +850,12 @@ def respond(intent, msg, db):
         term = extract_product_term(msg)
         if not term:
             return {"reply": "Which product? Try: \"how is milk selling?\"", "type": "text"}
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT p.name, p.category, SUM(s.total_price) as revenue, SUM(s.quantity) as qty,
                    COUNT(DISTINCT s.basket_id) as baskets, COUNT(DISTINCT s.customer_id) as customers,
                    AVG(s.discount) as avg_discount
             FROM sales s JOIN products p ON s.product_id = p.product_id
-            WHERE LOWER(p.name) LIKE :term {time_and.replace('WHERE', '')}
+            WHERE LOWER(p.name) LIKE :term {time_and}
             GROUP BY p.product_id ORDER BY revenue DESC LIMIT 3
         """, {"term": f"%{term}%"})
         if not data:
@@ -832,20 +877,20 @@ def respond(intent, msg, db):
             return {"reply": "⚖️ Which categories? Try: \"compare Dairy vs Bakery\"", "type": "text"}
         cat1, cat2 = cats[0], cats[1]
         
-        has_cost_check = query_db(db, "SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")
+        has_cost_check = tq("SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")
         has_cost = has_cost_check[0]['cnt'] > 0
         
         cost_expr = "p.cost" if has_cost else "p.price * 0.65"
         note = "" if has_cost else "\n\n💡 *Margins estimated (cost = 65% of price) because cost data is missing.*"
         
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT p.category, SUM(s.total_price) as revenue, SUM(s.quantity) as qty,
                    COUNT(DISTINCT s.basket_id) as baskets,
                    COUNT(DISTINCT p.product_id) as products,
                    ROUND((SUM(s.total_price) - SUM(s.quantity * {cost_expr})) / SUM(s.total_price) * 100, 1) as margin
             FROM sales s JOIN products p ON s.product_id = p.product_id
             WHERE p.category IN (:c1, :c2)
-            {time_and.replace('WHERE', '')}
+            {time_and}
             GROUP BY p.category
         """, {"c1": cat1, "c2": cat2})
         if len(data) < 2:
@@ -871,7 +916,7 @@ def respond(intent, msg, db):
 
     # ── Growth / Trend ──
     if intent == "growth":
-        data = query_db(db, """
+        data = tq("""
             SELECT strftime('%Y-%m', timestamp) as month, SUM(total_price) as revenue
             FROM sales GROUP BY month ORDER BY month DESC LIMIT 3
         """)
@@ -890,7 +935,7 @@ def respond(intent, msg, db):
 
     # ── Discounts ──
     if intent == "discounts":
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT ROUND(AVG(CASE WHEN discount > 0 THEN discount ELSE NULL END) * 100, 1) as avg_disc,
                    ROUND(SUM(CASE WHEN discount > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as disc_pct,
                    COUNT(CASE WHEN discount > 0 THEN 1 END) as disc_txns,
@@ -908,7 +953,7 @@ def respond(intent, msg, db):
 
     # ── Total Transactions ──
     if intent == "total_transactions":
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT COUNT(*) as txns, COUNT(DISTINCT basket_id) as baskets,
                    COUNT(DISTINCT customer_id) as customers,
                    COUNT(DISTINCT product_id) as products
@@ -930,12 +975,12 @@ def respond(intent, msg, db):
         if not cat:
             return None  # Let it fall through
             
-        has_cost_check = query_db(db, "SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")
+        has_cost_check = tq("SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")
         has_cost = has_cost_check[0]['cnt'] > 0
         cost_expr = "p.cost" if has_cost else "p.price * 0.65"
         note = "" if has_cost else "\n\n💡 *Margin estimated (cost = 65% of price) because cost data is missing.*"
         
-        data = query_db(db, f"""
+        data = tq(f"""
             SELECT SUM(s.total_price) as revenue, SUM(s.quantity) as qty,
                    COUNT(DISTINCT p.product_id) as products,
                    COUNT(DISTINCT s.customer_id) as customers,
@@ -947,7 +992,7 @@ def respond(intent, msg, db):
         r = data[0]
 
         # Top 3 products in category
-        top = query_db(db, """
+        top = tq("""
             SELECT p.name, SUM(s.total_price) as revenue
             FROM sales s JOIN products p ON s.product_id = p.product_id
             WHERE p.category = :cat
@@ -998,7 +1043,7 @@ def extract_compared_categories(msg, db):
 
 @router.post("")
 def chat(body: ChatMessage, db: Session = Depends(get_db)):
-    global _context
+    session_id = body.session_id or "default"
     msg = body.message.strip()
 
     if not msg:
@@ -1024,7 +1069,7 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
             score = 2.0
 
     # Generate response
-    response = respond(intent, msg, db)
+    response = respond(intent, msg, db, session_id=session_id)
 
     if response:
         # Define intent-specific suggestions & chart data
@@ -1136,12 +1181,13 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
             response["chart_data"] = chart_data
 
         # Update context
-        _context["last_intent"] = intent
-        _context["history"].append({"role": "user", "text": msg})
-        _context["history"].append({"role": "bot", "text": response["reply"][:100]})
+        _ctx = _get_context(session_id)
+        _ctx["last_intent"] = intent
+        _ctx["history"].append({"role": "user", "text": msg})
+        _ctx["history"].append({"role": "bot", "text": response["reply"][:100]})
         # Keep history short
-        if len(_context["history"]) > 20:
-            _context["history"] = _context["history"][-20:]
+        if len(_ctx["history"]) > 20:
+            _ctx["history"] = _ctx["history"][-20:]
         return response
 
     # Fallback — smart suggestions based on what they said

@@ -13,18 +13,18 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       api.getDashboardSummary(),
       api.getRevenue(),
       api.getLowStock(),
       api.getBestSellers()
     ]).then(([sum, rev, low, best]) => {
-      setSummary(sum);
-      setRevenue(rev);
-      setLowStock(low);
-      setBestSellers(best);
+      if (sum.status === 'fulfilled') setSummary(sum.value);
+      if (rev.status === 'fulfilled') setRevenue(rev.value);
+      if (low.status === 'fulfilled') setLowStock(low.value);
+      if (best.status === 'fulfilled') setBestSellers(best.value);
       setLoading(false);
-    }).catch(e => { console.error(e); setLoading(false); });
+    });
   }, []);
 
   if (loading) return <div className="loading">Loading dashboard...</div>;

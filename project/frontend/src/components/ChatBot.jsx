@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { api } from '../services/api';
+import { CHART_COLORS } from '../constants/colors';
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Cell, PieChart, Pie
 } from 'recharts';
@@ -13,12 +14,30 @@ const QUICK_ACTIONS = [
   { label: '🕐 Peak Hours', msg: 'peak hours' },
 ];
 
-function parseMarkdown(text) {
-  // Bold
-  let html = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Newlines
-  html = html.replace(/\n/g, '<br/>');
-  return html;
+function renderMarkdown(text) {
+  // Split on **bold** markers and newlines, returning React elements
+  // React's default escaping protects against XSS — no dangerouslySetInnerHTML needed
+  const parts = [];
+  const segments = text.split(/(\*\*.+?\*\*)/g);
+  segments.forEach((segment, i) => {
+    const boldMatch = segment.match(/^\*\*(.+)\*\*$/);
+    if (boldMatch) {
+      // Render bold segments
+      const inner = boldMatch[1].split('\n');
+      inner.forEach((line, j) => {
+        if (j > 0) parts.push(React.createElement('br', { key: `br-${i}-${j}` }));
+        parts.push(React.createElement('strong', { key: `b-${i}-${j}` }, line));
+      });
+    } else {
+      // Render plain text with newline support
+      const lines = segment.split('\n');
+      lines.forEach((line, j) => {
+        if (j > 0) parts.push(React.createElement('br', { key: `br-${i}-${j}` }));
+        if (line) parts.push(React.createElement(React.Fragment, { key: `t-${i}-${j}` }, line));
+      });
+    }
+  });
+  return parts;
 }
 
 function MiniChart({ type, data }) {
@@ -29,7 +48,7 @@ function MiniChart({ type, data }) {
   const isPie = type === 'pie';
 
   if (isPie) {
-    const COLORS = ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+    const COLORS = CHART_COLORS;
     return (
       <div className="chat-chart-wrapper pie">
         <ResponsiveContainer width="100%" height={120}>
@@ -86,8 +105,7 @@ function MiniChart({ type, data }) {
             />
             <Bar dataKey="value" fill="#7c3aed" radius={[2, 2, 0, 0]}>
               {data.map((entry, index) => {
-                const colors = ['#7c3aed', '#00d4ff', '#10b981', '#f59e0b', '#ef4444'];
-                return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                return <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />;
               })}
             </Bar>
           </BarChart>
@@ -107,6 +125,7 @@ export default function ChatBot() {
   const [pulse, setPulse] = useState(true);
   const messagesEnd = useRef(null);
   const inputRef = useRef(null);
+  const sessionId = useRef(crypto.randomUUID());
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: 'smooth' });
@@ -127,7 +146,7 @@ export default function ChatBot() {
     setLoading(true);
 
     try {
-      const res = await api.sendChat(text.trim());
+      const res = await api.sendChat(text.trim(), sessionId.current);
       setMessages(prev => [...prev, {
         role: 'bot',
         text: res.reply,
@@ -178,10 +197,9 @@ export default function ChatBot() {
                 <div className={`chat-msg ${m.role}`}>
                   {m.role === 'bot' && <span className="chat-msg-avatar">🤖</span>}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: '85%' }}>
-                    <div
-                      className={`chat-bubble ${m.role} ${m.type || ''}`}
-                      dangerouslySetInnerHTML={{ __html: parseMarkdown(m.text) }}
-                    />
+                    <div className={`chat-bubble ${m.role} ${m.type || ''}`}>
+                      {renderMarkdown(m.text)}
+                    </div>
                     {m.role === 'bot' && m.chartType && (
                       <MiniChart type={m.chartType} data={m.chartData} />
                     )}

@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { getCategoryColor } from '../constants/colors';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-
-const CATEGORY_COLORS = {
-  Dairy: '#00d4ff', Bakery: '#f59e0b', Beverages: '#7c3aed', Snacks: '#ec4899',
-  Produce: '#10b981', Meat: '#ef4444', Frozen: '#6366f1', Household: '#14b8a6'
-};
 
 export default function DemandForecastPanel() {
   const [forecasts, setForecasts] = useState(null);
@@ -30,7 +26,7 @@ export default function DemandForecastPanel() {
   const catData = forecasts[selectedCat];
 
   // Build chart data from historical
-  const historical = (catData.historical_last_30 || catData.historical || []).slice(-90);
+  const historical = (catData.historical_last_60 || catData.historical_last_30 || catData.historical || []).slice(-90);
   const forecast = catData.forecast || [];
 
   // Combine for visualization
@@ -43,7 +39,7 @@ export default function DemandForecastPanel() {
     <div>
       <div className="page-header">
         <h2>📈 Demand Forecasting</h2>
-        <p>AI-powered demand predictions using ARIMA time series models</p>
+        <p>AI-powered demand predictions using Holt-Winters exponential smoothing</p>
       </div>
 
       {/* Category Tabs */}
@@ -51,7 +47,7 @@ export default function DemandForecastPanel() {
         {categories.map(cat => (
           <button key={cat} className={`tab ${selectedCat === cat ? 'active' : ''}`}
             onClick={() => setSelectedCat(cat)}
-            style={selectedCat === cat ? { background: CATEGORY_COLORS[cat] || '#00d4ff' } : {}}>
+            style={selectedCat === cat ? { background: getCategoryColor(cat) } : {}}>
             {cat}
           </button>
         ))}
@@ -100,7 +96,7 @@ export default function DemandForecastPanel() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>MODEL</span>
-              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent-blue)' }}>{(catData.model || 'arima').replace('_', ' ').toUpperCase()}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent-blue)' }}>{(catData.model || 'holt_winters').replaceAll('_', ' ').toUpperCase()}</div>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>FORECAST HORIZON</span>
@@ -116,7 +112,7 @@ export default function DemandForecastPanel() {
             </div>
             <div style={{ marginTop: 8 }}>
               {categories.map(cat => (
-                <span key={cat} className="badge blue" style={{ marginRight: 6, marginBottom: 4, display: 'inline-block', background: `${CATEGORY_COLORS[cat]}22`, color: CATEGORY_COLORS[cat] }}>
+                <span key={cat} className="badge blue" style={{ marginRight: 6, marginBottom: 4, display: 'inline-block', background: `${getCategoryColor(cat)}22`, color: getCategoryColor(cat) }}>
                   {cat}
                 </span>
               ))}

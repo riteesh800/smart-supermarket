@@ -2,11 +2,14 @@
 ML prediction API routes
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 import joblib
 import os
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
+from auth import require_api_key
 
 router = APIRouter(prefix="/api", tags=["ml"])
 
@@ -25,13 +28,13 @@ def get_all_forecasts():
     """Get demand forecasts for all categories."""
     data = load_model("demand_forecasts.joblib")
     if not data:
-        return {"error": "Forecast model not trained"}
+        raise HTTPException(status_code=404, detail="Forecast model not trained. Load data and retrain models first.")
     result = {}
     for cat, val in data.items():
         result[cat] = {
             "forecast": val["forecast"],
-            "historical_last_30": val["historical"][-60:] if len(val["historical"]) > 60 else val["historical"],
-            "model": val.get("model", "arima"),
+            "historical_last_60": val["historical"][-60:] if len(val["historical"]) > 60 else val["historical"],
+            "model": val.get("model", "holt_winters"),
         }
     return result
 
@@ -41,9 +44,9 @@ def get_category_forecast(category: str):
     """Get demand forecast for specific category."""
     data = load_model("demand_forecasts.joblib")
     if not data:
-        return {"error": "Forecast model not trained"}
+        raise HTTPException(status_code=404, detail="Forecast model not trained")
     if category not in data:
-        return {"error": f"Category '{category}' not found", "available": list(data.keys())}
+        raise HTTPException(status_code=404, detail=f"Category '{category}' not found. Available: {list(data.keys())}")
     return data[category]
 
 
@@ -52,7 +55,7 @@ def get_recommendations():
     """Get product recommendations and suggestions."""
     data = load_model("recommendations.joblib")
     if not data:
-        return {"error": "Recommendation model not trained"}
+        raise HTTPException(status_code=404, detail="Recommendation model not trained")
     return {
         "suggestions": data["suggestions"],
         "top_rules": data["rules"][:20],
@@ -66,7 +69,7 @@ def get_anomalies():
     """Get detected sales anomalies."""
     data = load_model("anomaly_detection.joblib")
     if not data:
-        return {"error": "Anomaly model not trained"}
+        raise HTTPException(status_code=404, detail="Anomaly model not trained")
     return {
         "anomalies": data["anomalies"],
         "total_anomalies": data["total_anomalies"],
@@ -81,7 +84,7 @@ def get_pricing():
     """Get dynamic pricing suggestions."""
     data = load_model("dynamic_pricing.joblib")
     if not data:
-        return {"error": "Pricing model not trained"}
+        raise HTTPException(status_code=404, detail="Pricing model not trained")
     return {
         "suggestions": data["suggestions"],
         "action_summary": data["action_summary"],
@@ -90,8 +93,8 @@ def get_pricing():
 
 
 @router.post("/ml/retrain")
-def retrain_models():
-    """Retrain all ML models."""
+def retrain_models(_api_key: str = Depends(require_api_key)):
+    """Retrain all ML models. Requires API key."""
     ml_dir = os.path.dirname(ML_DIR)
     train_script = os.path.join(ml_dir, "train_all.py")
 
@@ -100,22 +103,24 @@ def retrain_models():
             [sys.executable, train_script],
             capture_output=True, text=True, timeout=120, cwd=ml_dir
         )
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"Training failed: {result.stderr[:500]}")
         return {
-            "status": "success" if result.returncode == 0 else "error",
+            "status": "success",
             "output": result.stdout,
-            "errors": result.stderr if result.returncode != 0 else None
         }
     except subprocess.TimeoutExpired:
-        return {"status": "error", "errors": "Training timed out (120s limit)"}
+        raise HTTPException(status_code=504, detail="Training timed out (120s limit)")
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"status": "error", "errors": str(e)}
+        raise HTTPException(status_code=500, detail=f"Training error: {str(e)}")
 
 
 @router.get("/dashboard/summary")
 def get_dashboard_summary():
     """Get KPI summary for dashboard."""
     from sqlalchemy import text
-    import sys
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from database import SessionLocal
 

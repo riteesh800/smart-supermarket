@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './index.css';
 import { api } from './services/api';
 import Sidebar from './components/Sidebar';
 import DashboardOverview from './components/DashboardOverview';
@@ -14,6 +13,7 @@ import SupplierPanel from './components/SupplierPanel';
 import SalesHeatmapPanel from './components/SalesHeatmapPanel';
 import DataSetupPanel from './components/DataSetupPanel';
 import ChatBot from './components/ChatBot';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const PANELS = {
   dashboard: DashboardOverview,
@@ -70,7 +70,9 @@ export default function App() {
     <>
       <Sidebar active={active} onNavigate={setActive} flags={flags} />
       <main className="main-content">
-        <Panel key={active} {...panelProps} />
+        <ErrorBoundary key={active}>
+          <Panel {...panelProps} />
+        </ErrorBoundary>
       </main>
       <ChatBot />
     </>

@@ -1,4 +1,8 @@
 *.db
 .venv/
 __pycache__/
-*.pyccl
+*.pyc
+node_modules/
+dist/
+*.joblib
+ml_models/saved/

@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { CHART_COLORS, getChartColor } from '../constants/colors';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-
-const COLORS = ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function getHeatColor(value, max) {
@@ -26,16 +25,16 @@ export default function SalesHeatmapPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       api.getHourlyHeatmap(),
       api.getPaymentBreakdown(),
       api.getProfitMargins()
     ]).then(([h, p, m]) => {
-      setHeatmap(h);
-      setPayments(p);
-      setMargins(m);
+      if (h.status === 'fulfilled') setHeatmap(h.value);
+      if (p.status === 'fulfilled') setPayments(p.value);
+      if (m.status === 'fulfilled') setMargins(m.value);
       setLoading(false);
-    }).catch(e => { console.error(e); setLoading(false); });
+    });
   }, []);
 
   if (loading) return <div className="loading">Loading analytics data...</div>;
@@ -53,6 +52,22 @@ export default function SalesHeatmapPanel() {
   const totalProfit = margins.reduce((s, m) => s + m.total_profit, 0);
   const totalRevenue = margins.reduce((s, m) => s + m.total_revenue, 0);
   const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100).toFixed(1) : 0;
+
+  // Compute real peak hours from heatmap data
+  const hourlySales = {};
+  heatmap.forEach(h => {
+    hourlySales[h.hour] = (hourlySales[h.hour] || 0) + h.sales_count;
+  });
+  let peakLabel = 'N/A';
+  const hourEntries = Object.entries(hourlySales);
+  if (hourEntries.length > 0) {
+    hourEntries.sort((a, b) => b[1] - a[1]);
+    const peakHour = parseInt(hourEntries[0][0]);
+    const startH = Math.max(peakHour - 1, 0);
+    const endH = Math.min(peakHour + 1, 23);
+    const fmtH = (h) => h === 0 ? '12am' : h === 12 ? '12pm' : h < 12 ? `${h}am` : `${h - 12}pm`;
+    peakLabel = `${fmtH(startH)}-${fmtH(endH)}`;
+  }
 
   return (
     <div>
@@ -80,7 +95,7 @@ export default function SalesHeatmapPanel() {
         <div className="kpi-card orange">
           <div className="kpi-icon">🕐</div>
           <div className="kpi-label">Peak Hours</div>
-          <div className="kpi-value">11am-3pm</div>
+          <div className="kpi-value">{peakLabel}</div>
         </div>
       </div>
 
@@ -139,7 +154,7 @@ export default function SalesHeatmapPanel() {
                   outerRadius={100} innerRadius={50} paddingAngle={3}
                   label={({ payment_method, total_revenue }) => `${payment_method}: ₹${Math.round(total_revenue).toLocaleString()}`}
                   labelLine={{ stroke: '#6868a0' }}>
-                  {payments.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  {payments.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
                   formatter={(val) => `₹${Math.round(val).toLocaleString()}`} />

@@ -1,18 +1,27 @@
 const API_BASE = '/api';
+const API_KEY = 'dev-key';  // Match SMARTMART_API_KEY env var on backend
 
 async function fetchJSON(url) {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
   return res.json();
 }
 
-async function postJSON(url, data) {
+async function postJSON(url, data, { auth = false } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth) headers['X-API-Key'] = API_KEY;
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
   return res.json();
 }
 
@@ -70,7 +79,7 @@ export const api = {
   getRecommendations: () => fetchJSON(`${API_BASE}/recommendations`),
   getAnomalies: () => fetchJSON(`${API_BASE}/anomalies`),
   getPricing: () => fetchJSON(`${API_BASE}/pricing`),
-  retrainModels: () => postJSON(`${API_BASE}/ml/retrain`),
+  retrainModels: () => postJSON(`${API_BASE}/ml/retrain`, {}, { auth: true }),
 
   // Upload / Data Management
   getUploadStatus: () => fetchJSON(`${API_BASE}/upload/status`),
@@ -78,6 +87,10 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
     const res = await fetch(`${API_BASE}/upload/preview`, { method: 'POST', body: formData });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `Upload failed: HTTP ${res.status}`);
+    }
     return res.json();
   },
   importData: async (uploadId, fileType, mapping) => {
@@ -86,11 +99,37 @@ export const api = {
     formData.append('file_type', fileType);
     formData.append('mapping_json', JSON.stringify(mapping));
     const res = await fetch(`${API_BASE}/upload/import`, { method: 'POST', body: formData });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `Import failed: HTTP ${res.status}`);
+    }
     return res.json();
   },
-  resetData: () => postJSON(`${API_BASE}/upload/reset`),
-  loadDemoData: () => postJSON(`${API_BASE}/upload/load-demo`),
+  resetData: async () => {
+    const res = await fetch(`${API_BASE}/upload/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `Reset failed: HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+  loadDemoData: async () => {
+    const res = await fetch(`${API_BASE}/upload/load-demo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `Load demo failed: HTTP ${res.status}`);
+    }
+    return res.json();
+  },
 
   // Chatbot
-  sendChat: (message) => postJSON(`${API_BASE}/chat`, { message }),
+  sendChat: (message, sessionId) => postJSON(`${API_BASE}/chat`, { message, session_id: sessionId }),
 };

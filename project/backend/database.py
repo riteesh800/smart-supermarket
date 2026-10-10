@@ -5,7 +5,7 @@ Loads CSV data and provides session management
 
 import os
 import pandas as pd
-from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, event
+from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, ForeignKey, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +19,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
 SessionLocal = sessionmaker(bind=engine)
@@ -28,6 +29,15 @@ Base = declarative_base()
 
 # ──────────────────────────── ORM MODELS ────────────────────────────
 
+class Supplier(Base):
+    __tablename__ = "suppliers"
+    supplier_id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    contact_email = Column(String)
+    lead_time_days = Column(Integer)
+    reliability_score = Column(Float)
+
+
 class Product(Base):
     __tablename__ = "products"
     product_id = Column(String, primary_key=True)
@@ -36,6 +46,7 @@ class Product(Base):
     price = Column(Float, nullable=False)
     cost = Column(Float)
     supplier = Column(String)
+    supplier_id = Column(String, ForeignKey("suppliers.supplier_id"))
     shelf_life_days = Column(Integer)
     unit = Column(String)
 
@@ -80,19 +91,11 @@ class Inventory(Base):
     warehouse_location = Column(String)
 
 
-class Supplier(Base):
-    __tablename__ = "suppliers"
-    supplier_id = Column(String, primary_key=True)
-    name = Column(String, nullable=False)
-    contact_email = Column(String)
-    lead_time_days = Column(Integer)
-    reliability_score = Column(Float)
-
-
 # ──────────────────────────── INIT ────────────────────────────
 
 def init_db():
-    """Create tables and load CSV data."""
+    """Create tables (preserving schema/constraints) and load CSV data if empty."""
+    # Create tables with proper PKs, FKs, and NOT NULL constraints
     Base.metadata.create_all(engine)
 
     session = SessionLocal()
@@ -104,32 +107,52 @@ def init_db():
 
     print("Loading CSV data into database...")
 
-    # Load products
-    products = pd.read_csv(os.path.join(DATA_DIR, "products.csv"))
-    products.to_sql("products", engine, if_exists="replace", index=False)
-    print(f"  Loaded {len(products)} products")
+    # Load in a single transaction, using append to preserve schema
+    try:
+        with engine.begin() as conn:
+            # Suppliers first (products reference them via FK)
+            suppliers_path = os.path.join(DATA_DIR, "suppliers.csv")
+            if os.path.exists(suppliers_path):
+                suppliers = pd.read_csv(suppliers_path)
+                suppliers.to_sql("suppliers", conn, if_exists="append", index=False)
+                print(f"  Loaded {len(suppliers)} suppliers")
 
-    # Load customers
-    customers = pd.read_csv(os.path.join(DATA_DIR, "customers.csv"))
-    customers.to_sql("customers", engine, if_exists="replace", index=False)
-    print(f"  Loaded {len(customers)} customers")
+            # Products (with supplier_id populated from supplier name)
+            products_path = os.path.join(DATA_DIR, "products.csv")
+            if os.path.exists(products_path):
+                products = pd.read_csv(products_path)
+                # Map supplier name -> supplier_id for FK
+                if os.path.exists(suppliers_path):
+                    sup_df = pd.read_csv(suppliers_path)
+                    name_to_id = dict(zip(sup_df["name"], sup_df["supplier_id"]))
+                    products["supplier_id"] = products["supplier"].map(name_to_id)
+                products.to_sql("products", conn, if_exists="append", index=False)
+                print(f"  Loaded {len(products)} products")
 
-    # Load sales
-    sales = pd.read_csv(os.path.join(DATA_DIR, "sales.csv"))
-    sales.to_sql("sales", engine, if_exists="replace", index=False)
-    print(f"  Loaded {len(sales)} sales")
+            # Customers
+            customers_path = os.path.join(DATA_DIR, "customers.csv")
+            if os.path.exists(customers_path):
+                customers = pd.read_csv(customers_path)
+                customers.to_sql("customers", conn, if_exists="append", index=False)
+                print(f"  Loaded {len(customers)} customers")
 
-    # Load inventory
-    inventory = pd.read_csv(os.path.join(DATA_DIR, "inventory.csv"))
-    inventory.to_sql("inventory", engine, if_exists="replace", index=False)
-    print(f"  Loaded {len(inventory)} inventory records")
+            # Sales
+            sales_path = os.path.join(DATA_DIR, "sales.csv")
+            if os.path.exists(sales_path):
+                sales = pd.read_csv(sales_path)
+                sales.to_sql("sales", conn, if_exists="append", index=False)
+                print(f"  Loaded {len(sales)} sales")
 
-    # Load suppliers
-    suppliers_path = os.path.join(DATA_DIR, "suppliers.csv")
-    if os.path.exists(suppliers_path):
-        suppliers = pd.read_csv(suppliers_path)
-        suppliers.to_sql("suppliers", engine, if_exists="replace", index=False)
-        print(f"  Loaded {len(suppliers)} suppliers")
+            # Inventory
+            inventory_path = os.path.join(DATA_DIR, "inventory.csv")
+            if os.path.exists(inventory_path):
+                inventory = pd.read_csv(inventory_path)
+                inventory.to_sql("inventory", conn, if_exists="append", index=False)
+                print(f"  Loaded {len(inventory)} inventory records")
+
+    except Exception as e:
+        print(f"Error loading CSV data: {e}")
+        raise
 
     session.close()
     print("Database initialized!")

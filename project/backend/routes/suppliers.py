@@ -2,7 +2,7 @@
 Supplier API routes
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import sys, os
@@ -20,7 +20,7 @@ def get_suppliers(db: Session = Depends(get_db)):
         SELECT s.supplier_id, s.name, s.contact_email, s.lead_time_days, s.reliability_score,
                COUNT(p.product_id) as products_supplied
         FROM suppliers s
-        LEFT JOIN products p ON p.supplier = s.name
+        LEFT JOIN products p ON p.supplier_id = s.supplier_id
         GROUP BY s.supplier_id
         ORDER BY s.reliability_score DESC
     """))
@@ -39,7 +39,7 @@ def get_supplier_performance(db: Session = Depends(get_db)):
                COALESCE(SUM(sa.total_price), 0) as total_revenue_generated,
                COALESCE(SUM(sa.quantity), 0) as total_units_sold
         FROM suppliers s
-        LEFT JOIN products p ON p.supplier = s.name
+        LEFT JOIN products p ON p.supplier_id = s.supplier_id
         LEFT JOIN sales sa ON sa.product_id = p.product_id
         GROUP BY s.supplier_id
         ORDER BY total_revenue_generated DESC
@@ -55,18 +55,18 @@ def get_supplier_detail(supplier_id: str, db: Session = Depends(get_db)):
     # Supplier info
     sup = db.execute(text("SELECT * FROM suppliers WHERE supplier_id = :sid"), {"sid": supplier_id}).fetchone()
     if not sup:
-        return {"error": "Supplier not found"}
+        raise HTTPException(status_code=404, detail="Supplier not found")
     sup_dict = dict(zip(["supplier_id", "name", "contact_email", "lead_time_days", "reliability_score"], sup))
 
-    # Products from this supplier
+    # Products from this supplier (using FK)
     products = db.execute(text("""
         SELECT p.product_id, p.name, p.category, p.price,
                i.current_stock, i.reorder_point
         FROM products p
         LEFT JOIN inventory i ON p.product_id = i.product_id
-        WHERE p.supplier = :sname
+        WHERE p.supplier_id = :sid
         ORDER BY p.category, p.name
-    """), {"sname": sup_dict["name"]})
+    """), {"sid": supplier_id})
     prod_rows = products.fetchall()
     prod_cols = products.keys()
 

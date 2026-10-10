@@ -37,7 +37,7 @@ export default function Sidebar({ active, onNavigate, flags }) {
         <div className="nav-section" key={section.section}>
           <div className="nav-section-title">{section.section}</div>
           {section.items.map(item => {
-            const enabled = item.flag === null || !flags || (flags.has_data !== false && flags[item.flag] !== false);
+            const enabled = item.flag === null || (flags && flags.has_data && flags[item.flag] !== false);
             return (
               <div
                 key={item.id}

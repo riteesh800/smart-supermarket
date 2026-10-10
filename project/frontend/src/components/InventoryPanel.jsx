@@ -1,12 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../services/api';
+import { CHART_COLORS as COLORS } from '../constants/colors';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-
-const COLORS = ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6',
-                '#06b6d4', '#a855f7', '#22c55e', '#eab308', '#f43f5e', '#d946ef', '#8b5cf6'];
 
 export default function InventoryPanel() {
   const [inventory, setInventory] = useState({ items: [], total: 0, page: 1, pages: 1 });
@@ -28,20 +26,18 @@ export default function InventoryPanel() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    try {
-      const [inv, low, exp, cat, cats] = await Promise.all([
-        api.getInventory(page, 50, search, catFilter),
-        api.getLowStock(),
-        api.getExpiringSoon(),
-        api.getInventoryByCategory(),
-        api.getCategories()
-      ]);
-      setInventory(inv);
-      setLowStock(low);
-      setExpiring(exp);
-      setByCategory(cat);
-      setCategories(cats);
-    } catch (e) { console.error(e); }
+    const [inv, low, exp, cat, cats] = await Promise.allSettled([
+      api.getInventory(page, 50, search, catFilter),
+      api.getLowStock(),
+      api.getExpiringSoon(),
+      api.getInventoryByCategory(),
+      api.getCategories()
+    ]);
+    if (inv.status === 'fulfilled') setInventory(inv.value);
+    if (low.status === 'fulfilled') setLowStock(low.value);
+    if (exp.status === 'fulfilled') setExpiring(exp.value);
+    if (cat.status === 'fulfilled') setByCategory(cat.value);
+    if (cats.status === 'fulfilled') setCategories(cats.value);
     setLoading(false);
   }, [page, search, catFilter]);
 
@@ -53,6 +49,14 @@ export default function InventoryPanel() {
     const timer = setTimeout(() => { setSearch(searchInput); setPage(1); }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!showModal) return;
+    const onKey = (e) => { if (e.key === 'Escape') setShowModal(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showModal]);
 
   async function handleAddProduct(e) {
     e.preventDefault();
@@ -288,7 +292,7 @@ export default function InventoryPanel() {
 
       {/* Add Product Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add New Product" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>➕ Add New Product</h3>
             <form onSubmit={handleAddProduct}>

@@ -2,7 +2,7 @@
 Customer API routes
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -39,9 +39,13 @@ def get_customers(page: int = 1, limit: int = 50, search: Optional[str] = None,
         query += " AND membership_tier = :tier"
         params["tier"] = tier
 
-    # Count
-    count_q = query.replace("SELECT *", "SELECT COUNT(*)")
-    total = db.execute(text(count_q), params).scalar()
+    # Count — separate query to avoid fragile string replacement
+    count_sql = "SELECT COUNT(*) FROM customers WHERE 1=1"
+    if search:
+        count_sql += " AND (first_name LIKE :search OR last_name LIKE :search OR customer_id LIKE :search OR email LIKE :search)"
+    if tier:
+        count_sql += " AND membership_tier = :tier"
+    total = db.execute(text(count_sql), params).scalar()
 
     query += " ORDER BY customer_id LIMIT :limit OFFSET :offset"
     params["limit"] = limit
@@ -90,7 +94,7 @@ def get_segments():
     model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                               "ml_models", "saved", "customer_segments.joblib")
     if not os.path.exists(model_path):
-        return {"error": "Model not trained yet"}
+        raise HTTPException(status_code=404, detail="Segmentation model not trained yet. Load data and retrain models first.")
     data = joblib.load(model_path)
     return {
         "segment_counts": data["segment_counts"],
@@ -206,14 +210,11 @@ def get_retention(db: Session = Depends(get_db)):
 @router.post("")
 def add_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     """Add a new customer."""
-    # Generate next customer ID
-    result = db.execute(text("SELECT customer_id FROM customers ORDER BY customer_id DESC LIMIT 1"))
-    row = result.fetchone()
-    if row:
-        last_num = int(row[0].replace("C", ""))
-        new_id = f"C{last_num + 1:04d}"
-    else:
-        new_id = "C0001"
+    # Generate next customer ID atomically
+    last_num = db.execute(text(
+        "SELECT MAX(CAST(SUBSTR(customer_id, 2) AS INTEGER)) FROM customers"
+    )).scalar() or 0
+    new_id = f"C{last_num + 1:04d}"
 
     email = customer.email or f"customer{new_id.replace('C', '')}@email.com"
 

@@ -249,14 +249,14 @@ def generate_customers(n=2000):
             "first_name": random.choice(FIRST_NAMES),
             "last_name": random.choice(LAST_NAMES),
             "age": age,
-            "gender": random.choice(["M", "F", "M", "F", "Other"]),  # weighted
+            "gender": np.random.choice(["M", "F", "Other"], p=[0.4, 0.4, 0.2]),
             "membership_tier": tier,
             "email": f"customer{i}@email.com",
             "phone": phone_num,
             "zip_code": random.choice(ZIP_CODES),
             "loyalty_points": loyalty_points,
             "preferred_section": random.choice(SECTIONS),
-            "join_date": (datetime(2024, 1, 1) + timedelta(days=random.randint(0, 840))).strftime("%Y-%m-%d"),
+            "join_date": (datetime.now() - timedelta(days=random.randint(0, 840))).strftime("%Y-%m-%d"),
         })
     return pd.DataFrame(customers)
 
@@ -305,9 +305,9 @@ def generate_sales(products_df, customers_df, n=50000):
     prod_weights = np.array([cat_weights.get(categories[pid], 1.0) for pid in product_ids])
     prod_weights /= prod_weights.sum()
 
-    # 2-year date range
-    start_date = datetime(2025, 1, 1)
-    end_date = datetime(2026, 4, 16)
+    # Dynamic date range: ~15.5 months ending now
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=470)
     total_days = (end_date - start_date).days
 
     # Generate basket-grouped sales
@@ -388,7 +388,7 @@ def generate_inventory(products_df):
         current_stock = random.randint(5, 200)
         max_stock = random.randint(current_stock + 20, 350)
         reorder_point = random.randint(10, 50)
-        last_restock = datetime(2026, 3, 1) + timedelta(days=random.randint(0, 45))
+        last_restock = datetime.now() - timedelta(days=random.randint(0, 45))
 
         inventory.append({
             "product_id": row["product_id"],

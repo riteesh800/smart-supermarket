@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { CHART_COLORS as COLORS } from '../constants/colors';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
-
-const COLORS = ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
 
 export default function SalesInsightsPanel() {
   const [revenue, setRevenue] = useState(null);
@@ -15,16 +14,16 @@ export default function SalesInsightsPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       api.getRevenue(),
       api.getBestSellers(),
       api.getSalesByCategory()
     ]).then(([rev, best, cat]) => {
-      setRevenue(rev);
-      setBestSellers(best);
-      setByCategory(cat);
+      if (rev.status === 'fulfilled') setRevenue(rev.value);
+      if (best.status === 'fulfilled') setBestSellers(best.value);
+      if (cat.status === 'fulfilled') setByCategory(cat.value);
       setLoading(false);
-    }).catch(e => { console.error(e); setLoading(false); });
+    });
   }, []);
 
   if (loading) return <div className="loading">Loading sales data...</div>;

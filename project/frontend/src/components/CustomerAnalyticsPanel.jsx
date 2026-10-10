@@ -27,21 +27,29 @@ export default function CustomerAnalyticsPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       api.getSegments(),
       api.getAllSegmented(),
       api.getTopCustomers(),
       api.getDemographics(),
       api.getRetention()
     ]).then(([seg, all, top, demo, ret]) => {
-      setSegments(seg);
-      setAllCustomers(all);
-      setTopCustomers(top);
-      setDemographics(demo);
-      setRetention(ret);
+      if (seg.status === 'fulfilled') setSegments(seg.value);
+      if (all.status === 'fulfilled') setAllCustomers(all.value);
+      if (top.status === 'fulfilled') setTopCustomers(top.value);
+      if (demo.status === 'fulfilled') setDemographics(demo.value);
+      if (ret.status === 'fulfilled') setRetention(ret.value);
       setLoading(false);
-    }).catch(e => { console.error(e); setLoading(false); });
+    });
   }, []);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!showModal) return;
+    const onKey = (e) => { if (e.key === 'Escape') setShowModal(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showModal]);
 
   async function handleAddCustomer(e) {
     e.preventDefault();
@@ -246,7 +254,7 @@ export default function CustomerAnalyticsPanel() {
 
       {/* Add Customer Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add New Customer" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>👤 Add New Customer</h3>
             <form onSubmit={handleAddCustomer}>

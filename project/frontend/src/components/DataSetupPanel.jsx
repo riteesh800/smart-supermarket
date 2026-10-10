@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../services/api';
 
-const FILE_TYPES = ['sales', 'products', 'customers'];
+const FILE_TYPES = ['sales', 'products', 'customers', 'inventory', 'suppliers'];
 const INTERNAL_FIELDS = {
   sales: ['sale_id', 'basket_id', 'product_id', 'customer_id', 'quantity', 'unit_price', 'total_price', 'discount', 'timestamp', 'payment_method', 'name', 'category'],
   products: ['product_id', 'name', 'category', 'price', 'cost', 'supplier', 'shelf_life_days', 'unit'],
   customers: ['customer_id', 'first_name', 'last_name', 'customer_name', 'age', 'gender', 'membership_tier', 'email', 'phone', 'zip_code'],
+  inventory: ['product_id', 'current_stock', 'max_stock', 'reorder_point', 'last_restock_date', 'warehouse_location'],
+  suppliers: ['supplier_id', 'name', 'contact_email', 'lead_time_days', 'reliability_score'],
 };
 
 export default function DataSetupPanel({ onFlagsUpdate }) {
@@ -221,7 +223,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
                   <span>or click to browse</span>
                 </div>
                 <div className="upload-hint">
-                  Supports: Sales data, Product catalog, Customer list
+                  Supports: Sales, Product, Customer, Inventory, and Supplier CSVs
                 </div>
               </>
             )}
@@ -253,7 +255,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
             {FILE_TYPES.map(t => (
               <button key={t} className={`tab ${fileType === t ? 'active' : ''}`}
                 onClick={() => setFileType(t)} style={{ marginRight: 6 }}>
-                {t === 'sales' ? '🛍️' : t === 'products' ? '📦' : '👥'} {t.charAt(0).toUpperCase() + t.slice(1)}
+                {t === 'sales' ? '🛍️' : t === 'products' ? '📦' : t === 'customers' ? '👥' : t === 'inventory' ? '📋' : '🚚'} {t.charAt(0).toUpperCase() + t.slice(1)}
               </button>
             ))}
           </div>
@@ -262,7 +264,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
           <div className="card-title" style={{ fontSize: 13, marginBottom: 8 }}>Column Mapping</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10, marginBottom: 20 }}>
             {INTERNAL_FIELDS[fileType]?.map(field => {
-              const isAutoDetected = preview.detected_mapping?.[field];
+              const isAutoDetected = mapping[field] && mapping[field] === preview.detected_mapping?.[field];
               return (
                 <div key={field} className="mapping-row">
                   <label className="mapping-label">

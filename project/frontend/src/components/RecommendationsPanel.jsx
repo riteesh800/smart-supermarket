@@ -7,14 +7,14 @@ export default function RecommendationsPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       api.getRecommendations(),
       api.getPricing()
     ]).then(([rec, price]) => {
-      setData(rec);
-      setPricing(price);
+      if (rec.status === 'fulfilled') setData(rec.value);
+      if (price.status === 'fulfilled') setPricing(price.value);
       setLoading(false);
-    }).catch(e => { console.error(e); setLoading(false); });
+    });
   }, []);
 
   if (loading) return <div className="loading">Loading recommendations...</div>;

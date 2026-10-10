@@ -50,12 +50,18 @@ def get_inventory(search: Optional[str] = None, category: Optional[str] = None,
         query += " AND p.category = :category"
         params["category"] = category
 
-    # Get total count
-    count_query = query.replace(
-        "SELECT p.product_id, p.name, p.category, p.price, p.cost, p.supplier,\n               p.shelf_life_days, p.unit,\n               i.current_stock, i.max_stock, i.reorder_point,\n               i.last_restock_date, i.warehouse_location",
-        "SELECT COUNT(*)"
-    )
-    total = db.execute(text(count_query), params).scalar()
+    # Get total count — separate query to avoid fragile string replacement
+    count_sql = """
+        SELECT COUNT(*)
+        FROM products p
+        LEFT JOIN inventory i ON p.product_id = i.product_id
+        WHERE 1=1
+    """
+    if search:
+        count_sql += " AND (p.name LIKE :search OR p.product_id LIKE :search)"
+    if category:
+        count_sql += " AND p.category = :category"
+    total = db.execute(text(count_sql), params).scalar()
 
     query += " ORDER BY i.current_stock ASC LIMIT :limit OFFSET :offset"
     params["limit"] = limit
@@ -150,14 +156,11 @@ def get_categories(db: Session = Depends(get_db)):
 @router.post("")
 def add_product(product: ProductCreate, db: Session = Depends(get_db)):
     """Add a new product to inventory."""
-    # Generate next product ID
-    result = db.execute(text("SELECT product_id FROM products ORDER BY product_id DESC LIMIT 1"))
-    row = result.fetchone()
-    if row:
-        last_num = int(row[0].replace("P", ""))
-        new_id = f"P{last_num + 1:04d}"
-    else:
-        new_id = "P0001"
+    # Generate next product ID atomically
+    last_num = db.execute(text(
+        "SELECT MAX(CAST(SUBSTR(product_id, 2) AS INTEGER)) FROM products"
+    )).scalar() or 0
+    new_id = f"P{last_num + 1:04d}"
 
     # Insert product
     db.execute(text("""

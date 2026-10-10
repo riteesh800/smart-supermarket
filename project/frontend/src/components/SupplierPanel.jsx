@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { CHART_COLORS as COLORS } from '../constants/colors';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
-
-const COLORS = ['#00d4ff', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
 
 export default function SupplierPanel() {
   const [suppliers, setSuppliers] = useState([]);
@@ -13,14 +12,14 @@ export default function SupplierPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       api.getSuppliers(),
       api.getSupplierPerformance()
     ]).then(([sup, perf]) => {
-      setSuppliers(sup);
-      setPerformance(perf);
+      if (sup.status === 'fulfilled') setSuppliers(sup.value);
+      if (perf.status === 'fulfilled') setPerformance(perf.value);
       setLoading(false);
-    }).catch(e => { console.error(e); setLoading(false); });
+    });
   }, []);
 
   if (loading) return <div className="loading">Loading supplier data...</div>;
@@ -80,7 +79,8 @@ export default function SupplierPanel() {
               <BarChart data={supplierChart} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis type="number" tick={{ fill: '#9898b8', fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" tick={{ fill: '#9898b8', fontSize: 11 }} width={90} />
+                <YAxis type="category" dataKey="name" tick={{ fill: '#9898b8', fontSize: 11 }} width={120}
+                  tickFormatter={(v) => v.length > 16 ? v.slice(0, 14) + '…' : v} />
                 <Tooltip
                   contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
                   formatter={(val) => [`₹${val.toLocaleString()}`, 'Revenue']}
