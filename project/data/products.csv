@@ -1,189 +1,225 @@
 product_id,name,category,price,cost,supplier,shelf_life_days,unit
-P0001,Whole Milk 1L,Dairy,3.3,1.78,Nature's Harvest,7,piece
-P0002,Skim Milk 1L,Dairy,3.3,1.76,Daily Dairy Ltd.,7,kg
-P0003,Cheddar Cheese 200g,Dairy,4.86,2.86,Daily Dairy Ltd.,14,pack
-P0004,Greek Yogurt 500g,Dairy,5.27,2.79,Daily Dairy Ltd.,10,piece
-P0005,Butter 250g,Dairy,3.91,2.16,Nature's Harvest,21,piece
-P0006,Cream Cheese 200g,Dairy,4.46,2.1,Nature's Harvest,14,liter
-P0007,Mozzarella 300g,Dairy,6.0,3.41,Daily Dairy Ltd.,10,piece
-P0008,Cottage Cheese 250g,Dairy,3.52,2.17,Daily Dairy Ltd.,10,pack
-P0009,Heavy Cream 500ml,Dairy,4.29,2.08,Daily Dairy Ltd.,7,piece
-P0010,Parmesan Wedge 150g,Dairy,7.26,4.5,Nature's Harvest,30,pack
-P0011,Flavored Yogurt 4pk,Dairy,4.48,2.19,Nature's Harvest,14,liter
-P0012,Goat Cheese 150g,Dairy,5.25,3.22,Daily Dairy Ltd.,14,liter
-P0013,Almond Milk 1L,Dairy,4.45,2.13,Nature's Harvest,14,kg
-P0014,Oat Milk 1L,Dairy,4.99,2.28,Daily Dairy Ltd.,14,pack
-P0015,White Bread Loaf,Bakery,2.74,1.25,Quality Foods Dist.,5,kg
-P0016,Whole Wheat Bread,Bakery,3.09,1.53,Quality Foods Dist.,5,pack
-P0017,Croissants 4pk,Bakery,4.5,2.51,Baker's Best,3,kg
-P0018,Bagels 6pk,Bakery,3.8,2.57,Baker's Best,4,piece
-P0019,Sourdough Loaf,Bakery,5.16,3.18,Quality Foods Dist.,5,piece
-P0020,Muffins 4pk,Bakery,5.73,3.13,Quality Foods Dist.,3,kg
-P0021,Dinner Rolls 8pk,Bakery,3.74,1.63,Quality Foods Dist.,4,piece
-P0022,Ciabatta Bread,Bakery,3.81,1.83,Quality Foods Dist.,3,piece
-P0023,Rye Bread Loaf,Bakery,3.39,1.84,Quality Foods Dist.,5,piece
-P0024,Pita Bread 6pk,Bakery,2.85,1.84,Quality Foods Dist.,5,kg
-P0025,Tortillas 10pk,Bakery,3.2,1.67,Baker's Best,7,piece
-P0026,Brioche Buns 4pk,Bakery,5.02,2.39,Baker's Best,3,pack
-P0027,Banana Bread Loaf,Bakery,6.17,2.78,Quality Foods Dist.,4,piece
-P0028,Focaccia Bread,Bakery,4.78,2.71,Baker's Best,3,piece
-P0029,Orange Juice 1L,Beverages,3.81,1.8,Global Foods Inc.,14,kg
-P0030,Cola 2L,Beverages,2.68,1.47,Global Foods Inc.,180,kg
-P0031,Sparkling Water 1L,Beverages,2.13,1.2,Pacific Beverages,365,kg
-P0032,Green Tea 20pk,Beverages,4.23,2.34,Global Foods Inc.,365,pack
-P0033,Coffee Beans 500g,Beverages,9.76,6.22,Global Foods Inc.,180,piece
-P0034,Energy Drink 250ml,Beverages,3.06,1.54,Pacific Beverages,365,pack
-P0035,Apple Juice 1L,Beverages,3.23,1.79,Pacific Beverages,14,liter
-P0036,Coconut Water 500ml,Beverages,3.19,1.96,Global Foods Inc.,180,kg
-P0037,Lemonade 1L,Beverages,3.07,1.88,Pacific Beverages,14,kg
-P0038,Iced Tea 1L,Beverages,2.77,1.32,Pacific Beverages,14,pack
-P0039,Kombucha 330ml,Beverages,4.12,2.4,Pacific Beverages,30,kg
-P0040,Protein Shake 4pk,Beverages,9.03,5.43,Global Foods Inc.,180,kg
-P0041,Craft Root Beer 330ml,Beverages,2.49,1.38,Pacific Beverages,365,pack
-P0042,Mineral Water 6pk,Beverages,5.95,2.73,Global Foods Inc.,365,pack
-P0043,Potato Chips 150g,Snacks,3.25,1.59,Quality Foods Dist.,90,liter
-P0044,Chocolate Bar 100g,Snacks,3.07,1.53,Quality Foods Dist.,180,pack
-P0045,Mixed Nuts 200g,Snacks,6.0,3.78,Quality Foods Dist.,120,pack
-P0046,Granola Bars 6pk,Snacks,4.34,2.39,SnackMaster Corp.,180,kg
-P0047,Popcorn 100g,Snacks,2.64,1.23,Quality Foods Dist.,90,liter
-P0048,Pretzels 200g,Snacks,3.04,1.67,Quality Foods Dist.,120,pack
-P0049,Trail Mix 250g,Snacks,5.29,3.49,SnackMaster Corp.,120,liter
-P0050,Rice Cakes 12pk,Snacks,3.47,1.9,SnackMaster Corp.,180,piece
-P0051,Cheese Crackers 200g,Snacks,4.01,2.31,SnackMaster Corp.,90,pack
-P0052,Dark Chocolate 85% 100g,Snacks,4.8,3.14,SnackMaster Corp.,365,liter
-P0053,Fruit Snacks 10pk,Snacks,4.31,2.62,SnackMaster Corp.,180,liter
-P0054,Tortilla Chips 200g,Snacks,3.73,1.79,Quality Foods Dist.,90,liter
-P0055,Protein Bars 4pk,Snacks,6.76,3.46,Quality Foods Dist.,180,piece
-P0056,Veggie Straws 150g,Snacks,3.95,2.45,SnackMaster Corp.,90,kg
-P0057,Bananas 1kg,Produce,2.21,0.9,Nature's Harvest,5,kg
-P0058,Apples 1kg,Produce,3.5,1.86,Green Valley Produce,10,kg
-P0059,Tomatoes 500g,Produce,2.82,1.42,FreshFarms Co.,7,pack
-P0060,Lettuce Head,Produce,1.89,1.27,FreshFarms Co.,5,piece
-P0061,Carrots 1kg,Produce,2.38,1.38,Nature's Harvest,14,kg
-P0062,Potatoes 2kg,Produce,4.11,2.09,Nature's Harvest,21,pack
-P0063,Onions 1kg,Produce,2.57,1.47,Nature's Harvest,21,piece
-P0064,Avocados 3pk,Produce,4.84,2.74,Nature's Harvest,5,kg
-P0065,Bell Peppers 3pk,Produce,3.87,2.02,Nature's Harvest,7,pack
-P0066,Cucumbers 2pk,Produce,2.21,1.42,Green Valley Produce,7,kg
-P0067,Spinach 250g,Produce,3.49,1.61,Green Valley Produce,5,piece
-P0068,Broccoli Head,Produce,2.86,1.89,Nature's Harvest,7,kg
-P0069,Sweet Potatoes 1kg,Produce,3.33,1.67,FreshFarms Co.,14,piece
-P0070,Mushrooms 200g,Produce,3.28,2.13,Green Valley Produce,5,kg
-P0071,Garlic 3pk,Produce,1.84,1.16,FreshFarms Co.,21,pack
-P0072,Strawberries 250g,Produce,5.15,2.48,Green Valley Produce,3,pack
-P0073,Blueberries 125g,Produce,4.13,2.09,Nature's Harvest,5,piece
-P0074,Lemons 6pk,Produce,3.07,1.72,Green Valley Produce,14,liter
-P0075,Chicken Breast 500g,Meat,8.01,3.74,Prime Meats,3,pack
-P0076,Ground Beef 500g,Meat,8.69,4.37,Prime Meats,3,liter
-P0077,Pork Chops 400g,Meat,6.8,3.2,Prime Meats,3,kg
-P0078,Salmon Fillet 300g,Meat,12.04,7.02,FreshFarms Co.,2,pack
-P0079,Turkey Slices 200g,Meat,5.2,3.03,Prime Meats,5,kg
-P0080,Bacon 200g,Meat,5.83,3.47,FreshFarms Co.,7,kg
-P0081,Italian Sausage 4pk,Meat,7.29,4.41,FreshFarms Co.,5,liter
-P0082,Lamb Chops 400g,Meat,12.92,8.28,Prime Meats,3,pack
-P0083,Shrimp 300g,Meat,9.77,5.18,Prime Meats,2,piece
-P0084,Deli Ham 200g,Meat,4.76,3.17,FreshFarms Co.,7,piece
-P0085,Beef Steak 300g,Meat,14.22,7.02,Prime Meats,3,pack
-P0086,Chicken Wings 500g,Meat,6.59,3.98,Prime Meats,3,piece
-P0087,Ground Turkey 500g,Meat,8.02,4.44,Prime Meats,3,pack
-P0088,Tilapia Fillets 400g,Meat,8.34,3.98,Prime Meats,2,piece
-P0089,Frozen Pizza,Frozen,6.23,3.77,Global Foods Inc.,180,piece
-P0090,Ice Cream 1L,Frozen,6.57,3.36,Arctic Frozen Foods,365,kg
-P0091,Frozen Vegetables 500g,Frozen,3.4,2.08,Global Foods Inc.,365,pack
-P0092,Fish Sticks 400g,Frozen,5.23,3.13,Arctic Frozen Foods,180,liter
-P0093,Frozen Berries 300g,Frozen,5.66,3.18,Arctic Frozen Foods,365,liter
-P0094,Frozen Fries 1kg,Frozen,3.74,1.92,Global Foods Inc.,365,pack
-P0095,Frozen Burritos 4pk,Frozen,6.23,3.42,Arctic Frozen Foods,180,piece
-P0096,Frozen Waffles 8pk,Frozen,4.2,2.11,Global Foods Inc.,180,kg
-P0097,Ice Cream Bars 6pk,Frozen,7.59,3.38,Global Foods Inc.,365,liter
-P0098,Frozen Dumplings 400g,Frozen,6.29,3.63,Global Foods Inc.,180,piece
-P0099,Frozen Mac & Cheese,Frozen,5.11,2.9,Arctic Frozen Foods,180,piece
-P0100,Frozen Chicken Nuggets 500g,Frozen,6.82,4.14,Global Foods Inc.,180,kg
-P0101,Paper Towels 6pk,Household,7.83,4.12,HomeClean Supplies,730,pack
-P0102,Dish Soap 500ml,Household,3.64,2.02,HomeClean Supplies,730,pack
-P0103,Laundry Detergent 1L,Household,9.2,5.23,Quality Foods Dist.,730,pack
-P0104,Trash Bags 30pk,Household,6.03,2.81,Quality Foods Dist.,730,pack
-P0105,Sponges 4pk,Household,2.91,1.5,Quality Foods Dist.,730,liter
-P0106,All-Purpose Cleaner 750ml,Household,4.34,2.89,HomeClean Supplies,730,piece
-P0107,Toilet Paper 12pk,Household,9.93,6.28,Quality Foods Dist.,730,piece
-P0108,Aluminum Foil 30m,Household,4.07,2.43,HomeClean Supplies,730,piece
-P0109,Plastic Wrap 60m,Household,3.49,1.97,HomeClean Supplies,730,pack
-P0110,Glass Cleaner 750ml,Household,3.99,1.95,HomeClean Supplies,730,liter
-P0111,Bleach 1L,Household,3.12,1.51,Quality Foods Dist.,730,liter
-P0112,Dryer Sheets 80pk,Household,4.7,2.89,HomeClean Supplies,730,liter
-P0113,Shampoo 400ml,Personal Care,5.8,3.82,HomeClean Supplies,730,pack
-P0114,Conditioner 400ml,Personal Care,6.26,3.79,WellLife Nutrition,730,piece
-P0115,Body Wash 500ml,Personal Care,4.91,2.26,WellLife Nutrition,730,kg
-P0116,Toothpaste 150g,Personal Care,3.75,1.87,WellLife Nutrition,730,kg
-P0117,Deodorant 75g,Personal Care,4.77,2.89,WellLife Nutrition,730,liter
-P0118,Hand Soap 250ml,Personal Care,3.2,1.52,HomeClean Supplies,730,pack
-P0119,Moisturizer 200ml,Personal Care,7.92,4.96,WellLife Nutrition,730,pack
-P0120,Sunscreen SPF50 100ml,Personal Care,9.88,4.83,HomeClean Supplies,730,piece
-P0121,Razor Blades 4pk,Personal Care,9.02,5.73,WellLife Nutrition,730,piece
-P0122,Lip Balm 2pk,Personal Care,3.11,1.69,HomeClean Supplies,730,liter
-P0123,Dental Floss 50m,Personal Care,2.25,1.43,HomeClean Supplies,730,piece
-P0124,Face Wash 150ml,Personal Care,7.28,3.34,HomeClean Supplies,730,pack
-P0125,Diapers Size 3 40pk,Baby & Kids,15.0,9.38,BabyCare Direct,730,piece
-P0126,Baby Wipes 80pk,Baby & Kids,4.13,2.35,BabyCare Direct,730,liter
-P0127,Baby Formula 400g,Baby & Kids,20.11,10.43,BabyCare Direct,365,pack
-P0128,Baby Food Puree 4pk,Baby & Kids,4.87,3.05,BabyCare Direct,180,piece
-P0129,Sippy Cup,Baby & Kids,6.18,3.73,Quality Foods Dist.,730,kg
-P0130,Baby Lotion 200ml,Baby & Kids,5.24,2.76,Quality Foods Dist.,730,pack
-P0131,Kids Cereal 300g,Baby & Kids,4.49,2.74,Quality Foods Dist.,180,pack
-P0132,Juice Boxes 8pk,Baby & Kids,4.08,2.36,Quality Foods Dist.,180,liter
-P0133,Animal Crackers 200g,Baby & Kids,3.47,2.07,BabyCare Direct,180,kg
-P0134,Kids Toothpaste 75g,Baby & Kids,2.89,1.57,Quality Foods Dist.,730,kg
-P0135,Dog Food 2kg,Pet Supplies,12.75,7.35,PetPals Wholesale,365,piece
-P0136,Cat Food 1.5kg,Pet Supplies,10.71,5.97,Quality Foods Dist.,365,piece
-P0137,Dog Treats 200g,Pet Supplies,5.02,2.53,PetPals Wholesale,180,pack
-P0138,Cat Litter 5kg,Pet Supplies,9.04,4.1,Quality Foods Dist.,730,pack
-P0139,Pet Shampoo 250ml,Pet Supplies,5.71,3.68,Quality Foods Dist.,730,piece
-P0140,Dog Chew Toys,Pet Supplies,3.91,1.9,PetPals Wholesale,730,kg
-P0141,Cat Treats 100g,Pet Supplies,3.5,2.11,Quality Foods Dist.,180,pack
-P0142,Pet Vitamins 60ct,Pet Supplies,9.82,5.74,Quality Foods Dist.,365,kg
-P0143,Dog Leash,Pet Supplies,7.74,3.68,PetPals Wholesale,730,kg
-P0144,Cat Scratching Post,Pet Supplies,15.01,8.37,PetPals Wholesale,730,pack
-P0145,Ketchup 500ml,Condiments & Sauces,3.07,1.78,Nature's Harvest,180,piece
-P0146,Mustard 250ml,Condiments & Sauces,2.78,1.38,Global Foods Inc.,180,pack
-P0147,Mayonnaise 400ml,Condiments & Sauces,3.88,2.43,Nature's Harvest,180,kg
-P0148,Soy Sauce 250ml,Condiments & Sauces,3.35,1.88,Global Foods Inc.,365,kg
-P0149,Hot Sauce 150ml,Condiments & Sauces,3.74,1.82,Global Foods Inc.,365,kg
-P0150,BBQ Sauce 500ml,Condiments & Sauces,4.27,2.46,Nature's Harvest,180,kg
-P0151,Olive Oil 500ml,Condiments & Sauces,8.11,4.25,Global Foods Inc.,365,piece
-P0152,Balsamic Vinegar 250ml,Condiments & Sauces,5.79,2.88,Nature's Harvest,365,kg
-P0153,Salad Dressing 350ml,Condiments & Sauces,3.34,1.95,Global Foods Inc.,120,piece
-P0154,Pasta Sauce 500ml,Condiments & Sauces,4.12,2.32,Nature's Harvest,365,pack
-P0155,Ranch Dressing 350ml,Condiments & Sauces,3.36,2.24,Nature's Harvest,120,pack
-P0156,Maple Syrup 250ml,Condiments & Sauces,7.13,3.92,Nature's Harvest,365,liter
-P0157,Canned Tomatoes 400g,Canned Goods,2.06,1.06,Global Foods Inc.,730,piece
-P0158,Canned Beans 400g,Canned Goods,1.34,0.78,Global Foods Inc.,730,pack
-P0159,Canned Corn 340g,Canned Goods,1.94,0.81,Global Foods Inc.,730,kg
-P0160,Canned Tuna 170g,Canned Goods,2.26,1.14,Global Foods Inc.,730,liter
-P0161,Canned Soup 400ml,Canned Goods,2.71,1.86,Global Foods Inc.,730,piece
-P0162,Canned Chickpeas 400g,Canned Goods,1.81,0.92,Quality Foods Dist.,730,kg
-P0163,Coconut Milk 400ml,Canned Goods,2.25,1.37,Global Foods Inc.,730,kg
-P0164,Canned Pineapple 400g,Canned Goods,2.27,1.11,Global Foods Inc.,730,pack
-P0165,Canned Sardines 120g,Canned Goods,2.95,1.58,Global Foods Inc.,730,kg
-P0166,Canned Peaches 400g,Canned Goods,2.56,1.44,Quality Foods Dist.,730,pack
-P0167,Spaghetti 500g,Pasta & Grains,1.72,1.04,Global Foods Inc.,730,pack
-P0168,Penne 500g,Pasta & Grains,2.07,1.1,Global Foods Inc.,730,liter
-P0169,Brown Rice 1kg,Pasta & Grains,3.7,2.03,Global Foods Inc.,730,pack
-P0170,White Rice 2kg,Pasta & Grains,4.79,2.32,Nature's Harvest,730,liter
-P0171,Quinoa 500g,Pasta & Grains,6.08,2.73,Global Foods Inc.,730,kg
-P0172,Oats 1kg,Pasta & Grains,4.04,2.55,Global Foods Inc.,365,piece
-P0173,Couscous 500g,Pasta & Grains,3.04,1.58,Nature's Harvest,730,piece
-P0174,Egg Noodles 500g,Pasta & Grains,2.58,1.35,Nature's Harvest,365,pack
-P0175,Fusilli 500g,Pasta & Grains,2.02,1.27,Global Foods Inc.,730,liter
-P0176,Basmati Rice 1kg,Pasta & Grains,4.42,2.88,Nature's Harvest,730,kg
-P0177,Flour 1kg,Pasta & Grains,2.23,0.97,Global Foods Inc.,730,pack
-P0178,Cornmeal 500g,Pasta & Grains,2.23,1.17,Global Foods Inc.,730,pack
-P0179,Multivitamins 60ct,Health & Wellness,12.7,6.09,Nature's Harvest,730,kg
-P0180,Vitamin C 1000mg 30ct,Health & Wellness,8.1,3.71,Nature's Harvest,730,piece
-P0181,Fish Oil 60ct,Health & Wellness,9.88,6.18,Nature's Harvest,730,kg
-P0182,Probiotics 30ct,Health & Wellness,14.7,9.19,Nature's Harvest,365,kg
-P0183,Protein Powder 500g,Health & Wellness,19.86,9.47,WellLife Nutrition,365,piece
-P0184,Electrolyte Powder 20pk,Health & Wellness,9.11,5.18,Nature's Harvest,365,pack
-P0185,Melatonin 5mg 30ct,Health & Wellness,6.22,3.58,Nature's Harvest,730,piece
-P0186,Zinc 50mg 60ct,Health & Wellness,7.17,3.54,WellLife Nutrition,730,liter
-P0187,Collagen Powder 300g,Health & Wellness,16.8,10.2,Nature's Harvest,365,kg
-P0188,Turmeric Capsules 60ct,Health & Wellness,12.17,7.77,Nature's Harvest,730,piece
+P0001,Amul Taaza Toned Milk 1L,Dairy,54.6,28.51,Nestle India Ltd,3,piece
+P0002,Amul Gold Full Cream Milk 1L,Dairy,70.5,41.28,Amul (GCMMF),3,kg
+P0003,Mother Dairy Cow Milk 500ml,Dairy,31.86,21.03,Amul (GCMMF),3,pack
+P0004,Amul Butter 100g,Dairy,56.26,34.97,Amul (GCMMF),30,piece
+P0005,Amul Paneer 200g,Dairy,90.83,45.84,Nestle India Ltd,5,piece
+P0006,Amul Masti Dahi 400g,Dairy,35.38,18.69,Nestle India Ltd,7,liter
+P0007,Amul Cheese Slices 100g (5 Slices),Dairy,52.61,37.94,Amul (GCMMF),30,piece
+P0008,Mother Dairy Fresh Curd 1kg,Dairy,68.03,43.01,Amul (GCMMF),5,pack
+P0009,Nestle Milkmaid 400g,Dairy,151.97,80.53,Amul (GCMMF),365,piece
+P0010,Amul Fresh Cream 200ml,Dairy,40.74,23.52,Nestle India Ltd,7,pack
+P0011,Amul Lassi Mango 200ml,Dairy,24.06,14.98,Nestle India Ltd,5,liter
+P0012,Epigamia Greek Yogurt 90g,Dairy,42.9,30.68,Amul (GCMMF),10,liter
+P0013,Gowardhan Paneer 1kg,Dairy,370.83,240.35,Nestle India Ltd,5,kg
+P0014,Amul Shrikhand Kesar 100g,Dairy,49.06,30.2,Amul (GCMMF),10,pack
+P0015,Britannia Cream Cheese 180g,Dairy,99.46,53.16,Nestle India Ltd,30,liter
+P0016,Mother Dairy Mishti Doi 100g,Dairy,31.41,19.65,Mother Dairy,5,kg
+P0017,Aashirvaad Whole Wheat Atta 5kg,Staples & Grains,292.31,190.11,Tata Consumer Products,180,pack
+P0018,Aashirvaad Multigrain Atta 5kg,Staples & Grains,313.03,212.16,ITC Limited,180,piece
+P0019,India Gate Basmati Rice 1kg,Staples & Grains,115.06,64.7,Tata Consumer Products,365,liter
+P0020,Daawat Rozana Basmati Rice 5kg,Staples & Grains,400.9,237.33,Tata Consumer Products,365,kg
+P0021,Tata Sampann Toor Dal 1kg,Staples & Grains,163.16,91.45,ITC Limited,365,kg
+P0022,Tata Sampann Chana Dal 1kg,Staples & Grains,118.78,65.71,Tata Consumer Products,365,liter
+P0023,Tata Sampann Moong Dal 1kg,Staples & Grains,141.82,88.24,Hindustan Unilever Ltd,365,piece
+P0024,Tata Sampann Urad Dal 1kg,Staples & Grains,154.25,105.67,ITC Limited,365,piece
+P0025,Fortune Soyabean Oil 1L,Staples & Grains,153.19,111.58,Hindustan Unilever Ltd,180,kg
+P0026,Fortune Sunflower Oil 1L,Staples & Grains,148.95,78.26,Hindustan Unilever Ltd,180,kg
+P0027,Tata Salt 1kg,Staples & Grains,26.62,18.57,Hindustan Unilever Ltd,730,pack
+P0028,Tata Rock Salt 1kg,Staples & Grains,32.66,20.67,Hindustan Unilever Ltd,730,piece
+P0029,MDH Rajma 500g,Staples & Grains,87.31,43.76,Tata Consumer Products,365,pack
+P0030,Saffola Gold Oil 1L,Staples & Grains,192.24,102.02,ITC Limited,180,piece
+P0031,24 Mantra Organic Tur Dal 1kg,Staples & Grains,202.08,121.81,Tata Consumer Products,365,piece
+P0032,Kohinoor Super Value Basmati 5kg,Staples & Grains,442.39,230.72,ITC Limited,365,kg
+P0033,Pillsbury Chakki Fresh Atta 5kg,Staples & Grains,259.99,149.73,ITC Limited,180,kg
+P0034,MTR Rava 500g,Staples & Grains,40.92,25.1,Tata Consumer Products,180,kg
+P0035,MTR Besan 500g,Staples & Grains,57.13,32.69,ITC Limited,180,pack
+P0036,Rajdhani Maida 1kg,Staples & Grains,40.4,26.99,Hindustan Unilever Ltd,180,kg
+P0037,Britannia White Bread 400g,Bakery,41.04,24.49,Parle Products Pvt Ltd,3,piece
+P0038,Britannia Whole Wheat Bread 400g,Bakery,51.35,29.94,Parle Products Pvt Ltd,3,pack
+P0039,Amul Butter Croissants 3pk,Bakery,120.27,70.26,Parle Products Pvt Ltd,2,pack
+P0040,English Oven Milk Bread 400g,Bakery,47.63,26.08,Britannia Industries,3,liter
+P0041,Modern Bread 400g,Bakery,40.03,26.35,ITC Limited,3,kg
+P0042,Britannia Burger Buns 4pk,Bakery,53.98,33.09,Parle Products Pvt Ltd,3,pack
+P0043,Harvest Gold Whole Wheat 450g,Bakery,46.83,24.74,Parle Products Pvt Ltd,3,kg
+P0044,Bonn Brown Bread 400g,Bakery,37.66,24.74,Britannia Industries,3,pack
+P0045,Theobroma Brownie 60g,Bakery,82.69,43.81,Britannia Industries,5,kg
+P0046,Monginis Cake Slice,Bakery,63.63,34.6,ITC Limited,2,kg
+P0047,Britannia Pav 6pk,Bakery,46.93,29.77,Britannia Industries,3,pack
+P0048,English Oven Hot Dog Rolls 4pk,Bakery,60.8,40.46,Parle Products Pvt Ltd,3,kg
+P0049,Harvest Gold Fruit Bread 400g,Bakery,56.67,29.55,Britannia Industries,3,liter
+P0050,Local Fresh Naan 4pk,Bakery,41.57,24.31,ITC Limited,1,liter
+P0051,Tata Tea Gold 500g,Beverages,298.92,196.97,PepsiCo India,365,kg
+P0052,Tata Tea Premium 250g,Beverages,117.82,62.64,PepsiCo India,365,pack
+P0053,Brooke Bond Taj Mahal 250g,Beverages,189.69,114.16,Coca-Cola India,365,liter
+P0054,Bru Instant Coffee 50g,Beverages,113.5,73.94,Nestle India Ltd,365,kg
+P0055,Nescafe Classic Coffee 50g,Beverages,147.36,93.33,PepsiCo India,365,pack
+P0056,Coca-Cola 2L,Beverages,94.22,51.72,Nestle India Ltd,180,piece
+P0057,Pepsi 2L,Beverages,91.39,53.91,Tata Consumer Products,180,piece
+P0058,Thums Up 750ml,Beverages,41.77,22.59,PepsiCo India,180,pack
+P0059,Frooti Mango Drink 1L,Beverages,70.13,44.84,Nestle India Ltd,90,piece
+P0060,Maaza Mango Drink 1.2L,Beverages,78.91,55.55,Nestle India Ltd,90,liter
+P0061,Sprite 750ml,Beverages,41.85,22.01,Nestle India Ltd,180,kg
+P0062,Paper Boat Aam Panna 200ml,Beverages,29.99,16.81,Tata Consumer Products,90,piece
+P0063,Real Fruit Juice Mixed Fruit 1L,Beverages,112.53,58.35,Coca-Cola India,90,kg
+P0064,Tropicana Orange Juice 1L,Beverages,111.21,66.06,Tata Consumer Products,30,kg
+P0065,Red Bull Energy Drink 250ml,Beverages,119.39,69.47,Nestle India Ltd,365,pack
+P0066,Bisleri Water 1L,Beverages,22.9,12.05,Nestle India Ltd,365,piece
+P0067,Kinley Water 1L,Beverages,21.22,13.15,Coca-Cola India,365,pack
+P0068,Rooh Afza Sharbat 750ml,Beverages,157.28,82.26,Tata Consumer Products,365,kg
+P0069,Lays Magic Masala 52g,Snacks & Namkeen,20.34,13.05,Parle Products Pvt Ltd,90,pack
+P0070,Lays Classic Salted 52g,Snacks & Namkeen,19.48,12.91,PepsiCo India,90,pack
+P0071,Kurkure Masala Munch 100g,Snacks & Namkeen,29.6,18.79,Haldiram's,90,kg
+P0072,Haldiram's Bhujia 400g,Snacks & Namkeen,126.67,75.89,Britannia Industries,120,piece
+P0073,Haldiram's Aloo Bhujia 200g,Snacks & Namkeen,62.34,43.36,Haldiram's,120,kg
+P0074,Haldiram's Moong Dal 200g,Snacks & Namkeen,54.01,29.55,PepsiCo India,120,pack
+P0075,Parle-G Glucose Biscuit 250g,Snacks & Namkeen,23.85,15.45,Haldiram's,180,pack
+P0076,Britannia Good Day 250g,Snacks & Namkeen,55.98,27.68,Haldiram's,180,piece
+P0077,Britannia 50-50 Maska Chaska 120g,Snacks & Namkeen,30.04,16.36,Britannia Industries,180,piece
+P0078,Oreo Original 120g,Snacks & Namkeen,30.44,16.05,Parle Products Pvt Ltd,180,pack
+P0079,Hide & Seek Chocolate 120g,Snacks & Namkeen,35.67,20.21,Britannia Industries,180,pack
+P0080,Bingo Mad Angles 72.5g,Snacks & Namkeen,20.87,10.55,PepsiCo India,90,liter
+P0081,Cadbury Dairy Milk 50g,Snacks & Namkeen,49.21,26.13,Parle Products Pvt Ltd,365,pack
+P0082,5 Star Chocolate 40g,Snacks & Namkeen,31.27,20.26,PepsiCo India,365,liter
+P0083,KitKat 4 Finger 37.3g,Snacks & Namkeen,34.15,22.12,PepsiCo India,365,liter
+P0084,Dark Fantasy Choco Fills 75g,Snacks & Namkeen,41.27,24.44,Britannia Industries,180,piece
+P0085,Britannia Marie Gold 250g,Snacks & Namkeen,35.1,19.19,Parle Products Pvt Ltd,180,pack
+P0086,Bikano Namkeen Mixture 200g,Snacks & Namkeen,57.56,40.77,Haldiram's,120,kg
+P0087,Banana Robusta 1 dozen,Fruits & Vegetables,52.0,31.33,Mother Dairy,3,pack
+P0088,Apple Shimla 1kg,Fruits & Vegetables,177.1,102.57,Mother Dairy,7,piece
+P0089,Tomato (Tamatar) 1kg,Fruits & Vegetables,40.9,27.18,Mother Dairy,5,piece
+P0090,Onion (Pyaaz) 1kg,Fruits & Vegetables,36.35,22.96,Mother Dairy,14,piece
+P0091,Potato (Aloo) 1kg,Fruits & Vegetables,30.43,15.5,Mother Dairy,21,kg
+P0092,Green Chilli (Hari Mirch) 250g,Fruits & Vegetables,14.49,10.2,Mother Dairy,5,pack
+P0093,Carrot (Gajar) 500g,Fruits & Vegetables,35.37,17.56,Godrej Consumer Products,7,liter
+P0094,Cucumber (Kheera) 500g,Fruits & Vegetables,24.0,15.82,Mother Dairy,5,pack
+P0095,Capsicum Green 250g,Fruits & Vegetables,28.52,15.96,Godrej Consumer Products,7,pack
+P0096,Spinach (Palak) 250g,Fruits & Vegetables,20.1,12.77,Godrej Consumer Products,2,liter
+P0097,Coriander (Dhaniya) 100g,Fruits & Vegetables,10.15,5.45,Mother Dairy,2,piece
+P0098,Ginger (Adrak) 250g,Fruits & Vegetables,25.53,13.69,Mother Dairy,7,liter
+P0099,Lemon (Nimbu) 250g,Fruits & Vegetables,19.65,12.99,Godrej Consumer Products,7,liter
+P0100,Lady Finger (Bhindi) 500g,Fruits & Vegetables,30.45,20.1,Godrej Consumer Products,3,liter
+P0101,Cauliflower (Phool Gobi) 1pc,Fruits & Vegetables,35.55,21.48,Mother Dairy,5,piece
+P0102,Cabbage (Patta Gobi) 1pc,Fruits & Vegetables,23.98,14.34,Mother Dairy,7,liter
+P0103,Mango Alphonso 1kg (seasonal),Fruits & Vegetables,341.78,192.08,Godrej Consumer Products,3,piece
+P0104,Pomegranate (Anaar) 500g,Fruits & Vegetables,94.26,52.08,Mother Dairy,7,pack
+P0105,Guava (Amrood) 500g,Fruits & Vegetables,41.57,25.05,Mother Dairy,5,liter
+P0106,Papaya 1kg,Fruits & Vegetables,46.33,27.02,Mother Dairy,3,liter
+P0107,Chicken Breast 500g,Meat & Seafood,201.54,119.7,Godrej Consumer Products,2,kg
+P0108,Chicken Curry Cut 1kg,Meat & Seafood,271.47,180.46,Mother Dairy,2,pack
+P0109,Chicken Drumsticks 500g,Meat & Seafood,156.49,80.78,Godrej Consumer Products,2,liter
+P0110,Mutton Curry Cut 500g,Meat & Seafood,456.55,240.94,Godrej Consumer Products,2,piece
+P0111,Fish Rohu (Whole) 1kg,Meat & Seafood,292.33,193.42,Godrej Consumer Products,1,piece
+P0112,Prawns Medium 500g,Meat & Seafood,364.52,200.91,Godrej Consumer Products,1,pack
+P0113,Chicken Seekh Kebab 250g,Meat & Seafood,171.28,123.42,Mother Dairy,3,liter
+P0114,Chicken Sausages 250g,Meat & Seafood,138.99,97.07,Mother Dairy,5,pack
+P0115,Eggs White (12pc),Meat & Seafood,78.48,50.3,Mother Dairy,10,piece
+P0116,Eggs White (30pc),Meat & Seafood,176.3,103.86,Godrej Consumer Products,10,liter
+P0117,Mutton Keema 500g,Meat & Seafood,414.05,225.35,Godrej Consumer Products,2,liter
+P0118,Fish Pomfret 500g,Meat & Seafood,367.44,232.32,Mother Dairy,1,liter
+P0119,Chicken Nuggets Frozen 250g,Meat & Seafood,156.54,95.88,Mother Dairy,30,liter
+P0120,Surimi Crab Sticks 200g,Meat & Seafood,161.12,83.11,Mother Dairy,30,pack
+P0121,McCain French Fries 450g,Frozen Foods,126.44,87.25,McCain India,365,kg
+P0122,McCain Veggie Nuggets 325g,Frozen Foods,115.68,72.44,McCain India,365,piece
+P0123,ITC Master Chef Frozen Paratha 5pc,Frozen Foods,88.21,55.09,Amul (GCMMF),180,piece
+P0124,Sumeru Frozen Peas 500g,Frozen Foods,76.48,48.04,Amul (GCMMF),365,kg
+P0125,Sumeru Frozen Mixed Vegetables 500g,Frozen Foods,93.67,53.08,McCain India,365,piece
+P0126,Amul Ice Cream Vanilla 750ml,Frozen Foods,201.03,129.09,Amul (GCMMF),365,liter
+P0127,Kwality Walls Cornetto 110ml,Frozen Foods,51.84,34.13,Amul (GCMMF),365,pack
+P0128,Mother Dairy Ice Cream Mango Dolly,Frozen Foods,20.02,12.01,McCain India,365,piece
+P0129,ITC Master Chef Chicken Seekh Kebab 200g,Frozen Foods,159.62,97.65,McCain India,180,piece
+P0130,Godrej Yummiez Veg Burger Patty 360g,Frozen Foods,173.43,112.06,Amul (GCMMF),180,piece
+P0131,Vadilal Kulfi Stick,Frozen Foods,31.17,17.03,Amul (GCMMF),365,pack
+P0132,Prasuma Chicken Momos 10pc,Frozen Foods,172.82,90.79,ITC Limited,180,piece
+P0133,Surf Excel Easy Wash 1kg,Household & Cleaning,131.02,65.93,Godrej Consumer Products,730,pack
+P0134,Surf Excel Matic Top Load 1kg,Household & Cleaning,259.11,158.22,Godrej Consumer Products,730,piece
+P0135,Vim Dishwash Bar 200g,Household & Cleaning,19.57,12.36,Godrej Consumer Products,730,piece
+P0136,Vim Dishwash Gel 500ml,Household & Cleaning,94.35,50.24,Reckitt India,730,kg
+P0137,Harpic Toilet Cleaner 500ml,Household & Cleaning,90.84,50.34,Reckitt India,730,pack
+P0138,Lizol Floor Cleaner 500ml,Household & Cleaning,105.9,66.49,Godrej Consumer Products,730,kg
+P0139,Colin Glass Cleaner 500ml,Household & Cleaning,92.43,48.88,Hindustan Unilever Ltd,730,kg
+P0140,Scotch-Brite Scrub Pad 3pk,Household & Cleaning,45.55,23.27,Reckitt India,730,pack
+P0141,Domex Toilet Cleaner 500ml,Household & Cleaning,78.32,49.71,Godrej Consumer Products,730,kg
+P0142,Ezee Liquid Detergent 1kg,Household & Cleaning,195.79,122.36,Reckitt India,730,kg
+P0143,Pril Dishwash Liquid 500ml,Household & Cleaning,101.24,68.82,Hindustan Unilever Ltd,730,piece
+P0144,Hit Cockroach Spray 200ml,Household & Cleaning,165.27,93.16,Reckitt India,730,piece
+P0145,Odonil Air Freshener 75g,Household & Cleaning,50.45,27.15,Hindustan Unilever Ltd,365,pack
+P0146,Garbage Bags Medium 30pc,Household & Cleaning,54.66,28.36,Godrej Consumer Products,730,kg
+P0147,Dettol Original Soap 125g,Personal Care,40.01,29.09,Procter & Gamble India,730,kg
+P0148,Dove Beauty Bar 100g,Personal Care,66.15,40.91,Hindustan Unilever Ltd,730,pack
+P0149,Clinic Plus Shampoo 340ml,Personal Care,183.32,98.91,Himalaya Wellness,730,kg
+P0150,Head & Shoulders Shampoo 340ml,Personal Care,304.18,173.27,Procter & Gamble India,730,liter
+P0151,Colgate Strong Teeth 200g,Personal Care,99.49,63.65,Himalaya Wellness,730,piece
+P0152,Colgate MaxFresh 80g,Personal Care,60.96,33.36,Himalaya Wellness,730,piece
+P0153,Pepsodent Germicheck 200g,Personal Care,99.32,61.52,Procter & Gamble India,730,kg
+P0154,Nivea Body Lotion 200ml,Personal Care,211.14,130.69,Hindustan Unilever Ltd,730,piece
+P0155,Vaseline Intensive Care 200ml,Personal Care,173.59,96.17,Procter & Gamble India,730,kg
+P0156,Himalaya Face Wash 150ml,Personal Care,177.41,117.28,Himalaya Wellness,730,pack
+P0157,Lifebuoy Handwash 190ml,Personal Care,39.96,21.98,Himalaya Wellness,730,pack
+P0158,Whisper Ultra Clean XL 30 Pads,Personal Care,281.61,149.9,Himalaya Wellness,730,liter
+P0159,Gillette Guard Razor 1pc,Personal Care,46.6,28.83,Himalaya Wellness,730,piece
+P0160,Parachute Coconut Oil 200ml,Personal Care,97.75,50.92,Hindustan Unilever Ltd,365,liter
+P0161,Dabur Amla Hair Oil 180ml,Personal Care,94.92,56.5,Himalaya Wellness,365,piece
+P0162,Set Wet Hair Gel 250ml,Personal Care,154.77,93.88,Hindustan Unilever Ltd,730,kg
+P0163,MDH Garam Masala 100g,Masala & Spices,71.27,44.87,MDH Spices,365,kg
+P0164,MDH Chana Masala 100g,Masala & Spices,60.81,30.54,MDH Spices,365,liter
+P0165,Everest Tikka Masala 100g,Masala & Spices,79.0,50.01,ITC Limited,365,liter
+P0166,Everest Sambhar Masala 100g,Masala & Spices,55.02,36.92,ITC Limited,365,piece
+P0167,Catch Red Chilli Powder 200g,Masala & Spices,76.19,39.94,MDH Spices,365,piece
+P0168,Catch Turmeric Powder (Haldi) 200g,Masala & Spices,49.77,32.68,ITC Limited,365,pack
+P0169,Catch Coriander Powder (Dhaniya) 200g,Masala & Spices,55.25,35.79,ITC Limited,365,piece
+P0170,Tata Sampann Cumin Powder (Jeera) 100g,Masala & Spices,70.99,41.83,Tata Consumer Products,365,pack
+P0171,Saffola Masala Oats 500g,Masala & Spices,128.55,81.73,Tata Consumer Products,180,pack
+P0172,MTR Puliogare Paste 200g,Masala & Spices,59.75,36.55,MDH Spices,365,kg
+P0173,MTR Rava Idli Mix 500g,Masala & Spices,99.19,54.84,Tata Consumer Products,180,piece
+P0174,Eastern Sambar Powder 100g,Masala & Spices,52.31,34.05,Tata Consumer Products,365,pack
+P0175,MDH Pav Bhaji Masala 100g,Masala & Spices,63.02,33.4,ITC Limited,365,pack
+P0176,Catch Black Pepper (Kali Mirch) 100g,Masala & Spices,139.21,73.03,ITC Limited,365,piece
+P0177,Maggi 2-Minute Noodles 70g,Ready to Eat & Instant,13.43,8.91,ITC Limited,180,liter
+P0178,Maggi 2-Minute Noodles 4pk,Ready to Eat & Instant,53.6,31.57,Haldiram's,180,pack
+P0179,Top Ramen Curry Noodles 70g,Ready to Eat & Instant,12.41,6.06,Nestle India Ltd,180,pack
+P0180,Yippee Magic Masala 70g,Ready to Eat & Instant,14.44,7.79,Nestle India Ltd,180,liter
+P0181,MTR Ready to Eat Paneer Butter Masala 300g,Ready to Eat & Instant,105.8,70.33,Nestle India Ltd,180,pack
+P0182,MTR Ready to Eat Dal Makhani 300g,Ready to Eat & Instant,96.22,64.17,Haldiram's,180,kg
+P0183,Haldiram's Minute Khana Biryani 300g,Ready to Eat & Instant,122.82,79.28,ITC Limited,90,pack
+P0184,Knorr Soup Tomato 53g,Ready to Eat & Instant,44.02,24.1,ITC Limited,365,pack
+P0185,Knorr Soup Hot & Sour 41g,Ready to Eat & Instant,51.25,33.07,Haldiram's,365,piece
+P0186,Ching's Schezwan Noodles 60g,Ready to Eat & Instant,20.98,11.65,ITC Limited,180,piece
+P0187,ACT II Popcorn Classic Salted 30g,Ready to Eat & Instant,19.74,13.11,ITC Limited,180,pack
+P0188,MTR Vermicelli 950g,Ready to Eat & Instant,59.04,41.17,Nestle India Ltd,180,liter
+P0189,Kissan Tomato Ketchup 500g,Condiments & Sauces,102.55,57.99,Nestle India Ltd,180,kg
+P0190,Kissan Mixed Fruit Jam 500g,Condiments & Sauces,148.64,94.38,Hindustan Unilever Ltd,180,pack
+P0191,Maggi Hot & Sweet Sauce 500g,Condiments & Sauces,105.63,74.86,Hindustan Unilever Ltd,180,pack
+P0192,Ching's Schezwan Chutney 250g,Condiments & Sauces,75.04,49.9,Nestle India Ltd,180,kg
+P0193,Smith & Jones Pasta Sauce 400g,Condiments & Sauces,97.22,67.23,Nestle India Ltd,180,piece
+P0194,Veeba Mayonnaise 250g,Condiments & Sauces,88.01,44.69,Nestle India Ltd,120,kg
+P0195,Funfoods Peanut Butter 400g,Condiments & Sauces,207.07,103.13,ITC Limited,365,liter
+P0196,Soy Sauce Ching's 200ml,Condiments & Sauces,54.01,37.95,ITC Limited,365,kg
+P0197,Tops Green Chilli Sauce 650g,Condiments & Sauces,67.93,39.95,Hindustan Unilever Ltd,365,piece
+P0198,Kissan Peanut Butter Crunchy 350g,Condiments & Sauces,177.31,103.2,Nestle India Ltd,365,pack
+P0199,Del Monte Olive Oil 500ml,Condiments & Sauces,341.78,197.44,ITC Limited,365,kg
+P0200,Borges Extra Virgin Olive Oil 500ml,Condiments & Sauces,558.47,357.11,Hindustan Unilever Ltd,365,piece
+P0201,Cerelac Stage 1 (6 months) 300g,Baby & Kids,247.0,157.9,Procter & Gamble India,365,kg
+P0202,Cerelac Stage 2 Wheat Apple 300g,Baby & Kids,239.78,149.72,Himalaya Wellness,365,liter
+P0203,Johnson's Baby Soap 75g,Baby & Kids,49.7,31.72,Nestle India Ltd,730,liter
+P0204,Johnson's Baby Shampoo 200ml,Baby & Kids,173.98,118.57,Hindustan Unilever Ltd,730,kg
+P0205,Himalaya Baby Lotion 200ml,Baby & Kids,142.84,75.89,Nestle India Ltd,730,liter
+P0206,Himalaya Baby Diaper Rash Cream 50g,Baby & Kids,106.07,71.75,Nestle India Ltd,730,pack
+P0207,Pampers Diapers M (66 Count),Baby & Kids,1010.81,519.7,Himalaya Wellness,730,liter
+P0208,MamyPoko Pants L (44 Count),Baby & Kids,813.69,543.52,Nestle India Ltd,730,kg
+P0209,Horlicks Junior 500g,Baby & Kids,291.97,202.63,Himalaya Wellness,365,piece
+P0210,Bournvita 5 Star Magic 500g,Baby & Kids,224.54,113.58,Himalaya Wellness,365,kg
+P0211,Complan Chocolate 500g,Baby & Kids,254.0,184.79,Procter & Gamble India,365,kg
+P0212,Dabur Gripe Water 125ml,Baby & Kids,54.31,31.58,Procter & Gamble India,730,kg
+P0213,Dabur Chyawanprash 500g,Health & Wellness,216.57,144.78,Patanjali Ayurved Ltd,365,pack
+P0214,Dabur Honey 500g,Health & Wellness,230.69,143.15,Dabur India Ltd,365,liter
+P0215,Saffola Fittify Hi Protein Slim Meal Shake 420g,Health & Wellness,591.59,309.5,Patanjali Ayurved Ltd,365,liter
+P0216,Himalaya Ashvagandha 60 Tablets,Health & Wellness,179.85,107.04,Patanjali Ayurved Ltd,730,pack
+P0217,Revital H Multivitamin 30 Capsules,Health & Wellness,347.35,238.44,Patanjali Ayurved Ltd,730,kg
+P0218,Centrum Multivitamin 30 Tablets,Health & Wellness,479.6,298.66,Himalaya Wellness,730,piece
+P0219,Protinex Health Drink 400g,Health & Wellness,428.01,267.18,Himalaya Wellness,365,kg
+P0220,Ensure Vanilla 400g,Health & Wellness,621.16,340.45,Dabur India Ltd,365,liter
+P0221,Zandu Balm 8ml,Health & Wellness,28.85,18.9,Patanjali Ayurved Ltd,730,kg
+P0222,Volini Pain Relief Spray 40g,Health & Wellness,122.95,74.0,Himalaya Wellness,730,liter
+P0223,Crocin Advance 20 Tablets,Health & Wellness,29.29,16.1,Himalaya Wellness,730,pack
+P0224,Dettol Antiseptic Liquid 125ml,Health & Wellness,56.76,39.08,Patanjali Ayurved Ltd,730,liter

@@ -1,16 +1,21 @@
 supplier_id,name,contact_email,lead_time_days,reliability_score
-SUP001,FreshFarms Co.,orders@freshfarms.com,3,0.94
-SUP002,Global Foods Inc.,supply@globalfoods.com,5,0.91
-SUP003,Daily Dairy Ltd.,sales@dailydairy.com,2,0.98
-SUP004,Baker's Best,hello@bakersbest.com,1,0.94
-SUP005,Pacific Beverages,orders@pacificbev.com,4,0.89
-SUP006,SnackMaster Corp.,supply@snackmaster.com,5,0.84
-SUP007,Green Valley Produce,fresh@greenvalley.com,1,0.93
-SUP008,Prime Meats,orders@primemeats.com,2,0.96
-SUP009,Arctic Frozen Foods,supply@arcticfoods.com,4,0.9
-SUP010,HomeClean Supplies,sales@homeclean.com,7,0.86
-SUP011,Nature's Harvest,info@naturesharvest.com,3,0.89
-SUP012,Quality Foods Dist.,orders@qualityfoods.com,4,0.93
-SUP013,BabyCare Direct,supply@babycare.com,5,0.89
-SUP014,PetPals Wholesale,orders@petpals.com,6,0.82
-SUP015,WellLife Nutrition,sales@welllife.com,5,0.89
+SUP001,Amul (GCMMF),orders@amul.coop,2,0.96
+SUP002,Hindustan Unilever Ltd,supply@hul.co.in,3,0.99
+SUP003,ITC Limited,orders@itcportal.com,3,0.96
+SUP004,Nestle India Ltd,supply@in.nestle.com,4,0.95
+SUP005,Britannia Industries,orders@britannia.co.in,2,0.93
+SUP006,Parle Products Pvt Ltd,supply@parle.biz,2,0.91
+SUP007,Dabur India Ltd,orders@dabur.com,4,0.89
+SUP008,Godrej Consumer Products,supply@godrej.com,3,0.95
+SUP009,Marico Ltd,orders@marico.com,3,0.92
+SUP010,Haldiram's,supply@haldirams.com,2,0.95
+SUP011,MDH Spices,orders@mdhspices.com,3,0.89
+SUP012,Tata Consumer Products,supply@tataconsumer.com,3,0.99
+SUP013,Patanjali Ayurved Ltd,orders@patanjali.com,4,0.9
+SUP014,Mother Dairy,supply@motherdairy.com,1,0.94
+SUP015,McCain India,orders@mccain.co.in,5,0.88
+SUP016,PepsiCo India,supply@pepsicoindia.com,4,0.9
+SUP017,Coca-Cola India,orders@coca-cola.co.in,4,0.92
+SUP018,Himalaya Wellness,supply@himalayawellness.com,4,0.91
+SUP019,Procter & Gamble India,supply@pg.co.in,3,0.95
+SUP020,Reckitt India,orders@reckitt.co.in,3,0.93

@@ -1,7 +1,7 @@
 """
-Synthetic Supermarket Data Generator — V2 (Expanded)
-Generates realistic datasets: products, customers, sales, inventory, suppliers
-200+ products, 2000 customers, 50k transactions, 15 categories
+Synthetic Indian Supermarket Data Generator — V3 (Indian Edition)
+Generates realistic Indian datasets: products, customers, sales, inventory, suppliers
+250+ products (real Indian brands & INR prices), 2000 customers, 50k transactions, 15 categories
 """
 
 import pandas as pd
@@ -16,144 +16,307 @@ random.seed(42)
 
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ──────────────────────────── PRODUCTS (200+ across 15 categories) ────────────────────────────
+# ──────────────────────────── PRODUCTS (250+ across 15 categories, real INR prices) ────────────────────────────
 
 CATEGORIES = {
     "Dairy": [
-        ("Whole Milk 1L", 3.49, 7), ("Skim Milk 1L", 3.29, 7), ("Cheddar Cheese 200g", 4.99, 14),
-        ("Greek Yogurt 500g", 5.49, 10), ("Butter 250g", 3.99, 21), ("Cream Cheese 200g", 4.29, 14),
-        ("Mozzarella 300g", 5.99, 10), ("Cottage Cheese 250g", 3.79, 10), ("Heavy Cream 500ml", 4.49, 7),
-        ("Parmesan Wedge 150g", 6.99, 30), ("Flavored Yogurt 4pk", 4.29, 14), ("Goat Cheese 150g", 5.49, 14),
-        ("Almond Milk 1L", 4.49, 14), ("Oat Milk 1L", 4.99, 14),
+        ("Amul Taaza Toned Milk 1L", 54, 3),
+        ("Amul Gold Full Cream Milk 1L", 72, 3),
+        ("Mother Dairy Cow Milk 500ml", 32, 3),
+        ("Amul Butter 100g", 58, 30),
+        ("Amul Paneer 200g", 90, 5),
+        ("Amul Masti Dahi 400g", 35, 7),
+        ("Amul Cheese Slices 100g (5 Slices)", 55, 30),
+        ("Mother Dairy Fresh Curd 1kg", 65, 5),
+        ("Nestle Milkmaid 400g", 155, 365),
+        ("Amul Fresh Cream 200ml", 40, 7),
+        ("Amul Lassi Mango 200ml", 25, 5),
+        ("Epigamia Greek Yogurt 90g", 45, 10),
+        ("Gowardhan Paneer 1kg", 380, 5),
+        ("Amul Shrikhand Kesar 100g", 50, 10),
+        ("Britannia Cream Cheese 180g", 99, 30),
+        ("Mother Dairy Mishti Doi 100g", 30, 5),
+    ],
+    "Staples & Grains": [
+        ("Aashirvaad Whole Wheat Atta 5kg", 280, 180),
+        ("Aashirvaad Multigrain Atta 5kg", 310, 180),
+        ("India Gate Basmati Rice 1kg", 120, 365),
+        ("Daawat Rozana Basmati Rice 5kg", 420, 365),
+        ("Tata Sampann Toor Dal 1kg", 165, 365),
+        ("Tata Sampann Chana Dal 1kg", 115, 365),
+        ("Tata Sampann Moong Dal 1kg", 145, 365),
+        ("Tata Sampann Urad Dal 1kg", 160, 365),
+        ("Fortune Soyabean Oil 1L", 160, 180),
+        ("Fortune Sunflower Oil 1L", 145, 180),
+        ("Tata Salt 1kg", 28, 730),
+        ("Tata Rock Salt 1kg", 32, 730),
+        ("MDH Rajma 500g", 85, 365),
+        ("Saffola Gold Oil 1L", 195, 180),
+        ("24 Mantra Organic Tur Dal 1kg", 195, 365),
+        ("Kohinoor Super Value Basmati 5kg", 450, 365),
+        ("Pillsbury Chakki Fresh Atta 5kg", 265, 180),
+        ("MTR Rava 500g", 40, 180),
+        ("MTR Besan 500g", 55, 180),
+        ("Rajdhani Maida 1kg", 42, 180),
     ],
     "Bakery": [
-        ("White Bread Loaf", 2.49, 5), ("Whole Wheat Bread", 2.99, 5), ("Croissants 4pk", 4.49, 3),
-        ("Bagels 6pk", 3.99, 4), ("Sourdough Loaf", 4.99, 5), ("Muffins 4pk", 5.49, 3),
-        ("Dinner Rolls 8pk", 3.49, 4), ("Ciabatta Bread", 3.99, 3), ("Rye Bread Loaf", 3.49, 5),
-        ("Pita Bread 6pk", 2.99, 5), ("Tortillas 10pk", 3.29, 7), ("Brioche Buns 4pk", 4.99, 3),
-        ("Banana Bread Loaf", 5.99, 4), ("Focaccia Bread", 4.49, 3),
+        ("Britannia White Bread 400g", 40, 3),
+        ("Britannia Whole Wheat Bread 400g", 50, 3),
+        ("Amul Butter Croissants 3pk", 120, 2),
+        ("English Oven Milk Bread 400g", 50, 3),
+        ("Modern Bread 400g", 42, 3),
+        ("Britannia Burger Buns 4pk", 55, 3),
+        ("Harvest Gold Whole Wheat 450g", 45, 3),
+        ("Bonn Brown Bread 400g", 38, 3),
+        ("Theobroma Brownie 60g", 85, 5),
+        ("Monginis Cake Slice", 65, 2),
+        ("Britannia Pav 6pk", 45, 3),
+        ("English Oven Hot Dog Rolls 4pk", 60, 3),
+        ("Harvest Gold Fruit Bread 400g", 55, 3),
+        ("Local Fresh Naan 4pk", 40, 1),
     ],
     "Beverages": [
-        ("Orange Juice 1L", 3.99, 14), ("Cola 2L", 2.49, 180), ("Sparkling Water 1L", 1.99, 365),
-        ("Green Tea 20pk", 4.49, 365), ("Coffee Beans 500g", 9.99, 180), ("Energy Drink 250ml", 2.99, 365),
-        ("Apple Juice 1L", 3.49, 14), ("Coconut Water 500ml", 3.29, 180), ("Lemonade 1L", 2.99, 14),
-        ("Iced Tea 1L", 2.79, 14), ("Kombucha 330ml", 3.99, 30), ("Protein Shake 4pk", 8.99, 180),
-        ("Craft Root Beer 330ml", 2.49, 365), ("Mineral Water 6pk", 5.99, 365),
+        ("Tata Tea Gold 500g", 290, 365),
+        ("Tata Tea Premium 250g", 120, 365),
+        ("Brooke Bond Taj Mahal 250g", 195, 365),
+        ("Bru Instant Coffee 50g", 110, 365),
+        ("Nescafe Classic Coffee 50g", 155, 365),
+        ("Coca-Cola 2L", 95, 180),
+        ("Pepsi 2L", 95, 180),
+        ("Thums Up 750ml", 40, 180),
+        ("Frooti Mango Drink 1L", 70, 90),
+        ("Maaza Mango Drink 1.2L", 80, 90),
+        ("Sprite 750ml", 40, 180),
+        ("Paper Boat Aam Panna 200ml", 30, 90),
+        ("Real Fruit Juice Mixed Fruit 1L", 115, 90),
+        ("Tropicana Orange Juice 1L", 110, 30),
+        ("Red Bull Energy Drink 250ml", 125, 365),
+        ("Bisleri Water 1L", 22, 365),
+        ("Kinley Water 1L", 22, 365),
+        ("Rooh Afza Sharbat 750ml", 150, 365),
     ],
-    "Snacks": [
-        ("Potato Chips 150g", 3.49, 90), ("Chocolate Bar 100g", 2.99, 180), ("Mixed Nuts 200g", 5.99, 120),
-        ("Granola Bars 6pk", 4.49, 180), ("Popcorn 100g", 2.49, 90), ("Pretzels 200g", 3.29, 120),
-        ("Trail Mix 250g", 5.49, 120), ("Rice Cakes 12pk", 3.29, 180), ("Cheese Crackers 200g", 3.79, 90),
-        ("Dark Chocolate 85% 100g", 4.99, 365), ("Fruit Snacks 10pk", 4.29, 180), ("Tortilla Chips 200g", 3.49, 90),
-        ("Protein Bars 4pk", 6.99, 180), ("Veggie Straws 150g", 3.99, 90),
+    "Snacks & Namkeen": [
+        ("Lays Magic Masala 52g", 20, 90),
+        ("Lays Classic Salted 52g", 20, 90),
+        ("Kurkure Masala Munch 100g", 30, 90),
+        ("Haldiram's Bhujia 400g", 125, 120),
+        ("Haldiram's Aloo Bhujia 200g", 65, 120),
+        ("Haldiram's Moong Dal 200g", 55, 120),
+        ("Parle-G Glucose Biscuit 250g", 25, 180),
+        ("Britannia Good Day 250g", 55, 180),
+        ("Britannia 50-50 Maska Chaska 120g", 30, 180),
+        ("Oreo Original 120g", 30, 180),
+        ("Hide & Seek Chocolate 120g", 35, 180),
+        ("Bingo Mad Angles 72.5g", 20, 90),
+        ("Cadbury Dairy Milk 50g", 50, 365),
+        ("5 Star Chocolate 40g", 30, 365),
+        ("KitKat 4 Finger 37.3g", 35, 365),
+        ("Dark Fantasy Choco Fills 75g", 40, 180),
+        ("Britannia Marie Gold 250g", 35, 180),
+        ("Bikano Namkeen Mixture 200g", 60, 120),
     ],
-    "Produce": [
-        ("Bananas 1kg", 1.99, 5), ("Apples 1kg", 3.49, 10), ("Tomatoes 500g", 2.99, 7),
-        ("Lettuce Head", 1.99, 5), ("Carrots 1kg", 2.49, 14), ("Potatoes 2kg", 3.99, 21),
-        ("Onions 1kg", 2.29, 21), ("Avocados 3pk", 4.99, 5), ("Bell Peppers 3pk", 3.99, 7),
-        ("Cucumbers 2pk", 2.49, 7), ("Spinach 250g", 3.49, 5), ("Broccoli Head", 2.99, 7),
-        ("Sweet Potatoes 1kg", 3.49, 14), ("Mushrooms 200g", 3.29, 5), ("Garlic 3pk", 1.99, 21),
-        ("Strawberries 250g", 4.99, 3), ("Blueberries 125g", 3.99, 5), ("Lemons 6pk", 2.99, 14),
+    "Fruits & Vegetables": [
+        ("Banana Robusta 1 dozen", 50, 3),
+        ("Apple Shimla 1kg", 180, 7),
+        ("Tomato (Tamatar) 1kg", 40, 5),
+        ("Onion (Pyaaz) 1kg", 35, 14),
+        ("Potato (Aloo) 1kg", 30, 21),
+        ("Green Chilli (Hari Mirch) 250g", 15, 5),
+        ("Carrot (Gajar) 500g", 35, 7),
+        ("Cucumber (Kheera) 500g", 25, 5),
+        ("Capsicum Green 250g", 30, 7),
+        ("Spinach (Palak) 250g", 20, 2),
+        ("Coriander (Dhaniya) 100g", 10, 2),
+        ("Ginger (Adrak) 250g", 25, 7),
+        ("Lemon (Nimbu) 250g", 20, 7),
+        ("Lady Finger (Bhindi) 500g", 30, 3),
+        ("Cauliflower (Phool Gobi) 1pc", 35, 5),
+        ("Cabbage (Patta Gobi) 1pc", 25, 7),
+        ("Mango Alphonso 1kg (seasonal)", 350, 3),
+        ("Pomegranate (Anaar) 500g", 90, 7),
+        ("Guava (Amrood) 500g", 40, 5),
+        ("Papaya 1kg", 45, 3),
     ],
-    "Meat": [
-        ("Chicken Breast 500g", 7.99, 3), ("Ground Beef 500g", 8.49, 3), ("Pork Chops 400g", 6.99, 3),
-        ("Salmon Fillet 300g", 11.99, 2), ("Turkey Slices 200g", 5.49, 5), ("Bacon 200g", 5.99, 7),
-        ("Italian Sausage 4pk", 7.49, 5), ("Lamb Chops 400g", 12.99, 3), ("Shrimp 300g", 9.99, 2),
-        ("Deli Ham 200g", 4.99, 7), ("Beef Steak 300g", 13.99, 3), ("Chicken Wings 500g", 6.49, 3),
-        ("Ground Turkey 500g", 7.99, 3), ("Tilapia Fillets 400g", 8.49, 2),
+    "Meat & Seafood": [
+        ("Chicken Breast 500g", 200, 2),
+        ("Chicken Curry Cut 1kg", 280, 2),
+        ("Chicken Drumsticks 500g", 160, 2),
+        ("Mutton Curry Cut 500g", 450, 2),
+        ("Fish Rohu (Whole) 1kg", 280, 1),
+        ("Prawns Medium 500g", 350, 1),
+        ("Chicken Seekh Kebab 250g", 180, 3),
+        ("Chicken Sausages 250g", 140, 5),
+        ("Eggs White (12pc)", 75, 10),
+        ("Eggs White (30pc)", 180, 10),
+        ("Mutton Keema 500g", 400, 2),
+        ("Fish Pomfret 500g", 380, 1),
+        ("Chicken Nuggets Frozen 250g", 150, 30),
+        ("Surimi Crab Sticks 200g", 160, 30),
     ],
-    "Frozen": [
-        ("Frozen Pizza", 5.99, 180), ("Ice Cream 1L", 6.49, 365), ("Frozen Vegetables 500g", 3.49, 365),
-        ("Fish Sticks 400g", 4.99, 180), ("Frozen Berries 300g", 5.49, 365), ("Frozen Fries 1kg", 3.99, 365),
-        ("Frozen Burritos 4pk", 5.99, 180), ("Frozen Waffles 8pk", 4.49, 180), ("Ice Cream Bars 6pk", 7.49, 365),
-        ("Frozen Dumplings 400g", 6.49, 180), ("Frozen Mac & Cheese", 4.99, 180), ("Frozen Chicken Nuggets 500g", 6.99, 180),
+    "Frozen Foods": [
+        ("McCain French Fries 450g", 125, 365),
+        ("McCain Veggie Nuggets 325g", 120, 365),
+        ("ITC Master Chef Frozen Paratha 5pc", 85, 180),
+        ("Sumeru Frozen Peas 500g", 75, 365),
+        ("Sumeru Frozen Mixed Vegetables 500g", 95, 365),
+        ("Amul Ice Cream Vanilla 750ml", 195, 365),
+        ("Kwality Walls Cornetto 110ml", 50, 365),
+        ("Mother Dairy Ice Cream Mango Dolly", 20, 365),
+        ("ITC Master Chef Chicken Seekh Kebab 200g", 155, 180),
+        ("Godrej Yummiez Veg Burger Patty 360g", 170, 180),
+        ("Vadilal Kulfi Stick", 30, 365),
+        ("Prasuma Chicken Momos 10pc", 175, 180),
     ],
-    "Household": [
-        ("Paper Towels 6pk", 7.99, 730), ("Dish Soap 500ml", 3.49, 730), ("Laundry Detergent 1L", 8.99, 730),
-        ("Trash Bags 30pk", 5.99, 730), ("Sponges 4pk", 2.99, 730), ("All-Purpose Cleaner 750ml", 4.49, 730),
-        ("Toilet Paper 12pk", 9.99, 730), ("Aluminum Foil 30m", 3.99, 730), ("Plastic Wrap 60m", 3.49, 730),
-        ("Glass Cleaner 750ml", 3.99, 730), ("Bleach 1L", 2.99, 730), ("Dryer Sheets 80pk", 4.99, 730),
+    "Household & Cleaning": [
+        ("Surf Excel Easy Wash 1kg", 130, 730),
+        ("Surf Excel Matic Top Load 1kg", 260, 730),
+        ("Vim Dishwash Bar 200g", 20, 730),
+        ("Vim Dishwash Gel 500ml", 99, 730),
+        ("Harpic Toilet Cleaner 500ml", 88, 730),
+        ("Lizol Floor Cleaner 500ml", 110, 730),
+        ("Colin Glass Cleaner 500ml", 90, 730),
+        ("Scotch-Brite Scrub Pad 3pk", 45, 730),
+        ("Domex Toilet Cleaner 500ml", 82, 730),
+        ("Ezee Liquid Detergent 1kg", 195, 730),
+        ("Pril Dishwash Liquid 500ml", 99, 730),
+        ("Hit Cockroach Spray 200ml", 165, 730),
+        ("Odonil Air Freshener 75g", 49, 365),
+        ("Garbage Bags Medium 30pc", 55, 730),
     ],
     "Personal Care": [
-        ("Shampoo 400ml", 5.99, 730), ("Conditioner 400ml", 5.99, 730), ("Body Wash 500ml", 4.99, 730),
-        ("Toothpaste 150g", 3.49, 730), ("Deodorant 75g", 4.49, 730), ("Hand Soap 250ml", 2.99, 730),
-        ("Moisturizer 200ml", 7.99, 730), ("Sunscreen SPF50 100ml", 9.99, 730), ("Razor Blades 4pk", 8.99, 730),
-        ("Lip Balm 2pk", 2.99, 730), ("Dental Floss 50m", 2.49, 730), ("Face Wash 150ml", 6.99, 730),
+        ("Dettol Original Soap 125g", 42, 730),
+        ("Dove Beauty Bar 100g", 64, 730),
+        ("Clinic Plus Shampoo 340ml", 185, 730),
+        ("Head & Shoulders Shampoo 340ml", 315, 730),
+        ("Colgate Strong Teeth 200g", 99, 730),
+        ("Colgate MaxFresh 80g", 60, 730),
+        ("Pepsodent Germicheck 200g", 95, 730),
+        ("Nivea Body Lotion 200ml", 210, 730),
+        ("Vaseline Intensive Care 200ml", 175, 730),
+        ("Himalaya Face Wash 150ml", 180, 730),
+        ("Lifebuoy Handwash 190ml", 42, 730),
+        ("Whisper Ultra Clean XL 30 Pads", 295, 730),
+        ("Gillette Guard Razor 1pc", 45, 730),
+        ("Parachute Coconut Oil 200ml", 98, 365),
+        ("Dabur Amla Hair Oil 180ml", 95, 365),
+        ("Set Wet Hair Gel 250ml", 160, 730),
     ],
-    "Baby & Kids": [
-        ("Diapers Size 3 40pk", 14.99, 730), ("Baby Wipes 80pk", 3.99, 730), ("Baby Formula 400g", 19.99, 365),
-        ("Baby Food Puree 4pk", 4.99, 180), ("Sippy Cup", 5.99, 730), ("Baby Lotion 200ml", 4.99, 730),
-        ("Kids Cereal 300g", 4.49, 180), ("Juice Boxes 8pk", 3.99, 180), ("Animal Crackers 200g", 3.29, 180),
-        ("Kids Toothpaste 75g", 2.99, 730),
+    "Masala & Spices": [
+        ("MDH Garam Masala 100g", 72, 365),
+        ("MDH Chana Masala 100g", 60, 365),
+        ("Everest Tikka Masala 100g", 80, 365),
+        ("Everest Sambhar Masala 100g", 55, 365),
+        ("Catch Red Chilli Powder 200g", 75, 365),
+        ("Catch Turmeric Powder (Haldi) 200g", 52, 365),
+        ("Catch Coriander Powder (Dhaniya) 200g", 58, 365),
+        ("Tata Sampann Cumin Powder (Jeera) 100g", 68, 365),
+        ("Saffola Masala Oats 500g", 130, 180),
+        ("MTR Puliogare Paste 200g", 60, 365),
+        ("MTR Rava Idli Mix 500g", 95, 180),
+        ("Eastern Sambar Powder 100g", 50, 365),
+        ("MDH Pav Bhaji Masala 100g", 65, 365),
+        ("Catch Black Pepper (Kali Mirch) 100g", 145, 365),
     ],
-    "Pet Supplies": [
-        ("Dog Food 2kg", 12.99, 365), ("Cat Food 1.5kg", 10.99, 365), ("Dog Treats 200g", 4.99, 180),
-        ("Cat Litter 5kg", 8.99, 730), ("Pet Shampoo 250ml", 5.99, 730), ("Dog Chew Toys", 3.99, 730),
-        ("Cat Treats 100g", 3.49, 180), ("Pet Vitamins 60ct", 9.99, 365), ("Dog Leash", 7.99, 730),
-        ("Cat Scratching Post", 14.99, 730),
+    "Ready to Eat & Instant": [
+        ("Maggi 2-Minute Noodles 70g", 14, 180),
+        ("Maggi 2-Minute Noodles 4pk", 56, 180),
+        ("Top Ramen Curry Noodles 70g", 12, 180),
+        ("Yippee Magic Masala 70g", 14, 180),
+        ("MTR Ready to Eat Paneer Butter Masala 300g", 110, 180),
+        ("MTR Ready to Eat Dal Makhani 300g", 95, 180),
+        ("Haldiram's Minute Khana Biryani 300g", 120, 90),
+        ("Knorr Soup Tomato 53g", 45, 365),
+        ("Knorr Soup Hot & Sour 41g", 50, 365),
+        ("Ching's Schezwan Noodles 60g", 20, 180),
+        ("ACT II Popcorn Classic Salted 30g", 20, 180),
+        ("MTR Vermicelli 950g", 60, 180),
     ],
     "Condiments & Sauces": [
-        ("Ketchup 500ml", 2.99, 180), ("Mustard 250ml", 2.49, 180), ("Mayonnaise 400ml", 3.99, 180),
-        ("Soy Sauce 250ml", 3.49, 365), ("Hot Sauce 150ml", 3.99, 365), ("BBQ Sauce 500ml", 3.99, 180),
-        ("Olive Oil 500ml", 7.99, 365), ("Balsamic Vinegar 250ml", 5.99, 365), ("Salad Dressing 350ml", 3.49, 120),
-        ("Pasta Sauce 500ml", 3.99, 365), ("Ranch Dressing 350ml", 3.49, 120), ("Maple Syrup 250ml", 6.99, 365),
+        ("Kissan Tomato Ketchup 500g", 99, 180),
+        ("Kissan Mixed Fruit Jam 500g", 145, 180),
+        ("Maggi Hot & Sweet Sauce 500g", 110, 180),
+        ("Ching's Schezwan Chutney 250g", 75, 180),
+        ("Smith & Jones Pasta Sauce 400g", 99, 180),
+        ("Veeba Mayonnaise 250g", 89, 120),
+        ("Funfoods Peanut Butter 400g", 199, 365),
+        ("Soy Sauce Ching's 200ml", 55, 365),
+        ("Tops Green Chilli Sauce 650g", 65, 365),
+        ("Kissan Peanut Butter Crunchy 350g", 175, 365),
+        ("Del Monte Olive Oil 500ml", 349, 365),
+        ("Borges Extra Virgin Olive Oil 500ml", 549, 365),
     ],
-    "Canned Goods": [
-        ("Canned Tomatoes 400g", 1.99, 730), ("Canned Beans 400g", 1.49, 730), ("Canned Corn 340g", 1.79, 730),
-        ("Canned Tuna 170g", 2.49, 730), ("Canned Soup 400ml", 2.99, 730), ("Canned Chickpeas 400g", 1.69, 730),
-        ("Coconut Milk 400ml", 2.49, 730), ("Canned Pineapple 400g", 2.29, 730), ("Canned Sardines 120g", 2.99, 730),
-        ("Canned Peaches 400g", 2.49, 730),
-    ],
-    "Pasta & Grains": [
-        ("Spaghetti 500g", 1.99, 730), ("Penne 500g", 1.99, 730), ("Brown Rice 1kg", 3.49, 730),
-        ("White Rice 2kg", 4.99, 730), ("Quinoa 500g", 5.99, 730), ("Oats 1kg", 3.99, 365),
-        ("Couscous 500g", 2.99, 730), ("Egg Noodles 500g", 2.49, 365), ("Fusilli 500g", 1.99, 730),
-        ("Basmati Rice 1kg", 4.49, 730), ("Flour 1kg", 1.99, 730), ("Cornmeal 500g", 2.49, 730),
+    "Baby & Kids": [
+        ("Cerelac Stage 1 (6 months) 300g", 240, 365),
+        ("Cerelac Stage 2 Wheat Apple 300g", 250, 365),
+        ("Johnson's Baby Soap 75g", 52, 730),
+        ("Johnson's Baby Shampoo 200ml", 175, 730),
+        ("Himalaya Baby Lotion 200ml", 145, 730),
+        ("Himalaya Baby Diaper Rash Cream 50g", 110, 730),
+        ("Pampers Diapers M (66 Count)", 999, 730),
+        ("MamyPoko Pants L (44 Count)", 849, 730),
+        ("Horlicks Junior 500g", 305, 365),
+        ("Bournvita 5 Star Magic 500g", 220, 365),
+        ("Complan Chocolate 500g", 265, 365),
+        ("Dabur Gripe Water 125ml", 55, 730),
     ],
     "Health & Wellness": [
-        ("Multivitamins 60ct", 12.99, 730), ("Vitamin C 1000mg 30ct", 7.99, 730),
-        ("Fish Oil 60ct", 9.99, 730), ("Probiotics 30ct", 14.99, 365),
-        ("Protein Powder 500g", 19.99, 365), ("Electrolyte Powder 20pk", 8.99, 365),
-        ("Melatonin 5mg 30ct", 5.99, 730), ("Zinc 50mg 60ct", 6.99, 730),
-        ("Collagen Powder 300g", 16.99, 365), ("Turmeric Capsules 60ct", 11.99, 730),
+        ("Dabur Chyawanprash 500g", 210, 365),
+        ("Dabur Honey 500g", 220, 365),
+        ("Saffola Fittify Hi Protein Slim Meal Shake 420g", 599, 365),
+        ("Himalaya Ashvagandha 60 Tablets", 175, 730),
+        ("Revital H Multivitamin 30 Capsules", 350, 730),
+        ("Centrum Multivitamin 30 Tablets", 499, 730),
+        ("Protinex Health Drink 400g", 450, 365),
+        ("Ensure Vanilla 400g", 650, 365),
+        ("Zandu Balm 8ml", 30, 730),
+        ("Volini Pain Relief Spray 40g", 120, 730),
+        ("Crocin Advance 20 Tablets", 28, 730),
+        ("Dettol Antiseptic Liquid 125ml", 58, 730),
     ],
 }
 
+# ──────────────────────────── INDIAN SUPPLIERS (Real FMCG Companies) ────────────────────────────
+
 SUPPLIERS = [
-    {"name": "FreshFarms Co.", "email": "orders@freshfarms.com", "lead_time": 3, "reliability": 0.95},
-    {"name": "Global Foods Inc.", "email": "supply@globalfoods.com", "lead_time": 5, "reliability": 0.88},
-    {"name": "Daily Dairy Ltd.", "email": "sales@dailydairy.com", "lead_time": 2, "reliability": 0.97},
-    {"name": "Baker's Best", "email": "hello@bakersbest.com", "lead_time": 1, "reliability": 0.93},
-    {"name": "Pacific Beverages", "email": "orders@pacificbev.com", "lead_time": 4, "reliability": 0.91},
-    {"name": "SnackMaster Corp.", "email": "supply@snackmaster.com", "lead_time": 5, "reliability": 0.86},
-    {"name": "Green Valley Produce", "email": "fresh@greenvalley.com", "lead_time": 1, "reliability": 0.96},
-    {"name": "Prime Meats", "email": "orders@primemeats.com", "lead_time": 2, "reliability": 0.94},
-    {"name": "Arctic Frozen Foods", "email": "supply@arcticfoods.com", "lead_time": 4, "reliability": 0.89},
-    {"name": "HomeClean Supplies", "email": "sales@homeclean.com", "lead_time": 7, "reliability": 0.85},
-    {"name": "Nature's Harvest", "email": "info@naturesharvest.com", "lead_time": 3, "reliability": 0.92},
-    {"name": "Quality Foods Dist.", "email": "orders@qualityfoods.com", "lead_time": 4, "reliability": 0.90},
-    {"name": "BabyCare Direct", "email": "supply@babycare.com", "lead_time": 5, "reliability": 0.87},
-    {"name": "PetPals Wholesale", "email": "orders@petpals.com", "lead_time": 6, "reliability": 0.84},
-    {"name": "WellLife Nutrition", "email": "sales@welllife.com", "lead_time": 5, "reliability": 0.91},
+    {"name": "Amul (GCMMF)", "email": "orders@amul.coop", "lead_time": 2, "reliability": 0.97},
+    {"name": "Hindustan Unilever Ltd", "email": "supply@hul.co.in", "lead_time": 3, "reliability": 0.96},
+    {"name": "ITC Limited", "email": "orders@itcportal.com", "lead_time": 3, "reliability": 0.95},
+    {"name": "Nestle India Ltd", "email": "supply@in.nestle.com", "lead_time": 4, "reliability": 0.94},
+    {"name": "Britannia Industries", "email": "orders@britannia.co.in", "lead_time": 2, "reliability": 0.95},
+    {"name": "Parle Products Pvt Ltd", "email": "supply@parle.biz", "lead_time": 2, "reliability": 0.93},
+    {"name": "Dabur India Ltd", "email": "orders@dabur.com", "lead_time": 4, "reliability": 0.92},
+    {"name": "Godrej Consumer Products", "email": "supply@godrej.com", "lead_time": 3, "reliability": 0.93},
+    {"name": "Marico Ltd", "email": "orders@marico.com", "lead_time": 3, "reliability": 0.91},
+    {"name": "Haldiram's", "email": "supply@haldirams.com", "lead_time": 2, "reliability": 0.94},
+    {"name": "MDH Spices", "email": "orders@mdhspices.com", "lead_time": 3, "reliability": 0.92},
+    {"name": "Tata Consumer Products", "email": "supply@tataconsumer.com", "lead_time": 3, "reliability": 0.96},
+    {"name": "Patanjali Ayurved Ltd", "email": "orders@patanjali.com", "lead_time": 4, "reliability": 0.88},
+    {"name": "Mother Dairy", "email": "supply@motherdairy.com", "lead_time": 1, "reliability": 0.96},
+    {"name": "McCain India", "email": "orders@mccain.co.in", "lead_time": 5, "reliability": 0.90},
+    {"name": "PepsiCo India", "email": "supply@pepsicoindia.com", "lead_time": 4, "reliability": 0.92},
+    {"name": "Coca-Cola India", "email": "orders@coca-cola.co.in", "lead_time": 4, "reliability": 0.93},
+    {"name": "Himalaya Wellness", "email": "supply@himalayawellness.com", "lead_time": 4, "reliability": 0.91},
+    {"name": "Procter & Gamble India", "email": "supply@pg.co.in", "lead_time": 3, "reliability": 0.95},
+    {"name": "Reckitt India", "email": "orders@reckitt.co.in", "lead_time": 3, "reliability": 0.94},
 ]
 
 # Map categories to preferred suppliers
 CATEGORY_SUPPLIERS = {
-    "Dairy": ["Daily Dairy Ltd.", "FreshFarms Co.", "Nature's Harvest"],
-    "Bakery": ["Baker's Best", "Quality Foods Dist."],
-    "Beverages": ["Pacific Beverages", "Global Foods Inc."],
-    "Snacks": ["SnackMaster Corp.", "Quality Foods Dist."],
-    "Produce": ["Green Valley Produce", "FreshFarms Co.", "Nature's Harvest"],
-    "Meat": ["Prime Meats", "FreshFarms Co."],
-    "Frozen": ["Arctic Frozen Foods", "Global Foods Inc."],
-    "Household": ["HomeClean Supplies", "Quality Foods Dist."],
-    "Personal Care": ["HomeClean Supplies", "WellLife Nutrition"],
-    "Baby & Kids": ["BabyCare Direct", "Quality Foods Dist."],
-    "Pet Supplies": ["PetPals Wholesale", "Quality Foods Dist."],
-    "Condiments & Sauces": ["Global Foods Inc.", "Nature's Harvest"],
-    "Canned Goods": ["Global Foods Inc.", "Quality Foods Dist."],
-    "Pasta & Grains": ["Global Foods Inc.", "Nature's Harvest"],
-    "Health & Wellness": ["WellLife Nutrition", "Nature's Harvest"],
+    "Dairy": ["Amul (GCMMF)", "Mother Dairy", "Nestle India Ltd"],
+    "Staples & Grains": ["Tata Consumer Products", "ITC Limited", "Hindustan Unilever Ltd"],
+    "Bakery": ["Britannia Industries", "ITC Limited", "Parle Products Pvt Ltd"],
+    "Beverages": ["Tata Consumer Products", "PepsiCo India", "Coca-Cola India", "Nestle India Ltd"],
+    "Snacks & Namkeen": ["Haldiram's", "Parle Products Pvt Ltd", "PepsiCo India", "Britannia Industries"],
+    "Fruits & Vegetables": ["Mother Dairy", "Godrej Consumer Products"],
+    "Meat & Seafood": ["Godrej Consumer Products", "Mother Dairy"],
+    "Frozen Foods": ["McCain India", "ITC Limited", "Amul (GCMMF)"],
+    "Household & Cleaning": ["Hindustan Unilever Ltd", "Reckitt India", "Godrej Consumer Products"],
+    "Personal Care": ["Hindustan Unilever Ltd", "Procter & Gamble India", "Himalaya Wellness", "Dabur India Ltd"],
+    "Masala & Spices": ["MDH Spices", "Tata Consumer Products", "ITC Limited"],
+    "Ready to Eat & Instant": ["Nestle India Ltd", "ITC Limited", "Haldiram's"],
+    "Condiments & Sauces": ["Hindustan Unilever Ltd", "Nestle India Ltd", "ITC Limited"],
+    "Baby & Kids": ["Nestle India Ltd", "Hindustan Unilever Ltd", "Himalaya Wellness", "Procter & Gamble India"],
+    "Health & Wellness": ["Dabur India Ltd", "Himalaya Wellness", "Patanjali Ayurved Ltd"],
 }
 
 
@@ -174,14 +337,14 @@ def generate_products():
     products = []
     pid = 1
     for category, items in CATEGORIES.items():
-        possible_suppliers = CATEGORY_SUPPLIERS.get(category, ["Quality Foods Dist."])
+        possible_suppliers = CATEGORY_SUPPLIERS.get(category, ["Tata Consumer Products"])
         for name, price, shelf_life in items:
             products.append({
                 "product_id": f"P{pid:04d}",
                 "name": name,
                 "category": category,
-                "price": round(price + np.random.uniform(-0.30, 0.30), 2),
-                "cost": round(price * np.random.uniform(0.45, 0.65), 2),
+                "price": round(price + np.random.uniform(-price * 0.05, price * 0.05), 2),
+                "cost": round(price * np.random.uniform(0.50, 0.70), 2),
                 "supplier": random.choice(possible_suppliers),
                 "shelf_life_days": shelf_life,
                 "unit": random.choice(["piece", "pack", "kg", "liter"]),
@@ -190,49 +353,76 @@ def generate_products():
     return pd.DataFrame(products)
 
 
-# ──────────────────────────── CUSTOMERS ────────────────────────────
+# ──────────────────────────── CUSTOMERS (Indian names, cities, PIN codes) ────────────────────────────
 
-FIRST_NAMES = [
-    "James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda",
-    "David", "Elizabeth", "William", "Barbara", "Richard", "Susan", "Joseph", "Jessica",
-    "Thomas", "Sarah", "Christopher", "Karen", "Daniel", "Lisa", "Matthew", "Nancy",
-    "Anthony", "Betty", "Mark", "Margaret", "Andrew", "Sandra", "Steven", "Ashley",
-    "Paul", "Dorothy", "Joshua", "Kimberly", "Kenneth", "Emily", "Kevin", "Donna",
-    "Brian", "Michelle", "George", "Carol", "Timothy", "Amanda", "Ronald", "Melissa",
-    "Edward", "Deborah", "Jason", "Stephanie", "Jeffrey", "Rebecca", "Ryan", "Sharon",
-    "Jacob", "Laura", "Gary", "Cynthia", "Nicholas", "Kathleen", "Eric", "Amy",
-    "Jonathan", "Angela", "Stephen", "Shirley", "Larry", "Anna", "Justin", "Brenda",
-    "Raymond", "Emma", "Samuel", "Olivia", "Benjamin", "Sophia", "Gregory", "Isabella",
-    "Frank", "Mia", "Alexander", "Charlotte", "Patrick", "Amelia", "Jack", "Harper",
-    "Dennis", "Evelyn", "Jerry", "Abigail", "Tyler", "Ella", "Aaron", "Scarlett",
-    "Henry", "Grace", "Douglas", "Chloe", "Peter", "Victoria", "Adam", "Riley",
+FIRST_NAMES_MALE = [
+    "Aarav", "Amit", "Rahul", "Rajesh", "Suresh", "Vikram", "Arun", "Manoj",
+    "Deepak", "Sanjay", "Ravi", "Pradeep", "Ajay", "Vijay", "Nitin", "Rohit",
+    "Karan", "Arjun", "Varun", "Gaurav", "Sahil", "Pankaj", "Nikhil", "Vivek",
+    "Anand", "Harsh", "Kunal", "Mohit", "Sachin", "Tushar", "Vishal", "Aditya",
+    "Dev", "Ishaan", "Kabir", "Lakshay", "Manish", "Naveen", "Om", "Pranav",
+    "Rakesh", "Shubham", "Tarun", "Umesh", "Yash", "Rohan", "Akash", "Chirag",
+    "Dhruv", "Eshaan", "Farhan", "Ganesh", "Hari", "Jatin", "Krishna", "Lalit",
+    "Mukesh", "Neeraj", "Prakash", "Rajat", "Sunil", "Tanmay", "Utkarsh", "Vihaan",
+]
+
+FIRST_NAMES_FEMALE = [
+    "Priya", "Neha", "Anjali", "Pooja", "Sunita", "Kavita", "Divya", "Meena",
+    "Rashmi", "Swati", "Nisha", "Ritu", "Shweta", "Pallavi", "Anita", "Deepika",
+    "Isha", "Shruti", "Tanvi", "Aditi", "Bhavna", "Chitra", "Garima", "Jyoti",
+    "Komal", "Lata", "Manju", "Namrata", "Parul", "Renu", "Shalini", "Tara",
+    "Usha", "Vidya", "Yamini", "Aishwarya", "Bhoomika", "Chetna", "Disha", "Ekta",
+    "Falguni", "Geeta", "Harsha", "Ila", "Juhi", "Kirti", "Leela", "Madhuri",
+    "Nandini", "Payal", "Rani", "Sarita", "Trisha", "Uma", "Vrinda", "Zara",
+    "Aanya", "Myra", "Saanvi", "Riya", "Ananya", "Aarohi", "Khushi", "Pihu",
 ]
 
 LAST_NAMES = [
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-    "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
-    "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson",
-    "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker",
-    "Young", "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores",
-    "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell",
-    "Carter", "Roberts", "Gomez", "Phillips", "Evans", "Turner", "Diaz", "Parker",
-    "Cruz", "Edwards", "Collins", "Reyes", "Stewart", "Morris", "Morales", "Murphy",
+    "Sharma", "Verma", "Gupta", "Singh", "Patel", "Kumar", "Reddy", "Rao",
+    "Das", "Mishra", "Mehta", "Joshi", "Shah", "Nair", "Menon", "Pillai",
+    "Iyer", "Yadav", "Chauhan", "Tiwari", "Pandey", "Dubey", "Saxena", "Agarwal",
+    "Banerjee", "Mukherjee", "Chatterjee", "Bose", "Sen", "Roy", "Ghosh", "Dey",
+    "Kulkarni", "Deshmukh", "Patil", "Jadhav", "More", "Pawar", "Thakur", "Chowdhury",
+    "Rathore", "Kaur", "Gill", "Bhatia", "Khanna", "Malhotra", "Kapoor", "Arora",
+    "Sinha", "Prasad", "Mohan", "Srinivasan", "Naidu", "Hegde", "Bhatt", "Choudhary",
+    "Rajan", "Goyal", "Garg", "Mittal", "Rastogi", "Trivedi", "Deshpande", "Nayak",
 ]
 
-ZIP_CODES = [
-    "10001", "10002", "10003", "10010", "10011", "10012", "10013", "10014",
-    "10016", "10017", "10018", "10019", "10020", "10021", "10022", "10023",
-    "10024", "10025", "10026", "10027", "10028", "10029", "10030", "10031",
+# Indian cities with PIN codes and state info
+CITIES = [
+    {"city": "Mumbai", "state": "Maharashtra", "pins": ["400001", "400050", "400053", "400069", "400072", "400076", "400080", "400092"]},
+    {"city": "Delhi", "state": "Delhi", "pins": ["110001", "110011", "110017", "110025", "110034", "110044", "110048", "110062"]},
+    {"city": "Bangalore", "state": "Karnataka", "pins": ["560001", "560008", "560011", "560034", "560038", "560043", "560068", "560078"]},
+    {"city": "Hyderabad", "state": "Telangana", "pins": ["500001", "500003", "500013", "500018", "500029", "500033", "500038", "500049"]},
+    {"city": "Chennai", "state": "Tamil Nadu", "pins": ["600001", "600010", "600017", "600024", "600032", "600040", "600078", "600096"]},
+    {"city": "Pune", "state": "Maharashtra", "pins": ["411001", "411004", "411011", "411016", "411021", "411028", "411038", "411048"]},
+    {"city": "Kolkata", "state": "West Bengal", "pins": ["700001", "700006", "700012", "700019", "700027", "700032", "700053", "700064"]},
+    {"city": "Ahmedabad", "state": "Gujarat", "pins": ["380001", "380006", "380013", "380015", "380022", "380027", "380052", "380058"]},
+    {"city": "Jaipur", "state": "Rajasthan", "pins": ["302001", "302004", "302012", "302015", "302017", "302019", "302020", "302021"]},
+    {"city": "Lucknow", "state": "Uttar Pradesh", "pins": ["226001", "226003", "226010", "226012", "226016", "226020", "226022", "226025"]},
+    {"city": "Chandigarh", "state": "Chandigarh", "pins": ["160001", "160009", "160011", "160014", "160017", "160019", "160022", "160036"]},
+    {"city": "Kochi", "state": "Kerala", "pins": ["682001", "682011", "682016", "682018", "682020", "682024", "682026", "682030"]},
 ]
 
-SECTIONS = ["Produce", "Dairy", "Meat", "Bakery", "Beverages", "Frozen", "Snacks", "Household"]
+SECTIONS = ["Fruits & Vegetables", "Dairy", "Meat & Seafood", "Bakery", "Beverages", "Frozen Foods", "Snacks & Namkeen", "Household & Cleaning", "Staples & Grains"]
 
 
 def generate_customers(n=2000):
     customers = []
     for i in range(1, n + 1):
-        age = int(np.random.normal(42, 15))
-        age = max(18, min(80, age))
+        age = int(np.random.normal(35, 12))
+        age = max(18, min(75, age))
+        gender = np.random.choice(["M", "F", "Other"], p=[0.45, 0.45, 0.10])
+
+        if gender == "M":
+            first_name = random.choice(FIRST_NAMES_MALE)
+        elif gender == "F":
+            first_name = random.choice(FIRST_NAMES_FEMALE)
+        else:
+            first_name = random.choice(FIRST_NAMES_MALE + FIRST_NAMES_FEMALE)
+
+        last_name = random.choice(LAST_NAMES)
+
         tier = np.random.choice(
             ["Bronze", "Silver", "Gold", "Platinum"],
             p=[0.40, 0.30, 0.20, 0.10]
@@ -242,18 +432,22 @@ def generate_customers(n=2000):
         base_points = tier_points[tier]
         loyalty_points = max(0, int(base_points + np.random.normal(0, base_points * 0.3)))
 
-        phone_num = f"({random.randint(200,999)}) {random.randint(200,999)}-{random.randint(1000,9999)}"
+        city_info = random.choice(CITIES)
+        pin_code = random.choice(city_info["pins"])
+        phone_num = f"+91 {random.randint(70000, 99999)}{random.randint(10000, 99999)}"
+        email_name = f"{first_name.lower()}.{last_name.lower()}{random.randint(1, 999)}"
+        email = f"{email_name}@{random.choice(['gmail.com', 'yahoo.co.in', 'outlook.com', 'hotmail.com', 'rediffmail.com'])}"
 
         customers.append({
             "customer_id": f"C{i:04d}",
-            "first_name": random.choice(FIRST_NAMES),
-            "last_name": random.choice(LAST_NAMES),
+            "first_name": first_name,
+            "last_name": last_name,
             "age": age,
-            "gender": np.random.choice(["M", "F", "Other"], p=[0.4, 0.4, 0.2]),
+            "gender": gender,
             "membership_tier": tier,
-            "email": f"customer{i}@email.com",
+            "email": email,
             "phone": phone_num,
-            "zip_code": random.choice(ZIP_CODES),
+            "zip_code": pin_code,
             "loyalty_points": loyalty_points,
             "preferred_section": random.choice(SECTIONS),
             "join_date": (datetime.now() - timedelta(days=random.randint(0, 840))).strftime("%Y-%m-%d"),
@@ -261,21 +455,27 @@ def generate_customers(n=2000):
     return pd.DataFrame(customers)
 
 
-# ──────────────────────────── SALES (50k, 2 years, basket IDs) ────────────────────────────
+# ──────────────────────────── SALES (50k, ~15.5 months, basket IDs) ────────────────────────────
 
+# Indian festivals and holidays that boost sales
 HOLIDAYS = {
-    # month-day patterns that get boosted
-    (1, 1): 1.3,    # New Year
-    (2, 14): 1.2,   # Valentine's
-    (4, 20): 1.2,   # Easter approx
-    (5, 27): 1.3,   # Memorial Day approx
-    (7, 4): 1.5,    # July 4th
-    (9, 4): 1.3,    # Labor Day approx
-    (10, 31): 1.3,  # Halloween
-    (11, 23): 1.8,  # Thanksgiving approx
-    (12, 24): 1.8,  # Christmas Eve
-    (12, 25): 1.5,  # Christmas
-    (12, 31): 1.4,  # New Year's Eve
+    (1, 14): 1.3,    # Makar Sankranti / Pongal
+    (1, 26): 1.4,    # Republic Day
+    (3, 8): 1.2,     # Holi (approx)
+    (3, 25): 1.3,    # Holi (approx)
+    (4, 14): 1.2,    # Baisakhi
+    (8, 15): 1.4,    # Independence Day
+    (8, 26): 1.3,    # Janmashtami (approx)
+    (9, 19): 1.3,    # Ganesh Chaturthi (approx)
+    (10, 2): 1.3,    # Gandhi Jayanti
+    (10, 12): 1.6,   # Dussehra (approx)
+    (10, 24): 1.5,   # Karwa Chauth (approx)
+    (11, 1): 2.0,    # Diwali (approx) — massive boost
+    (11, 2): 1.8,    # Diwali (day after)
+    (11, 15): 1.3,   # Guru Nanak Jayanti (approx)
+    (12, 25): 1.4,   # Christmas
+    (12, 31): 1.3,   # New Year's Eve
+    (1, 1): 1.2,     # New Year
 }
 
 
@@ -292,13 +492,13 @@ def generate_sales(products_df, customers_df, n=50000):
     prices = dict(zip(products_df["product_id"], products_df["price"]))
     categories = dict(zip(products_df["product_id"], products_df["category"]))
 
-    # Category popularity weights
+    # Category popularity weights (adjusted for Indian shopping patterns)
     cat_weights = {
-        "Dairy": 1.2, "Bakery": 1.1, "Beverages": 1.3, "Snacks": 1.0,
-        "Produce": 1.4, "Meat": 0.9, "Frozen": 0.8, "Household": 0.6,
-        "Personal Care": 0.5, "Baby & Kids": 0.4, "Pet Supplies": 0.35,
-        "Condiments & Sauces": 0.7, "Canned Goods": 0.65, "Pasta & Grains": 0.75,
-        "Health & Wellness": 0.45,
+        "Dairy": 1.4, "Staples & Grains": 1.5, "Bakery": 0.8, "Beverages": 1.2,
+        "Snacks & Namkeen": 1.3, "Fruits & Vegetables": 1.4, "Meat & Seafood": 0.7,
+        "Frozen Foods": 0.6, "Household & Cleaning": 0.8, "Personal Care": 0.7,
+        "Masala & Spices": 1.0, "Ready to Eat & Instant": 0.9,
+        "Condiments & Sauces": 0.7, "Baby & Kids": 0.4, "Health & Wellness": 0.5,
     }
 
     # Product weights based on category popularity
@@ -322,14 +522,18 @@ def generate_sales(products_df, customers_df, n=50000):
         sale_date = start_date + timedelta(days=day_offset)
         month = sale_date.month
 
-        # Seasonal multiplier
+        # Seasonal multiplier (Indian patterns: festive season boost Oct-Nov, summer demand Jun-Jul)
         seasonal = 1.0
-        if month in [6, 7, 8]:
-            seasonal = 1.3
-        elif month in [11, 12]:
-            seasonal = 1.5
+        if month in [6, 7]:
+            seasonal = 1.2   # Summer — beverages, ice cream
+        elif month in [10, 11]:
+            seasonal = 1.6   # Festive season — Navratri, Dussehra, Diwali
+        elif month in [12]:
+            seasonal = 1.3   # Year-end / Christmas / New Year
+        elif month in [3]:
+            seasonal = 1.2   # Holi
         elif month in [1, 2]:
-            seasonal = 0.8
+            seasonal = 0.85  # Post-festive lull
 
         # Weekend boost
         if sale_date.weekday() >= 5:
@@ -338,8 +542,8 @@ def generate_sales(products_df, customers_df, n=50000):
         # Holiday boost
         seasonal *= get_holiday_boost(sale_date)
 
-        # Time of day (shopping hours pattern)
-        hour_weights = [0]*8 + [3,5,7,9,10,10,9,8,7,6,5,3,2,1]  # 8am-9pm
+        # Time of day (shopping hours pattern — Indian timing)
+        hour_weights = [0]*7 + [2, 4, 6, 8, 10, 8, 6, 5, 4, 5, 7, 9, 8, 5, 3, 1, 0]  # 7am-11pm
         hour = random.choices(range(24), weights=[w if w > 0 else 0.1 for w in (hour_weights + [0.1]*max(0,24-len(hour_weights)))[:24]])[0]
         minute = random.randint(0, 59)
 
@@ -347,8 +551,8 @@ def generate_sales(products_df, customers_df, n=50000):
         basket_counter += 1
         basket_id = f"B{basket_counter:06d}"
 
-        # Items in basket: 1-6, influenced by seasonal
-        num_items = max(1, min(6, int(np.random.exponential(2.5) * (seasonal ** 0.3))))
+        # Items in basket: 1-8, influenced by seasonal
+        num_items = max(1, min(8, int(np.random.exponential(2.5) * (seasonal ** 0.3))))
 
         selected_products = np.random.choice(product_ids, size=num_items, replace=False, p=prod_weights)
 
@@ -358,7 +562,7 @@ def generate_sales(products_df, customers_df, n=50000):
             quantity = min(quantity, 10)
 
             unit_price = prices[pid]
-            discount = np.random.choice([0, 0, 0, 0.05, 0.10, 0.15], p=[0.5, 0.2, 0.1, 0.1, 0.07, 0.03])
+            discount = np.random.choice([0, 0, 0, 0.05, 0.10, 0.15, 0.20], p=[0.45, 0.15, 0.10, 0.12, 0.10, 0.05, 0.03])
             final_price = round(unit_price * (1 - discount), 2)
 
             sales.append({
@@ -372,8 +576,8 @@ def generate_sales(products_df, customers_df, n=50000):
                 "total_price": round(final_price * quantity, 2),
                 "timestamp": sale_date.replace(hour=hour, minute=minute).strftime("%Y-%m-%d %H:%M:%S"),
                 "payment_method": np.random.choice(
-                    ["Cash", "Credit Card", "Debit Card", "Digital Wallet"],
-                    p=[0.15, 0.35, 0.25, 0.25]
+                    ["Cash", "Credit Card", "Debit Card", "UPI", "Net Banking"],
+                    p=[0.15, 0.15, 0.20, 0.40, 0.10]
                 ),
             })
 
@@ -381,6 +585,18 @@ def generate_sales(products_df, customers_df, n=50000):
 
 
 # ──────────────────────────── INVENTORY ────────────────────────────
+
+WAREHOUSE_LOCATIONS = [
+    "Mumbai Hub - Aisle {a} Shelf {s}",
+    "Delhi Warehouse - Aisle {a} Shelf {s}",
+    "Bangalore DC - Aisle {a} Shelf {s}",
+    "Hyderabad Hub - Aisle {a} Shelf {s}",
+    "Chennai Warehouse - Aisle {a} Shelf {s}",
+    "Pune DC - Aisle {a} Shelf {s}",
+    "Kolkata Hub - Aisle {a} Shelf {s}",
+    "Ahmedabad Warehouse - Aisle {a} Shelf {s}",
+]
+
 
 def generate_inventory(products_df):
     inventory = []
@@ -390,13 +606,18 @@ def generate_inventory(products_df):
         reorder_point = random.randint(10, 50)
         last_restock = datetime.now() - timedelta(days=random.randint(0, 45))
 
+        warehouse = random.choice(WAREHOUSE_LOCATIONS).format(
+            a=random.randint(1, 25),
+            s=random.choice("ABCDEFGH")
+        )
+
         inventory.append({
             "product_id": row["product_id"],
             "current_stock": current_stock,
             "max_stock": max_stock,
             "reorder_point": reorder_point,
             "last_restock_date": last_restock.strftime("%Y-%m-%d"),
-            "warehouse_location": f"Aisle-{random.randint(1, 30)}-Shelf-{random.choice('ABCDEFGH')}",
+            "warehouse_location": warehouse,
         })
     return pd.DataFrame(inventory)
 
@@ -404,24 +625,25 @@ def generate_inventory(products_df):
 # ──────────────────────────── MAIN ────────────────────────────
 
 def main():
-    print("=" * 50)
-    print("SmartMart Data Generator V2")
-    print("=" * 50)
+    print("=" * 55)
+    print("  SmartMart Indian Data Generator V3")
+    print("  Real Indian brands, INR prices, Indian demographics")
+    print("=" * 55)
 
-    print("\nGenerating suppliers...")
+    print("\nGenerating suppliers (Indian FMCG companies)...")
     suppliers = generate_suppliers()
     suppliers.to_csv(os.path.join(OUTPUT_DIR, "suppliers.csv"), index=False)
     print(f"  -> {len(suppliers)} suppliers")
 
-    print("Generating products...")
+    print("Generating products (Indian brands, INR prices)...")
     products = generate_products()
     products.to_csv(os.path.join(OUTPUT_DIR, "products.csv"), index=False)
     print(f"  -> {len(products)} products across {products['category'].nunique()} categories")
 
-    print("Generating customers...")
+    print("Generating customers (Indian demographics)...")
     customers = generate_customers(2000)
     customers.to_csv(os.path.join(OUTPUT_DIR, "customers.csv"), index=False)
-    print(f"  -> {len(customers)} customers")
+    print(f"  -> {len(customers)} customers across {len(CITIES)} cities")
 
     print("Generating sales transactions...")
     sales = generate_sales(products, customers, 50000)
