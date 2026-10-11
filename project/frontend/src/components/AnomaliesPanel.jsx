@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import SourceButton from './SourceButton';
+import { SOURCES } from '../constants/sources';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceDot
@@ -38,22 +40,34 @@ export default function AnomaliesPanel() {
 
       <div className="kpi-grid">
         <div className="kpi-card red">
-          <div className="kpi-icon">🔍</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.anomalies.kpiTotalAnomalies} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🔍</div>
+          </div>
           <div className="kpi-label">Total Anomalies</div>
           <div className="kpi-value">{data.total_anomalies}</div>
         </div>
         <div className="kpi-card orange">
-          <div className="kpi-icon">📈</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.anomalies.kpiSalesSpikes} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📈</div>
+          </div>
           <div className="kpi-label">Sales Spikes</div>
           <div className="kpi-value">{data.spikes}</div>
         </div>
         <div className="kpi-card purple">
-          <div className="kpi-icon">📉</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.anomalies.kpiSalesDrops} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📉</div>
+          </div>
           <div className="kpi-label">Sales Drops</div>
           <div className="kpi-value">{data.drops}</div>
         </div>
         <div className="kpi-card blue">
-          <div className="kpi-icon">🤖</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.anomalies.kpiModel} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🤖</div>
+          </div>
           <div className="kpi-label">Model</div>
           <div className="kpi-value" style={{ fontSize: 16 }}>Isolation Forest</div>
         </div>
@@ -61,7 +75,10 @@ export default function AnomaliesPanel() {
 
       {/* Sales Timeline with Anomalies */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-title">Sales Timeline with Detected Anomalies</div>
+        <div className="card-header-with-source">
+          <SourceButton sources={SOURCES.anomalies.salesTimeline} />
+          <div className="card-title">Sales Timeline with Detected Anomalies</div>
+        </div>
         <div className="chart-container-lg">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={daily}>
@@ -91,7 +108,10 @@ export default function AnomaliesPanel() {
 
       {/* Anomaly Details Table */}
       <div className="card">
-        <div className="card-title">Anomaly Details</div>
+        <div className="card-header-with-source">
+          <SourceButton sources={SOURCES.anomalies.anomalyDetailsTable} />
+          <div className="card-title">Anomaly Details</div>
+        </div>
         <div className="table-wrapper">
           <table>
             <thead>

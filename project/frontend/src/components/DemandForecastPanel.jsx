@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import SourceButton from './SourceButton';
+import { SOURCES } from '../constants/sources';
 import { getCategoryColor } from '../constants/colors';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -65,7 +67,10 @@ export default function DemandForecastPanel() {
 
       {/* Main Forecast Chart */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-title">Predicted vs Actual Demand — {selectedCat}</div>
+        <div className="card-header-with-source">
+          <SourceButton sources={SOURCES.forecast.demandChart} />
+          <div className="card-title">Predicted vs Actual Demand — {selectedCat}</div>
+        </div>
         <div className="chart-container-lg">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
@@ -88,7 +93,10 @@ export default function DemandForecastPanel() {
       <div className="grid-2">
         {/* Forecast Table */}
         <div className="card">
-          <div className="card-title">30-Day Forecast — {selectedCat}</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.forecast.forecastTable} />
+            <div className="card-title">30-Day Forecast — {selectedCat}</div>
+          </div>
           <div className="table-wrapper" style={{ maxHeight: 300 }}>
             <table>
               <thead><tr><th>Date</th><th>Predicted Demand</th></tr></thead>
@@ -106,7 +114,10 @@ export default function DemandForecastPanel() {
 
         {/* Model Info */}
         <div className="card">
-          <div className="card-title">Model Summary</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.forecast.modelSummary} />
+            <div className="card-title">Model Summary</div>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>MODEL</span>

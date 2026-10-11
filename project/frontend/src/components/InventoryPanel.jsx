@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../services/api';
+import SourceButton from './SourceButton';
+import { SOURCES } from '../constants/sources';
 import { CHART_COLORS as COLORS } from '../constants/colors';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -105,22 +107,34 @@ export default function InventoryPanel() {
       {/* KPI Row */}
       <div className="kpi-grid">
         <div className="kpi-card blue">
-          <div className="kpi-icon">📦</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.inventory.kpiTotalProducts} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📦</div>
+          </div>
           <div className="kpi-label">Total Products</div>
           <div className="kpi-value">{inventory.total}</div>
         </div>
         <div className="kpi-card red">
-          <div className="kpi-icon">🚨</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.inventory.kpiLowStock} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🚨</div>
+          </div>
           <div className="kpi-label">Low Stock</div>
           <div className="kpi-value">{lowStock.length}</div>
         </div>
         <div className="kpi-card orange">
-          <div className="kpi-icon">⏰</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.inventory.kpiExpiringSoon} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>⏰</div>
+          </div>
           <div className="kpi-label">Expiring Soon</div>
           <div className="kpi-value">{expiring.length}</div>
         </div>
         <div className="kpi-card green">
-          <div className="kpi-icon">📊</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.inventory.kpiCategories} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📊</div>
+          </div>
           <div className="kpi-label">Categories</div>
           <div className="kpi-value">{byCategory.length}</div>
         </div>
@@ -138,7 +152,10 @@ export default function InventoryPanel() {
       <div className="grid-2">
         {/* Stock by Category */}
         <div className="card">
-          <div className="card-title">Stock by Category</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.inventory.stockByCategory} />
+            <div className="card-title">Stock by Category</div>
+          </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={byCategory}>
@@ -154,7 +171,10 @@ export default function InventoryPanel() {
 
         {/* Category Distribution Pie */}
         <div className="card">
-          <div className="card-title">Product Distribution</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.inventory.productDistribution} />
+            <div className="card-title">Product Distribution</div>
+          </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -175,7 +195,10 @@ export default function InventoryPanel() {
       {/* Expiring Soon */}
       {expiring.length > 0 && (
         <div className="card" style={{ marginBottom: 24 }}>
-          <div className="card-title">⏰ Expiring Soon ({expiring.length})</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.inventory.expiringSoon} />
+            <div className="card-title">⏰ Expiring Soon ({expiring.length})</div>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
             {expiring.slice(0, 8).map(item => {
               const days = Math.round(item.days_remaining || 0);
@@ -203,7 +226,10 @@ export default function InventoryPanel() {
       {/* Low Stock Alerts */}
       {lowStock.length > 0 && (
         <div className="card" style={{ marginBottom: 24 }}>
-          <div className="card-title">⚠️ Low Stock Alerts ({lowStock.length})</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.inventory.lowStockAlerts} />
+            <div className="card-title">⚠️ Low Stock Alerts ({lowStock.length})</div>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 8 }}>
             {lowStock.slice(0, 8).map(item => (
               <div className="alert-row" key={item.product_id}>
@@ -226,7 +252,10 @@ export default function InventoryPanel() {
       {/* Search & Filter Bar */}
       <div className="card">
         <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <div className="card-title" style={{ marginBottom: 0, flex: 1 }}>All Products</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+            <SourceButton sources={SOURCES.inventory.allProductsTable} />
+            <div className="card-title" style={{ marginBottom: 0 }}>All Products</div>
+          </div>
           <input className="search-input" placeholder="🔍 Search products..."
             value={searchInput} onChange={e => setSearchInput(e.target.value)} />
           <select className="filter-select" value={catFilter}

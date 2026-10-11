@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import SourceButton from './SourceButton';
+import { SOURCES } from '../constants/sources';
 import { CHART_COLORS as COLORS } from '../constants/colors';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -57,22 +59,34 @@ export default function SalesInsightsPanel() {
 
       <div className="kpi-grid">
         <div className="kpi-card green">
-          <div className="kpi-icon">💰</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.sales.kpiTotalRevenue} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>💰</div>
+          </div>
           <div className="kpi-label">Total Revenue</div>
           <div className="kpi-value">₹{totalRevenue.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
         </div>
         <div className="kpi-card blue">
-          <div className="kpi-icon">🧾</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.sales.kpiTransactions} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🧾</div>
+          </div>
           <div className="kpi-label">Transactions</div>
           <div className="kpi-value">{totalTxns.toLocaleString()}</div>
         </div>
         <div className="kpi-card purple">
-          <div className="kpi-icon">📊</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.sales.kpiAvgDailyRevenue} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📊</div>
+          </div>
           <div className="kpi-label">Avg Daily Revenue</div>
           <div className="kpi-value">₹{avgDaily.toFixed(0)}</div>
         </div>
         <div className="kpi-card orange">
-          <div className="kpi-icon">🏆</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.sales.kpiTopProduct} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🏆</div>
+          </div>
           <div className="kpi-label">Top Product</div>
           <div className="kpi-value" style={{ fontSize: 16 }}>{bestSellers[0]?.name || 'N/A'}</div>
         </div>
@@ -80,8 +94,11 @@ export default function SalesInsightsPanel() {
 
       {/* Revenue Chart */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div className="card-title" style={{ marginBottom: 0 }}>Revenue Trend</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SourceButton sources={SOURCES.sales.revenueTrend} />
+            <div className="card-title" style={{ marginBottom: 0 }}>Revenue Trend</div>
+          </div>
           <div className="tabs" style={{ marginBottom: 0 }}>
             <button className={`tab ${view === 'daily' ? 'active' : ''}`} onClick={() => setView('daily')}>Daily</button>
             <button className={`tab ${view === 'monthly' ? 'active' : ''}`} onClick={() => setView('monthly')}>Monthly</button>
@@ -105,7 +122,10 @@ export default function SalesInsightsPanel() {
       <div className="grid-2">
         {/* Best Sellers */}
         <div className="card">
-          <div className="card-title">🏆 Best Selling Products</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.sales.bestSellers} />
+            <div className="card-title">🏆 Best Selling Products</div>
+          </div>
           <div className="table-wrapper" style={{ maxHeight: 350 }}>
             <table>
               <thead><tr><th>Product</th><th>Category</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
@@ -128,7 +148,10 @@ export default function SalesInsightsPanel() {
 
         {/* Category Revenue */}
         <div className="card">
-          <div className="card-title">Revenue by Category</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.sales.revenueByCategory} />
+            <div className="card-title">Revenue by Category</div>
+          </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

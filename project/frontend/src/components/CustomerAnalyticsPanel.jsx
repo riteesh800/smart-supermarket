@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import SourceButton from './SourceButton';
+import { SOURCES } from '../constants/sources';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ZAxis,
@@ -85,27 +87,42 @@ export default function CustomerAnalyticsPanel() {
       {/* KPI Row */}
       <div className="kpi-grid">
         <div className="kpi-card green">
-          <div className="kpi-icon">🏆</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.customers.kpiChampions} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🏆</div>
+          </div>
           <div className="kpi-label">Champions</div>
           <div className="kpi-value">{segments?.segment_counts?.Champions || 0}</div>
         </div>
         <div className="kpi-card blue">
-          <div className="kpi-icon">💎</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.customers.kpiLoyal} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>💎</div>
+          </div>
           <div className="kpi-label">Loyal</div>
           <div className="kpi-value">{segments?.segment_counts?.['Loyal Customers'] || 0}</div>
         </div>
         <div className="kpi-card purple">
-          <div className="kpi-icon">🌱</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.customers.kpiPotential} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🌱</div>
+          </div>
           <div className="kpi-label">Potential</div>
           <div className="kpi-value">{segments?.segment_counts?.Potential || 0}</div>
         </div>
         <div className="kpi-card orange">
-          <div className="kpi-icon">⚡</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.customers.kpiAtRisk} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>⚡</div>
+          </div>
           <div className="kpi-label">At Risk</div>
           <div className="kpi-value">{segments?.segment_counts?.['At Risk'] || 0}</div>
         </div>
         <div className="kpi-card red">
-          <div className="kpi-icon">📉</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.customers.kpiLost} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📉</div>
+          </div>
           <div className="kpi-label">Lost</div>
           <div className="kpi-value">{segments?.segment_counts?.Lost || 0}</div>
         </div>
@@ -114,7 +131,10 @@ export default function CustomerAnalyticsPanel() {
       <div className="grid-2">
         {/* Segment Distribution */}
         <div className="card">
-          <div className="card-title">Customer Segments</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.customers.customerSegments} />
+            <div className="card-title">Customer Segments</div>
+          </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -134,7 +154,10 @@ export default function CustomerAnalyticsPanel() {
 
         {/* RFM Scatter */}
         <div className="card">
-          <div className="card-title">RFM Analysis (Frequency vs Monetary)</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.customers.rfmScatter} />
+            <div className="card-title">RFM Analysis (Frequency vs Monetary)</div>
+          </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart>
@@ -159,7 +182,10 @@ export default function CustomerAnalyticsPanel() {
         <div className="grid-2" style={{ marginTop: 0 }}>
           {/* Age Distribution */}
           <div className="card">
-            <div className="card-title">Age Distribution</div>
+            <div className="card-header-with-source">
+              <SourceButton sources={SOURCES.customers.ageDistribution} />
+              <div className="card-title">Age Distribution</div>
+            </div>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={demographics.age_distribution}>
@@ -175,7 +201,10 @@ export default function CustomerAnalyticsPanel() {
 
           {/* Tier Distribution */}
           <div className="card">
-            <div className="card-title">Membership Tiers</div>
+            <div className="card-header-with-source">
+              <SourceButton sources={SOURCES.customers.membershipTiers} />
+              <div className="card-title">Membership Tiers</div>
+            </div>
             <div className="chart-container">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -198,7 +227,10 @@ export default function CustomerAnalyticsPanel() {
       {/* Retention Chart */}
       {retention.length > 0 && (
         <div className="card" style={{ marginBottom: 24 }}>
-          <div className="card-title">Monthly Active Customers (Retention)</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.customers.retentionChart} />
+            <div className="card-title">Monthly Active Customers (Retention)</div>
+          </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={retention}>
@@ -217,7 +249,10 @@ export default function CustomerAnalyticsPanel() {
       {/* Top Customers + Actions */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-          <div className="card-title" style={{ marginBottom: 0 }}>Top Customers</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SourceButton sources={SOURCES.customers.topCustomersTable} />
+            <div className="card-title" style={{ marginBottom: 0 }}>Top Customers</div>
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-secondary" onClick={handleExportCSV}>📥 Export CSV</button>
             <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add Customer</button>

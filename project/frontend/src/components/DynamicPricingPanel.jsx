@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import SourceButton from './SourceButton';
+import { SOURCES } from '../constants/sources';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
@@ -43,25 +45,37 @@ export default function DynamicPricingPanel() {
 
       <div className="kpi-grid">
         <div className="kpi-card green">
-          <div className="kpi-icon">📈</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.pricing.kpiPriceIncreases} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📈</div>
+          </div>
           <div className="kpi-label">Price Increases</div>
           <div className="kpi-value">{actionSummary.Increase || 0}</div>
           <div className="kpi-sub">High demand / low stock</div>
         </div>
         <div className="kpi-card orange">
-          <div className="kpi-icon">📉</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.pricing.kpiPriceDecreases} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📉</div>
+          </div>
           <div className="kpi-label">Price Decreases</div>
           <div className="kpi-value">{actionSummary.Decrease || 0}</div>
           <div className="kpi-sub">Overstocked / low demand</div>
         </div>
         <div className="kpi-card purple">
-          <div className="kpi-icon">⏸️</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.pricing.kpiHold} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>⏸️</div>
+          </div>
           <div className="kpi-label">Hold / No Change</div>
           <div className="kpi-value">{actionSummary.Hold || 0}</div>
           <div className="kpi-sub">Balanced</div>
         </div>
         <div className="kpi-card blue">
-          <div className="kpi-icon">📊</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.pricing.kpiAvgChange} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📊</div>
+          </div>
           <div className="kpi-label">Avg Change</div>
           <div className="kpi-value">{pricing.avg_change_pct > 0 ? '+' : ''}{pricing.avg_change_pct}%</div>
           <div className="kpi-sub">Across all products</div>
@@ -70,7 +84,10 @@ export default function DynamicPricingPanel() {
 
       {/* Price Change Distribution Chart */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-title">Price Change Distribution</div>
+        <div className="card-header-with-source">
+          <SourceButton sources={SOURCES.pricing.priceChangeDistribution} />
+          <div className="card-title">Price Change Distribution</div>
+        </div>
         <div className="chart-container">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={changeData}>
@@ -88,8 +105,11 @@ export default function DynamicPricingPanel() {
 
       {/* Filter Tabs + Table */}
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div className="card-title" style={{ marginBottom: 0 }}>Pricing Suggestions</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SourceButton sources={SOURCES.pricing.pricingSuggestionsTable} />
+            <div className="card-title" style={{ marginBottom: 0 }}>Pricing Suggestions</div>
+          </div>
           <div className="tabs" style={{ marginBottom: 0 }}>
             {['all', 'Increase', 'Decrease', 'Hold'].map(f => (
               <button key={f} className={`tab ${filter === f ? 'active' : ''}`}

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import SourceButton from './SourceButton';
+import { SOURCES } from '../constants/sources';
 import { CHART_COLORS, getChartColor } from '../constants/colors';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -81,22 +83,34 @@ export default function SalesHeatmapPanel() {
 
       <div className="kpi-grid">
         <div className="kpi-card green">
-          <div className="kpi-icon">💰</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.heatmap.kpiTotalProfit} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>💰</div>
+          </div>
           <div className="kpi-label">Total Profit</div>
           <div className="kpi-value">₹{Math.round(totalProfit).toLocaleString()}</div>
         </div>
         <div className="kpi-card blue">
-          <div className="kpi-icon">📊</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.heatmap.kpiOverallMargin} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📊</div>
+          </div>
           <div className="kpi-label">Overall Margin</div>
           <div className="kpi-value">{overallMargin}%</div>
         </div>
         <div className="kpi-card purple">
-          <div className="kpi-icon">💳</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.heatmap.kpiPaymentMethods} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>💳</div>
+          </div>
           <div className="kpi-label">Payment Methods</div>
           <div className="kpi-value">{payments.length}</div>
         </div>
         <div className="kpi-card orange">
-          <div className="kpi-icon">🕐</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.heatmap.kpiPeakHours} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🕐</div>
+          </div>
           <div className="kpi-label">Peak Hours</div>
           <div className="kpi-value">{peakLabel}</div>
         </div>
@@ -104,7 +118,10 @@ export default function SalesHeatmapPanel() {
 
       {/* Heatmap */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-title">Sales Volume — Hour × Day of Week</div>
+        <div className="card-header-with-source">
+          <SourceButton sources={SOURCES.heatmap.hourlyHeatmap} />
+          <div className="card-title">Sales Volume — Hour × Day of Week</div>
+        </div>
         <div style={{ overflowX: 'auto' }}>
           <div className="heatmap-grid">
             <div className="heatmap-row">
@@ -149,7 +166,10 @@ export default function SalesHeatmapPanel() {
       <div className="grid-2">
         {/* Payment Methods */}
         <div className="card">
-          <div className="card-title">Payment Method Distribution</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.heatmap.paymentMethods} />
+            <div className="card-title">Payment Method Distribution</div>
+          </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -168,7 +188,10 @@ export default function SalesHeatmapPanel() {
 
         {/* Profit Margins */}
         <div className="card">
-          <div className="card-title">Profit Margin by Category</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.heatmap.profitMarginByCategory} />
+            <div className="card-title">Profit Margin by Category</div>
+          </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={margins} layout="vertical">
@@ -193,7 +216,10 @@ export default function SalesHeatmapPanel() {
 
       {/* Profit Detail Table */}
       <div className="card">
-        <div className="card-title">Category Profit Breakdown</div>
+        <div className="card-header-with-source">
+          <SourceButton sources={SOURCES.heatmap.categoryProfitBreakdownTable} />
+          <div className="card-title">Category Profit Breakdown</div>
+        </div>
         <div className="table-wrapper">
           <table>
             <thead>

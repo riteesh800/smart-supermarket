@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import SourceButton from './SourceButton';
+import { SOURCES } from '../constants/sources';
 
 export default function RecommendationsPanel() {
   const [data, setData] = useState(null);
@@ -33,22 +35,34 @@ export default function RecommendationsPanel() {
 
       <div className="kpi-grid">
         <div className="kpi-card blue">
-          <div className="kpi-icon">📦</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.recommendations.kpiRestock} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📦</div>
+          </div>
           <div className="kpi-label">Restock Suggestions</div>
           <div className="kpi-value">{suggestions.length}</div>
         </div>
         <div className="kpi-card green">
-          <div className="kpi-icon">📈</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.recommendations.kpiPriceIncrease} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📈</div>
+          </div>
           <div className="kpi-label">Price Increase</div>
           <div className="kpi-value">{actionSummary.Increase || 0}</div>
         </div>
         <div className="kpi-card orange">
-          <div className="kpi-icon">📉</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.recommendations.kpiPriceDecrease} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>📉</div>
+          </div>
           <div className="kpi-label">Price Decrease</div>
           <div className="kpi-value">{actionSummary.Decrease || 0}</div>
         </div>
         <div className="kpi-card purple">
-          <div className="kpi-icon">🔗</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <SourceButton sources={SOURCES.recommendations.kpiAssociationRules} />
+            <div className="kpi-icon" style={{ marginBottom: 0 }}>🔗</div>
+          </div>
           <div className="kpi-label">Association Rules</div>
           <div className="kpi-value">{data?.total_rules || 0}</div>
         </div>
@@ -57,7 +71,10 @@ export default function RecommendationsPanel() {
       <div className="grid-2">
         {/* Product Suggestions */}
         <div className="card">
-          <div className="card-title">🛒 Product Suggestions (Co-purchase Patterns)</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.recommendations.productSuggestions} />
+            <div className="card-title">🛒 Product Suggestions (Co-purchase Patterns)</div>
+          </div>
           {suggestions.length === 0
             ? <p style={{ color: 'var(--text-muted)' }}>No suggestions available</p>
             : suggestions.map((s, i) => (
@@ -79,7 +96,10 @@ export default function RecommendationsPanel() {
 
         {/* Association Rules */}
         <div className="card">
-          <div className="card-title">🔗 Association Rules (Frequently Bought Together)</div>
+          <div className="card-header-with-source">
+            <SourceButton sources={SOURCES.recommendations.associationRules} />
+            <div className="card-title">🔗 Association Rules (Frequently Bought Together)</div>
+          </div>
           <div className="table-wrapper" style={{ maxHeight: 350 }}>
             <table>
               <thead><tr><th>If Buys</th><th>Then Buys</th><th>Confidence</th><th>Lift</th></tr></thead>
@@ -100,7 +120,10 @@ export default function RecommendationsPanel() {
 
       {/* Dynamic Pricing Table */}
       <div className="card">
-        <div className="card-title">💲 Dynamic Pricing Suggestions</div>
+        <div className="card-header-with-source">
+          <SourceButton sources={SOURCES.recommendations.dynamicPricingTable} />
+          <div className="card-title">💲 Dynamic Pricing Suggestions</div>
+        </div>
         <div className="table-wrapper">
           <table>
             <thead>
