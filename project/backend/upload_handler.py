@@ -277,16 +277,19 @@ def normalize_sales(df, mapping):
     else:
         result["unit_price"] = 0
 
+    # Discount
+    if "discount" in mapping:
+        disc = pd.to_numeric(df[mapping["discount"]], errors="coerce").fillna(0)
+        if (disc > 1).any():
+            disc = disc / 100.0
+        result["discount"] = disc.clip(0, 1)
+    else:
+        result["discount"] = 0.0
+
     if "total_price" in mapping:
         result["total_price"] = pd.to_numeric(df[mapping["total_price"]], errors="coerce").fillna(0)
     else:
-        result["total_price"] = (result["unit_price"] * result["quantity"]).round(2)
-
-    # Discount
-    if "discount" in mapping:
-        result["discount"] = pd.to_numeric(df[mapping["discount"]], errors="coerce").fillna(0)
-    else:
-        result["discount"] = 0.0
+        result["total_price"] = (result["unit_price"] * result["quantity"] * (1 - result["discount"])).round(2)
 
     # Timestamp
     if "timestamp" in mapping:
@@ -420,20 +423,32 @@ def normalize_suppliers(df, mapping):
 
     result["contact_email"] = df[mapping["contact_email"]].fillna("").astype(str) if "contact_email" in mapping else ""
     result["lead_time_days"] = pd.to_numeric(df[mapping["lead_time_days"]], errors="coerce").fillna(7).astype(int) if "lead_time_days" in mapping else 7
-    result["reliability_score"] = pd.to_numeric(df[mapping["reliability_score"]], errors="coerce").fillna(0.5) if "reliability_score" in mapping else 0.5
+    if "reliability_score" in mapping:
+        rel = pd.to_numeric(df[mapping["reliability_score"]], errors="coerce").fillna(0.5)
+        if (rel > 1).any():
+            rel = rel / 100.0
+        result["reliability_score"] = rel.clip(0, 1)
+    else:
+        result["reliability_score"] = 0.5
 
     return result
 
 
 def extract_products_from_sales(sales_df):
     """Auto-generate products table from sales data when no products CSV provided."""
-    products = sales_df.groupby("product_id").agg(
-        price=("unit_price", "median"),
-    ).reset_index()
+    agg_dict = {"price": ("unit_price", "median")}
+    if "name" in sales_df.columns:
+        agg_dict["name"] = ("name", "first")
+    if "category" in sales_df.columns:
+        agg_dict["category"] = ("category", "first")
 
-    products["name"] = products["product_id"]
-    products["category"] = "General"
-    products["cost"] = None
+    products = sales_df.groupby("product_id").agg(**agg_dict).reset_index()
+
+    if "name" not in products.columns:
+        products["name"] = products["product_id"]
+    if "category" not in products.columns:
+        products["category"] = "General"
+    products["cost"] = (products["price"] * 0.55).round(2)
     products["supplier"] = "Unknown"
     products["shelf_life_days"] = 30
     products["unit"] = "piece"

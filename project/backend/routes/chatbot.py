@@ -730,14 +730,15 @@ def respond(intent, msg, db, session_id="default"):
         data = tq("""
             SELECT s.name, s.lead_time_days, s.reliability_score,
                    COUNT(p.product_id) as products, GROUP_CONCAT(DISTINCT p.category) as categories
-            FROM suppliers s LEFT JOIN products p ON p.supplier = s.name
+            FROM suppliers s LEFT JOIN products p ON p.supplier_id = s.supplier_id OR p.supplier = s.name
             GROUP BY s.supplier_id ORDER BY products DESC
         """)
         if not data:
             return {"reply": "No supplier data available.", "type": "text"}
         lines = ["🚚 **Supplier Overview**:\n"]
         for d in data:
-            rel = round(d['reliability_score'] * 100) if d['reliability_score'] else 0
+            raw_rel = d['reliability_score'] or 0
+            rel = round((raw_rel / 100 if raw_rel > 1 else raw_rel) * 100)
             star = "⭐" if rel >= 95 else "✅" if rel >= 90 else "⚠️" if rel >= 85 else "🔴"
             cats = d['categories'][:40] + "..." if d['categories'] and len(d['categories']) > 40 else (d['categories'] or "N/A")
             lines.append(f"{star} **{d['name']}** — {d['products']} products\n   Reliability: {rel}% • Lead: {d['lead_time_days']}d • Categories: {cats}")

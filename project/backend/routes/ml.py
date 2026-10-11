@@ -131,9 +131,8 @@ def get_dashboard_summary():
 
         # Total cost (profit calc)
         cost = db.execute(text("""
-            SELECT SUM(s.quantity * p.cost) FROM sales s
+            SELECT SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, 0)) FROM sales s
             JOIN products p ON s.product_id = p.product_id
-            WHERE p.cost IS NOT NULL
         """)).scalar() or 0
 
         # Total products

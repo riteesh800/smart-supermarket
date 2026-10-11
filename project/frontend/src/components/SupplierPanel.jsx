@@ -24,8 +24,14 @@ export default function SupplierPanel() {
 
   if (loading) return <div className="loading">Loading supplier data...</div>;
 
+  const normRel = (score) => {
+    if (score == null) return 0;
+    const n = Number(score);
+    return n > 1 ? n / 100 : n;
+  };
+
   const avgReliability = suppliers.length
-    ? (suppliers.reduce((s, x) => s + (x.reliability_score || 0), 0) / suppliers.length * 100).toFixed(1)
+    ? (suppliers.reduce((s, x) => s + normRel(x.reliability_score), 0) / suppliers.length * 100).toFixed(1)
     : 0;
   const totalProducts = suppliers.reduce((s, x) => s + (x.products_supplied || 0), 0);
   const avgLeadTime = suppliers.length
@@ -34,10 +40,11 @@ export default function SupplierPanel() {
 
   // Chart data: products per supplier
   const supplierChart = performance.map(s => ({
-    name: s.name.split(' ')[0],
+    name: s.name,
+    shortName: s.name.length > 16 ? s.name.slice(0, 14) + '…' : s.name,
     products: s.products_supplied,
-    revenue: Math.round(s.total_revenue_generated),
-    reliability: Math.round(s.reliability_score * 100),
+    revenue: Math.round(s.total_revenue_generated || 0),
+    reliability: Math.round(normRel(s.reliability_score) * 100),
   })).sort((a, b) => b.revenue - a.revenue);
 
   return (
@@ -104,7 +111,8 @@ export default function SupplierPanel() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={supplierChart}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" tick={{ fill: '#9898b8', fontSize: 10 }} angle={-30} textAnchor="end" height={60} />
+                <XAxis dataKey="name" tick={{ fill: '#9898b8', fontSize: 10 }} angle={-30} textAnchor="end" height={60}
+                  tickFormatter={(v) => v.length > 15 ? v.slice(0, 13) + '…' : v} />
                 <YAxis tick={{ fill: '#9898b8', fontSize: 11 }} />
                 <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }} />
                 <Bar dataKey="products" fill="#10b981" radius={[6, 6, 0, 0]} />
@@ -138,15 +146,21 @@ export default function SupplierPanel() {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 50, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3 }}>
-                        <div style={{
-                          width: `${s.reliability_score * 100}%`, height: '100%', borderRadius: 3,
-                          background: s.reliability_score >= 0.9 ? '#10b981' : s.reliability_score >= 0.85 ? '#f59e0b' : '#ef4444'
-                        }} />
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 600 }}>{(s.reliability_score * 100).toFixed(0)}%</span>
-                    </div>
+                    {(() => {
+                      const rel = normRel(s.reliability_score);
+                      const pct = Math.round(rel * 100);
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 50, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3 }}>
+                            <div style={{
+                              width: `${pct}%`, height: '100%', borderRadius: 3,
+                              background: rel >= 0.9 ? '#10b981' : rel >= 0.85 ? '#f59e0b' : '#ef4444'
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 600 }}>{pct}%</span>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td style={{ fontWeight: 600 }}>{s.products_supplied}</td>
                   <td>{s.categories_covered}</td>

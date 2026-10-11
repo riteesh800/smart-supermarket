@@ -30,6 +30,7 @@ export default function SalesInsightsPanel() {
 
   const dailyData = (revenue?.daily || []).map(d => ({
     date: d.date?.slice(5),
+    fullDate: d.date,
     revenue: Math.round(d.revenue * 100) / 100,
     transactions: d.transactions
   }));
@@ -93,7 +94,8 @@ export default function SalesInsightsPanel() {
               <XAxis dataKey={xKey} tick={{ fill: '#9898b8', fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis tick={{ fill: '#9898b8', fontSize: 11 }} />
               <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
-                formatter={(val) => [`₹${val.toLocaleString()}`, 'Revenue']} />
+                labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
+                formatter={(val) => [`₹${Number(val).toLocaleString()}`, 'Revenue']} />
               <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -116,7 +118,7 @@ export default function SalesInsightsPanel() {
                     </td>
                     <td><span className="badge blue">{p.category}</span></td>
                     <td>{p.total_quantity}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--accent-green)' }}>₹{p.total_revenue?.toFixed(2)}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--accent-green)' }}>₹{Math.round(p.total_revenue || 0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

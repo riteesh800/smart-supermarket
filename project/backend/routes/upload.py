@@ -247,6 +247,17 @@ async def import_data(
                 normalized = normalize_suppliers(df, mapping)
                 _safe_load_to_table(conn, normalized, "suppliers")
 
+                # Link existing products to suppliers
+                conn.execute(text("""
+                    UPDATE products
+                    SET supplier_id = (
+                        SELECT s.supplier_id FROM suppliers s
+                        WHERE s.name = products.supplier OR s.supplier_id = products.supplier
+                        LIMIT 1
+                    )
+                    WHERE supplier IS NOT NULL AND (supplier_id IS NULL OR supplier_id = '')
+                """))
+
                 mapping_info["suppliers"] = {"mapping": mapping, "rows": len(normalized)}
 
             else:

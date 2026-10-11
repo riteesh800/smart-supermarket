@@ -71,7 +71,7 @@ export default function DashboardOverview() {
           <div className="kpi-icon">🧾</div>
           <div className="kpi-label">Transactions</div>
           <div className="kpi-value">{summary?.total_transactions?.toLocaleString()}</div>
-          <div className="kpi-sub">{summary?.total_baskets?.toLocaleString()} baskets</div>
+          <div className="kpi-sub">{summary?.total_baskets?.toLocaleString()} baskets{summary?.avg_basket_value ? ` • avg ₹${Math.round(summary.avg_basket_value)}` : ''}</div>
         </div>
         <div className="kpi-card red">
           <div className="kpi-icon">🚨</div>
@@ -149,7 +149,7 @@ export default function DashboardOverview() {
                   <tr key={p.product_id}>
                     <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
                     <td style={{ fontWeight: 600 }}>{p.name}</td>
-                    <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>₹{p.total_revenue?.toFixed(0)}</td>
+                    <td style={{ color: 'var(--accent-green)', fontWeight: 600 }}>₹{Math.round(p.total_revenue || 0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

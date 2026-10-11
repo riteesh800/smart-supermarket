@@ -143,9 +143,9 @@ export default function CustomerAnalyticsPanel() {
                 <YAxis dataKey="monetary" name="Monetary" tick={{ fill: '#9898b8', fontSize: 11 }} />
                 <ZAxis dataKey="recency" range={[20, 200]} name="Recency" />
                 <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
-                  formatter={(val, name) => [name === 'Monetary' ? `₹${val}` : val, name]} />
+                  formatter={(val, name) => [name === 'Monetary' ? `₹${Math.round(Number(val || 0)).toLocaleString()}` : Number(val || 0).toLocaleString(), name]} />
                 {Object.keys(SEGMENT_COLORS).map(seg => (
-                  <Scatter key={seg} name={seg} data={allCustomers.filter(c => c.segment === seg)}
+                  <Scatter key={seg} name={seg} data={(Array.isArray(allCustomers) ? allCustomers : []).filter(c => c.segment === seg)}
                     fill={SEGMENT_COLORS[seg]} opacity={0.7} />
                 ))}
               </ScatterChart>
@@ -205,7 +205,8 @@ export default function CustomerAnalyticsPanel() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="month" tick={{ fill: '#9898b8', fontSize: 10 }} />
                 <YAxis tick={{ fill: '#9898b8', fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }} />
+                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
+                  formatter={(val) => [Number(val || 0).toLocaleString(), 'Active Customers']} />
                 <Line type="monotone" dataKey="active_customers" stroke="#00d4ff" strokeWidth={2} dot={false} name="Active Customers" />
               </LineChart>
             </ResponsiveContainer>
@@ -231,7 +232,7 @@ export default function CustomerAnalyticsPanel() {
               </tr>
             </thead>
             <tbody>
-              {topCustomers.map(c => (
+              {(Array.isArray(topCustomers) ? topCustomers : []).map(c => (
                 <tr key={c.customer_id}>
                   <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{c.customer_id}</td>
                   <td style={{ fontWeight: 600 }}>{c.first_name} {c.last_name}</td>
@@ -244,7 +245,7 @@ export default function CustomerAnalyticsPanel() {
                   <td><span className="badge purple">{c.membership_tier}</span></td>
                   <td>{c.recency}d</td>
                   <td>{c.frequency}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--accent-green)' }}>₹{c.monetary?.toFixed(2)}</td>
+                  <td style={{ fontWeight: 600, color: 'var(--accent-green)' }}>₹{Math.round(c.monetary || 0).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

@@ -26,12 +26,12 @@ export default function DynamicPricingPanel() {
   // Chart: price change distribution
   const changeData = [
     { range: '< -10%', count: suggestions.filter(s => s.price_change_pct < -10).length, color: '#ef4444' },
-    { range: '-10 to -5%', count: suggestions.filter(s => s.price_change_pct >= -10 && s.price_change_pct < -5).length, color: '#f59e0b' },
-    { range: '-5 to 0%', count: suggestions.filter(s => s.price_change_pct >= -5 && s.price_change_pct < 0).length, color: '#fbbf24' },
+    { range: '-10% to -5%', count: suggestions.filter(s => s.price_change_pct >= -10 && s.price_change_pct <= -5).length, color: '#f59e0b' },
+    { range: '-5% to 0%', count: suggestions.filter(s => s.price_change_pct > -5 && s.price_change_pct < 0).length, color: '#fbbf24' },
     { range: '0% (Hold)', count: suggestions.filter(s => s.price_change_pct === 0).length, color: '#6366f1' },
-    { range: '0 to 5%', count: suggestions.filter(s => s.price_change_pct > 0 && s.price_change_pct <= 5).length, color: '#34d399' },
-    { range: '5 to 10%', count: suggestions.filter(s => s.price_change_pct > 5 && s.price_change_pct <= 10).length, color: '#10b981' },
-    { range: '> 10%', count: suggestions.filter(s => s.price_change_pct > 10).length, color: '#059669' },
+    { range: '0% to +5%', count: suggestions.filter(s => s.price_change_pct > 0 && s.price_change_pct <= 5).length, color: '#34d399' },
+    { range: '+5% to +10%', count: suggestions.filter(s => s.price_change_pct > 5 && s.price_change_pct <= 10).length, color: '#10b981' },
+    { range: '> +10%', count: suggestions.filter(s => s.price_change_pct > 10).length, color: '#059669' },
   ].filter(d => d.count > 0);
 
   return (
@@ -63,7 +63,7 @@ export default function DynamicPricingPanel() {
         <div className="kpi-card blue">
           <div className="kpi-icon">📊</div>
           <div className="kpi-label">Avg Change</div>
-          <div className="kpi-value">{pricing.avg_change_pct}%</div>
+          <div className="kpi-value">{pricing.avg_change_pct > 0 ? '+' : ''}{pricing.avg_change_pct}%</div>
           <div className="kpi-sub">Across all products</div>
         </div>
       </div>

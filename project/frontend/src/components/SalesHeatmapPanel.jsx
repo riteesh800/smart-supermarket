@@ -39,8 +39,11 @@ export default function SalesHeatmapPanel() {
 
   if (loading) return <div className="loading">Loading analytics data...</div>;
 
-  // Build heatmap grid: hours (8-21) x days (0-6)
-  const hours = Array.from({ length: 14 }, (_, i) => i + 8);
+  // Build heatmap grid: hours dynamically based on data, defaulting to 8-21
+  const allHours = heatmap.length ? [...new Set(heatmap.map(h => h.hour))].sort((a, b) => a - b) : [];
+  const minHour = allHours.length ? Math.min(8, allHours[0]) : 8;
+  const maxHour = allHours.length ? Math.max(21, allHours[allHours.length - 1]) : 21;
+  const hours = Array.from({ length: maxHour - minHour + 1 }, (_, i) => i + minHour);
   const heatGrid = {};
   let maxCount = 0;
   heatmap.forEach(h => {
@@ -49,9 +52,9 @@ export default function SalesHeatmapPanel() {
     if (h.sales_count > maxCount) maxCount = h.sales_count;
   });
 
-  const totalProfit = margins.reduce((s, m) => s + m.total_profit, 0);
-  const totalRevenue = margins.reduce((s, m) => s + m.total_revenue, 0);
-  const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100).toFixed(1) : 0;
+  const totalProfit = margins.reduce((s, m) => s + (m.total_profit || 0), 0);
+  const totalRevenue = margins.reduce((s, m) => s + (m.total_revenue || 0), 0);
+  const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100).toFixed(1) : '0.0';
 
   // Compute real peak hours from heatmap data
   const hourlySales = {};
@@ -208,7 +211,7 @@ export default function SalesHeatmapPanel() {
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ width: 60, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3 }}>
-                        <div style={{ width: `${Math.min(m.margin_pct, 100)}%`, height: '100%', borderRadius: 3,
+                        <div style={{ width: `${Math.max(0, Math.min(m.margin_pct || 0, 100))}%`, height: '100%', borderRadius: 3,
                           background: m.margin_pct >= 40 ? '#10b981' : m.margin_pct >= 30 ? '#f59e0b' : '#ef4444' }} />
                       </div>
                       <span style={{ fontSize: 12, fontWeight: 600 }}>{m.margin_pct}%</span>

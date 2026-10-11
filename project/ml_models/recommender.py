@@ -123,10 +123,10 @@ def train():
     print(f"  Built {len(baskets)} baskets")
 
     n_baskets = len(baskets)
-    # Dynamically scale thresholds to avoid empty rules on small datasets
-    min_support = max(1, int(n_baskets * 0.05)) if n_baskets > 0 else 15
-    min_pair_support = max(1, int(n_baskets * 0.02)) if n_baskets > 0 else 5
-    min_conf = 0.05 if n_baskets < 100 else 0.1
+    # Dynamically scale thresholds based on realistic market basket support
+    min_support = max(10, int(n_baskets * 0.005)) if n_baskets > 0 else 10
+    min_pair_support = max(5, int(n_baskets * 0.0008)) if n_baskets > 0 else 3
+    min_conf = 0.05
 
     item_freq = compute_item_frequencies(baskets, min_support_count=min_support)
     pair_freq = compute_pair_frequencies(baskets, item_freq, min_support_count=min_pair_support)

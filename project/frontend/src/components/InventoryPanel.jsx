@@ -86,7 +86,7 @@ export default function InventoryPanel() {
   }
 
   function stockPercent(current, max) {
-    return Math.min(100, Math.round((current / (max || 1)) * 100));
+    return Math.max(0, Math.min(100, Math.round(((current || 0) / (max || 1)) * 100)));
   }
 
   function stockColor(current, reorder) {
@@ -177,16 +177,25 @@ export default function InventoryPanel() {
         <div className="card" style={{ marginBottom: 24 }}>
           <div className="card-title">⏰ Expiring Soon ({expiring.length})</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
-            {expiring.slice(0, 8).map(item => (
-              <div key={item.product_id} className="alert-row" style={{ borderColor: 'rgba(245, 158, 11, 0.15)', background: 'rgba(245, 158, 11, 0.05)' }}>
-                <div className="alert-icon">⏰</div>
-                <div className="alert-info">
-                  <div className="alert-name">{item.name}</div>
-                  <div className="alert-detail">{Math.round(item.days_remaining)}d remaining • Stock: {item.current_stock}</div>
+            {expiring.slice(0, 8).map(item => {
+              const days = Math.round(item.days_remaining || 0);
+              const isExpired = days < 0;
+              const text = isExpired ? `Expired (${Math.abs(days)}d ago)` : `${days}d remaining`;
+              const badgeClass = isExpired ? 'red' : 'orange';
+              return (
+                <div key={item.product_id} className="alert-row" style={{
+                  borderColor: isExpired ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+                  background: isExpired ? 'rgba(239, 68, 68, 0.05)' : 'rgba(245, 158, 11, 0.05)'
+                }}>
+                  <div className="alert-icon">{isExpired ? '⚠️' : '⏰'}</div>
+                  <div className="alert-info">
+                    <div className="alert-name">{item.name}</div>
+                    <div className="alert-detail">{text} • Stock: {item.current_stock}</div>
+                  </div>
+                  <span className={`badge ${badgeClass}`}>{isExpired ? `-${Math.abs(days)}d` : `${days}d`}</span>
                 </div>
-                <span className="badge orange">{Math.round(item.days_remaining)}d</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

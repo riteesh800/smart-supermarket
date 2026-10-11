@@ -111,7 +111,7 @@ def get_all_segmented():
     model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                               "ml_models", "saved", "customer_segments.joblib")
     if not os.path.exists(model_path):
-        return {"error": "Model not trained yet"}
+        return []
     data = joblib.load(model_path)
     # Return subset of fields for visualization
     customers = []
@@ -135,7 +135,7 @@ def get_top_customers():
     model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                               "ml_models", "saved", "customer_segments.joblib")
     if not os.path.exists(model_path):
-        return {"error": "Model not trained yet"}
+        return []
     data = joblib.load(model_path)
     return data["top_customers"]
 
@@ -147,6 +147,7 @@ def get_demographics(db: Session = Depends(get_db)):
     age = db.execute(text("""
         SELECT
             CASE
+                WHEN age IS NULL THEN 'Unknown'
                 WHEN age < 25 THEN '18-24'
                 WHEN age < 35 THEN '25-34'
                 WHEN age < 45 THEN '35-44'
@@ -157,7 +158,16 @@ def get_demographics(db: Session = Depends(get_db)):
             COUNT(*) as count
         FROM customers
         GROUP BY age_group
-        ORDER BY age_group
+        ORDER BY
+            CASE
+                WHEN age_group = '18-24' THEN 1
+                WHEN age_group = '25-34' THEN 2
+                WHEN age_group = '35-44' THEN 3
+                WHEN age_group = '45-54' THEN 4
+                WHEN age_group = '55-64' THEN 5
+                WHEN age_group = '65+' THEN 6
+                ELSE 7
+            END
     """))
     age_data = [dict(zip(["age_group", "count"], row)) for row in age.fetchall()]
 

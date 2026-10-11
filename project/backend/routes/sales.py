@@ -142,12 +142,13 @@ def get_profit_margins(db: Session = Depends(get_db)):
     result = db.execute(text("""
         SELECT p.category,
                SUM(s.total_price) as total_revenue,
-               SUM(s.quantity * p.cost) as total_cost,
-               SUM(s.total_price) - SUM(s.quantity * p.cost) as total_profit,
-               ROUND((SUM(s.total_price) - SUM(s.quantity * p.cost)) / SUM(s.total_price) * 100, 1) as margin_pct
+               SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, 0)) as total_cost,
+               SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, 0)) as total_profit,
+               CASE WHEN SUM(s.total_price) > 0
+                    THEN ROUND((SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, 0))) / SUM(s.total_price) * 100, 1)
+                    ELSE 0.0 END as margin_pct
         FROM sales s
         JOIN products p ON s.product_id = p.product_id
-        WHERE p.cost IS NOT NULL AND p.cost > 0
         GROUP BY p.category
         ORDER BY total_profit DESC
     """))

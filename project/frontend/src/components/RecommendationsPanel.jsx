@@ -71,7 +71,7 @@ export default function RecommendationsPanel() {
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.reason}</div>
                 </div>
                 <span className="badge blue">{s.category}</span>
-                <span style={{ fontSize: 12, color: 'var(--accent-purple)' }}>Lift: {s.lift}x</span>
+                <span style={{ fontSize: 12, color: 'var(--accent-purple)' }}>Lift: {Number(s.lift || 0).toFixed(2)}x</span>
               </div>
             ))
           }
@@ -89,7 +89,7 @@ export default function RecommendationsPanel() {
                     <td style={{ fontWeight: 500 }}>{r.antecedent_name}</td>
                     <td style={{ fontWeight: 500 }}>{r.consequent_name}</td>
                     <td>{(r.confidence * 100).toFixed(1)}%</td>
-                    <td style={{ color: 'var(--accent-purple)', fontWeight: 600 }}>{r.lift}x</td>
+                    <td style={{ color: 'var(--accent-purple)', fontWeight: 600 }}>{Number(r.lift || 0).toFixed(2)}x</td>
                   </tr>
                 ))}
               </tbody>

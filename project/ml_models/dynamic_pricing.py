@@ -109,7 +109,7 @@ def suggest_pricing(metrics_df):
             confidence = 0.85
         elif stock > reorder * 3 and recent_qty < avg_daily * 15:
             # Overstocked + low demand -> markdown
-            decrease = min(0.20, max(0.05, (stock / max(1, reorder * 3)) - 1) * 0.1)
+            decrease = min(0.20, max(0.05, ((stock / max(1, reorder * 3)) - 1) * 0.1))
             suggested_price = round(current_price * (1 - decrease), 2)
             action = "Decrease"
             reason = f"Overstocked ({int(stock)} units) with declining demand"

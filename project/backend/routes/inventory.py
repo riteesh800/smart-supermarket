@@ -115,7 +115,7 @@ def get_inventory_by_category(db: Session = Depends(get_db)):
         SELECT p.category,
                COUNT(*) as product_count,
                SUM(i.current_stock) as total_stock,
-               AVG(i.current_stock) as avg_stock,
+               ROUND(AVG(i.current_stock), 1) as avg_stock,
                SUM(CASE WHEN i.current_stock <= i.reorder_point THEN 1 ELSE 0 END) as low_stock_count
         FROM products p
         JOIN inventory i ON p.product_id = i.product_id
@@ -162,14 +162,25 @@ def add_product(product: ProductCreate, db: Session = Depends(get_db)):
     )).scalar() or 0
     new_id = f"P{last_num + 1:04d}"
 
+    # Look up supplier_id if supplier name or id is given
+    sup_id = None
+    if product.supplier:
+        sup_row = db.execute(
+            text("SELECT supplier_id FROM suppliers WHERE name = :sup OR supplier_id = :sup LIMIT 1"),
+            {"sup": product.supplier}
+        ).fetchone()
+        if sup_row:
+            sup_id = sup_row[0]
+
     # Insert product
     db.execute(text("""
-        INSERT INTO products (product_id, name, category, price, cost, supplier, shelf_life_days, unit)
-        VALUES (:pid, :name, :cat, :price, :cost, :supplier, :shelf, :unit)
+        INSERT INTO products (product_id, name, category, price, cost, supplier, supplier_id, shelf_life_days, unit)
+        VALUES (:pid, :name, :cat, :price, :cost, :supplier, :sup_id, :shelf, :unit)
     """), {
         "pid": new_id, "name": product.name, "cat": product.category,
         "price": product.price, "cost": product.cost or round(product.price * 0.55, 2),
-        "supplier": product.supplier or "Unknown", "shelf": product.shelf_life_days, "unit": product.unit
+        "supplier": product.supplier or "Unknown", "sup_id": sup_id,
+        "shelf": product.shelf_life_days, "unit": product.unit
     })
 
     # Insert inventory record
