@@ -40,20 +40,43 @@ def load_table(table_name):
 
 
 def build_baskets(sales_df):
-    """Group products by basket_id (preferred) or by customer+date."""
+    """Group products by basket_id (preferred), customer+date, or timestamp."""
     sales_df = sales_df.copy()
+    if sales_df.empty or "product_id" not in sales_df.columns:
+        return []
 
+    # Clean product IDs
+    sales_df = sales_df[sales_df["product_id"].notnull() & (sales_df["product_id"] != "")]
+
+    # Strategy 1: Explicit basket_id
     if "basket_id" in sales_df.columns:
-        baskets = sales_df.groupby("basket_id")["product_id"].apply(list).reset_index()
-    else:
-        sales_df["date"] = pd.to_datetime(sales_df["timestamp"]).dt.date
-        baskets = sales_df.groupby(["customer_id", "date"])["product_id"].apply(list).reset_index()
+        b = sales_df.groupby("basket_id")["product_id"].apply(list).reset_index()
+        multi = b[b["product_id"].apply(len) >= 2]
+        if len(multi) >= 2:
+            return multi["product_id"].tolist()
 
-    baskets = baskets[baskets["product_id"].apply(len) >= 2]
-    return baskets["product_id"].tolist()
+    # Strategy 2: customer_id + date
+    if "customer_id" in sales_df.columns and "timestamp" in sales_df.columns:
+        sales_df["date"] = pd.to_datetime(sales_df["timestamp"], errors="coerce").dt.date
+        valid_cust = sales_df[sales_df["customer_id"].notnull() & (sales_df["customer_id"] != "UNKNOWN")]
+        if not valid_cust.empty:
+            b = valid_cust.groupby(["customer_id", "date"])["product_id"].apply(list).reset_index()
+            multi = b[b["product_id"].apply(len) >= 2]
+            if len(multi) >= 2:
+                return multi["product_id"].tolist()
+
+    # Strategy 3: invoice/timestamp group
+    if "timestamp" in sales_df.columns:
+        parsed_dt = pd.to_datetime(sales_df["timestamp"], errors="coerce")
+        sales_df["time_slot"] = parsed_dt.dt.floor("15min")
+        b = sales_df.dropna(subset=["time_slot"]).groupby("time_slot")["product_id"].apply(list).reset_index()
+        multi = b[b["product_id"].apply(len) >= 2]
+        return multi["product_id"].tolist()
+
+    return []
 
 
-def compute_item_frequencies(baskets, min_support_count=20):
+def compute_item_frequencies(baskets, min_support_count=2):
     """Count individual item frequencies."""
     item_counts = defaultdict(int)
     for basket in baskets:
@@ -62,7 +85,7 @@ def compute_item_frequencies(baskets, min_support_count=20):
     return {k: v for k, v in item_counts.items() if v >= min_support_count}
 
 
-def compute_pair_frequencies(baskets, frequent_items, min_support_count=10):
+def compute_pair_frequencies(baskets, frequent_items, min_support_count=1):
     """Count pair frequencies for frequent items only."""
     pair_counts = defaultdict(int)
     freq_set = set(frequent_items.keys())
@@ -73,7 +96,7 @@ def compute_pair_frequencies(baskets, frequent_items, min_support_count=10):
     return {k: v for k, v in pair_counts.items() if v >= min_support_count}
 
 
-def compute_association_rules(item_freq, pair_freq, n_baskets, min_confidence=0.15):
+def compute_association_rules(item_freq, pair_freq, n_baskets, min_confidence=0.03):
     """Generate association rules with confidence and lift."""
     rules = []
     if n_baskets == 0:
@@ -82,8 +105,8 @@ def compute_association_rules(item_freq, pair_freq, n_baskets, min_confidence=0.
         support = pair_count / n_baskets
 
         # A -> B
-        conf_ab = pair_count / item_freq[item_a]
-        lift_ab = conf_ab / (item_freq[item_b] / n_baskets) if item_freq[item_b] > 0 else 0
+        conf_ab = pair_count / item_freq[item_a] if item_a in item_freq and item_freq[item_a] > 0 else 0
+        lift_ab = conf_ab / (item_freq[item_b] / n_baskets) if item_b in item_freq and item_freq[item_b] > 0 else 0
         if conf_ab >= min_confidence:
             rules.append({
                 "antecedent": item_a,
@@ -94,8 +117,8 @@ def compute_association_rules(item_freq, pair_freq, n_baskets, min_confidence=0.
             })
 
         # B -> A
-        conf_ba = pair_count / item_freq[item_b]
-        lift_ba = conf_ba / (item_freq[item_a] / n_baskets) if item_freq[item_a] > 0 else 0
+        conf_ba = pair_count / item_freq[item_b] if item_b in item_freq and item_freq[item_b] > 0 else 0
+        lift_ba = conf_ba / (item_freq[item_a] / n_baskets) if item_a in item_freq and item_freq[item_a] > 0 else 0
         if conf_ba >= min_confidence:
             rules.append({
                 "antecedent": item_b,
@@ -114,19 +137,21 @@ def train():
 
     if sales.empty:
         print("  No sales data available for recommendations.")
-        return {"rules": [], "suggestions": [], "total_rules": 0, "total_baskets": 0}
+        result = {"rules": [], "suggestions": [], "total_rules": 0, "total_baskets": 0}
+        joblib.dump(result, os.path.join(SAVE_DIR, "recommendations.joblib"))
+        return result
 
-    product_names = dict(zip(products["product_id"], products["name"])) if not products.empty else {}
-    product_categories = dict(zip(products["product_id"], products["category"])) if not products.empty else {}
+    product_names = dict(zip(products["product_id"], products["name"])) if not products.empty and "product_id" in products.columns and "name" in products.columns else {}
+    product_categories = dict(zip(products["product_id"], products["category"])) if not products.empty and "product_id" in products.columns and "category" in products.columns else {}
 
     baskets = build_baskets(sales)
     print(f"  Built {len(baskets)} baskets")
 
     n_baskets = len(baskets)
     # Dynamically scale thresholds based on realistic market basket support
-    min_support = max(10, int(n_baskets * 0.005)) if n_baskets > 0 else 10
-    min_pair_support = max(5, int(n_baskets * 0.0008)) if n_baskets > 0 else 3
-    min_conf = 0.05
+    min_support = max(2, int(n_baskets * 0.005)) if n_baskets > 0 else 2
+    min_pair_support = max(1, int(n_baskets * 0.0008)) if n_baskets > 0 else 1
+    min_conf = 0.03
 
     item_freq = compute_item_frequencies(baskets, min_support_count=min_support)
     pair_freq = compute_pair_frequencies(baskets, item_freq, min_support_count=min_pair_support)

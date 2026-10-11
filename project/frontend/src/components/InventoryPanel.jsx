@@ -20,7 +20,7 @@ export default function InventoryPanel() {
   const [showModal, setShowModal] = useState(false);
   const [restocking, setRestocking] = useState(null);
   const [form, setForm] = useState({
-    name: '', category: 'Dairy', price: '', cost: '',
+    name: '', category: '', price: '', cost: '',
     supplier: '', shelf_life_days: 30, unit: 'piece',
     initial_stock: 50, max_stock: 200, reorder_point: 20
   });
@@ -39,7 +39,11 @@ export default function InventoryPanel() {
     if (low.status === 'fulfilled') setLowStock(low.value);
     if (exp.status === 'fulfilled') setExpiring(exp.value);
     if (cat.status === 'fulfilled') setByCategory(cat.value);
-    if (cats.status === 'fulfilled') setCategories(cats.value);
+    if (cats.status === 'fulfilled') {
+      const catList = cats.value || [];
+      setCategories(catList);
+      setForm(prev => ({ ...prev, category: prev.category || (catList[0] || 'General') }));
+    }
     setLoading(false);
   }, [page, search, catFilter]);
 
@@ -73,7 +77,7 @@ export default function InventoryPanel() {
         reorder_point: parseInt(form.reorder_point),
       });
       setShowModal(false);
-      setForm({ name: '', category: 'Dairy', price: '', cost: '', supplier: '', shelf_life_days: 30, unit: 'piece', initial_stock: 50, max_stock: 200, reorder_point: 20 });
+      setForm({ name: '', category: categories[0] || 'General', price: '', cost: '', supplier: '', shelf_life_days: 30, unit: 'piece', initial_stock: 50, max_stock: 200, reorder_point: 20 });
       loadData();
     } catch (e) { alert('Error adding product'); }
   }

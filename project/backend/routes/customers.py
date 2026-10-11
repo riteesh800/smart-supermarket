@@ -220,13 +220,20 @@ def get_retention(db: Session = Depends(get_db)):
 @router.post("")
 def add_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     """Add a new customer."""
-    # Generate next customer ID atomically
-    last_num = db.execute(text(
-        "SELECT MAX(CAST(SUBSTR(customer_id, 2) AS INTEGER)) FROM customers"
-    )).scalar() or 0
-    new_id = f"C{last_num + 1:04d}"
+    # Generate next customer ID safely without colliding with existing dataset IDs
+    existing_ids = set(db.execute(text("SELECT customer_id FROM customers")).scalars().all())
+    c_nums = [int(cid[1:]) for cid in existing_ids if cid.startswith("C") and cid[1:].isdigit()]
+    if c_nums:
+        next_num = max(c_nums) + 1
+    else:
+        nums = [int(cid) for cid in existing_ids if cid.isdigit()]
+        next_num = max(nums) + 1 if nums else len(existing_ids) + 1
+    new_id = f"C{next_num:04d}"
+    while new_id in existing_ids:
+        next_num += 1
+        new_id = f"C{next_num:04d}"
 
-    email = customer.email or f"customer{new_id.replace('C', '')}@email.com"
+    email = customer.email or f"customer{next_num}@email.com"
 
     db.execute(text("""
         INSERT INTO customers (customer_id, first_name, last_name, age, gender, membership_tier, email, join_date)

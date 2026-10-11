@@ -78,6 +78,12 @@ def build_daily_demand(sales_df, category):
         daily.index.freq = "D"
         return daily
 
+    if "date" not in cat_sales.columns:
+        if "timestamp" in cat_sales.columns:
+            cat_sales["date"] = pd.to_datetime(cat_sales["timestamp"]).dt.strftime("%Y-%m-%d")
+        else:
+            cat_sales["date"] = pd.Timestamp.now().strftime("%Y-%m-%d")
+
     daily = cat_sales.groupby("date")["quantity"].sum().reset_index()
     daily["date"] = pd.to_datetime(daily["date"])
     daily = daily.set_index("date").sort_index()
@@ -154,11 +160,13 @@ def train_sarimax(daily_demand):
         return None, None
 
 
-def forecast_model(fitted_model, model_type, steps=30):
-    """Generate forecast from fitted model."""
+def forecast_model(fitted_model, model_type, steps=30, start_date=None):
+    """Generate forecast from fitted model continuous from historical data end date."""
     fc = fitted_model.forecast(steps=steps)
+    if start_date is None:
+        start_date = pd.Timestamp.now().normalize()
     future_dates = pd.date_range(
-        start=pd.Timestamp.now().normalize(),
+        start=start_date,
         periods=steps,
         freq="D"
     )
@@ -171,7 +179,7 @@ def forecast_model(fitted_model, model_type, steps=30):
     return forecast_df
 
 
-def fallback_seasonal_naive(daily_demand, steps=30):
+def fallback_seasonal_naive(daily_demand, steps=30, start_date=None):
     """Seasonal naive: repeat last week's pattern. Much better than flat average."""
     vals = daily_demand["quantity"].values
     period = 7
@@ -183,10 +191,14 @@ def fallback_seasonal_naive(daily_demand, steps=30):
 
     # Add some random noise proportional to the data variance to look realistic
     std = float(np.std(vals[-30:])) if len(vals) >= 30 else float(np.std(vals))
-    noise = np.random.normal(0, std * 0.15, steps)
+    noise = np.random.normal(0, std * 0.15, steps) if std > 0 else np.zeros(steps)
     predicted = np.maximum(np.round(np.array(predicted) + noise, 1), 0)
 
-    future_dates = pd.date_range(start=pd.Timestamp.now().normalize(), periods=steps, freq="D")
+    if start_date is None:
+        max_d = daily_demand.index.max() if not daily_demand.empty else None
+        start_date = (max_d + pd.Timedelta(days=1)).normalize() if max_d is not None and not pd.isnull(max_d) else pd.Timestamp.now().normalize()
+
+    future_dates = pd.date_range(start=start_date, periods=steps, freq="D")
     return pd.DataFrame({
         "date": [d.strftime("%Y-%m-%d") for d in future_dates],
         "predicted_demand": predicted.tolist()
@@ -195,13 +207,22 @@ def fallback_seasonal_naive(daily_demand, steps=30):
 
 def train_all_categories():
     sales = load_sales()
-    categories = sales["category"].unique()
+    if sales.empty or "category" not in sales.columns:
+        print("  No sales data available for demand forecasting.")
+        results = {}
+        joblib.dump(results, os.path.join(SAVE_DIR, "demand_forecasts.joblib"))
+        return results
+
+    categories = [c for c in sales["category"].unique() if pd.notnull(c)]
     results = {}
 
     for cat in categories:
         daily = build_daily_demand(sales, cat)
         n_days = len(daily)
         print(f"  Training forecast for {cat} ({n_days} days of data)...")
+
+        max_d = daily.index.max() if not daily.empty else None
+        cat_start_date = (max_d + pd.Timedelta(days=1)).normalize() if max_d is not None and not pd.isnull(max_d) else pd.Timestamp.now().normalize()
 
         fc_df = None
         model_used = "none"
@@ -211,7 +232,7 @@ def train_all_categories():
             fitted, mtype = train_holt_winters(daily)
             if fitted is not None:
                 try:
-                    fc_df = forecast_model(fitted, mtype, steps=30)
+                    fc_df = forecast_model(fitted, mtype, steps=30, start_date=cat_start_date)
                     model_used = mtype
                     print(f"    [OK] {mtype} succeeded")
                 except Exception as e:
@@ -222,7 +243,7 @@ def train_all_categories():
             fitted, mtype = train_sarimax(daily)
             if fitted is not None:
                 try:
-                    fc_df = forecast_model(fitted, mtype, steps=30)
+                    fc_df = forecast_model(fitted, mtype, steps=30, start_date=cat_start_date)
                     model_used = mtype
                     print(f"    [OK] {mtype} succeeded")
                 except Exception as e:
@@ -230,7 +251,7 @@ def train_all_categories():
 
         # Strategy 3: Seasonal naive (repeat last week's pattern)
         if fc_df is None:
-            fc_df = fallback_seasonal_naive(daily, steps=30)
+            fc_df = fallback_seasonal_naive(daily, steps=30, start_date=cat_start_date)
             model_used = "seasonal_naive"
             print(f"    -> Using seasonal naive fallback")
 

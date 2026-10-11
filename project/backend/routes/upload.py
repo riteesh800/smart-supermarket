@@ -26,6 +26,7 @@ from upload_handler import (
     normalize_sales, normalize_products, normalize_customers, normalize_inventory,
     normalize_suppliers,
     extract_products_from_sales, extract_customers_from_sales,
+    extract_suppliers_from_products,
     generate_inventory_from_products, compute_feature_flags
 )
 
@@ -145,41 +146,55 @@ async def import_data(
     try:
         with engine.begin() as conn:
             if file_type == "sales":
-                # Validate: require at least one product identifier
-                if "product_id" not in mapping and "name" not in mapping:
+                # Validate: require at least one product-identifying column (product_id, name, or category)
+                if "product_id" not in mapping and "name" not in mapping and "category" not in mapping:
                     raise HTTPException(
                         status_code=400,
-                        detail="Sales data requires at least one product-identifying column mapped (product_id or name). "
-                               "Please map a column to 'product_id' or 'name' in the column mapping."
+                        detail="Sales data requires at least one product-identifying column mapped (product_id, name, or category)."
                     )
 
                 normalized = normalize_sales(df, mapping)
                 _safe_load_to_table(conn, normalized, "sales")
 
-                # Auto-extract products if not already loaded
+                # Auto-extract and synchronize products if products table is empty or doesn't match the new sales
                 products_count = conn.execute(text("SELECT COUNT(*) FROM products")).scalar() or 0
-                if products_count == 0:
-                    products = extract_products_from_sales(normalized)
-                    if "name" in mapping:
-                        name_map = dict(zip(df[mapping.get("product_id", mapping.get("name", ""))].astype(str),
-                                           df[mapping["name"]].astype(str)))
-                        products["name"] = products["product_id"].map(name_map).fillna(products["product_id"])
-                    if "category" in mapping:
-                        cat_map = dict(zip(df[mapping.get("product_id", mapping.get("name", ""))].astype(str),
-                                          df[mapping["category"]].astype(str)))
-                        products["category"] = products["product_id"].map(cat_map).fillna("General")
+                existing_pids = set(conn.execute(text("SELECT product_id FROM products")).scalars().all())
+                sales_pids = set(normalized["product_id"].unique())
+                overlap = len(existing_pids & sales_pids)
+                should_sync_products = (products_count == 0) or (overlap < len(sales_pids) * 0.5)
+
+                if should_sync_products:
+                    products = extract_products_from_sales(normalized, df, mapping)
                     _safe_load_to_table(conn, products, "products")
 
-                    # Auto-generate inventory
+                    # Auto-generate matching inventory
                     inventory = generate_inventory_from_products(products)
                     _safe_load_to_table(conn, inventory, "inventory")
 
-                # Auto-extract customers if not already loaded
+                    # If supplier names exist in products, extract suppliers
+                    suppliers = extract_suppliers_from_products(products)
+                    if not suppliers.empty:
+                        _safe_load_to_table(conn, suppliers, "suppliers")
+                        name_to_id = dict(zip(suppliers["name"], suppliers["supplier_id"]))
+                        products["supplier_id"] = products["supplier"].map(name_to_id)
+                        _safe_load_to_table(conn, products, "products")
+                        mapping_info["suppliers"] = {"mapping": {"supplier_id": "auto", "name": "auto"}, "rows": len(suppliers)}
+
+                    mapping_info["products"] = {"mapping": {"product_id": "auto", "name": "auto", "category": "auto"}, "rows": len(products)}
+                    mapping_info["inventory"] = {"mapping": {"product_id": "auto"}, "rows": len(inventory)}
+
+                # Auto-extract and synchronize customers if empty or doesn't match the new sales
                 customers_count = conn.execute(text("SELECT COUNT(*) FROM customers")).scalar() or 0
-                if customers_count == 0 and "customer_id" in mapping:
-                    customers = extract_customers_from_sales(normalized)
-                    if len(customers) > 0:
+                existing_cids = set(conn.execute(text("SELECT customer_id FROM customers")).scalars().all())
+                sales_cids = set(normalized["customer_id"].unique()) - {"UNKNOWN"}
+                cust_overlap = len(existing_cids & sales_cids)
+                should_sync_customers = (customers_count == 0) or (len(sales_cids) > 0 and cust_overlap < len(sales_cids) * 0.5)
+
+                if should_sync_customers and len(sales_cids) > 0:
+                    customers = extract_customers_from_sales(normalized, df, mapping)
+                    if not customers.empty:
                         _safe_load_to_table(conn, customers, "customers")
+                        mapping_info["customers"] = {"mapping": {"customer_id": "auto"}, "rows": len(customers)}
 
                 mapping_info["sales"] = {"mapping": mapping, "rows": len(normalized)}
 

@@ -39,15 +39,19 @@ def get_all_forecasts():
     return result
 
 
-@router.get("/forecast/{category}")
+@router.get("/forecast/{category:path}")
 def get_category_forecast(category: str):
     """Get demand forecast for specific category."""
     data = load_model("demand_forecasts.joblib")
     if not data:
         raise HTTPException(status_code=404, detail="Forecast model not trained")
-    if category not in data:
-        raise HTTPException(status_code=404, detail=f"Category '{category}' not found. Available: {list(data.keys())}")
-    return data[category]
+    if category in data:
+        return data[category]
+    # Fallback to case-insensitive lookup
+    matched = next((k for k in data if k.lower() == category.lower()), None)
+    if matched:
+        return data[matched]
+    raise HTTPException(status_code=404, detail=f"Category '{category}' not found. Available: {list(data.keys())}")
 
 
 @router.get("/recommendations")

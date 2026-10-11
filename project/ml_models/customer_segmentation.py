@@ -41,7 +41,17 @@ def load_table(table_name):
 
 def compute_rfm(sales_df, reference_date=None):
     sales_df = sales_df.copy()
-    sales_df["date"] = pd.to_datetime(sales_df["timestamp"]).dt.date
+    if "timestamp" not in sales_df.columns or "customer_id" not in sales_df.columns:
+        return pd.DataFrame()
+
+    sales_df = sales_df[sales_df["customer_id"].notnull() & (sales_df["customer_id"] != "")].copy()
+    if sales_df.empty:
+        return pd.DataFrame()
+
+    sales_df["date"] = pd.to_datetime(sales_df["timestamp"], errors="coerce").dt.date
+    sales_df = sales_df.dropna(subset=["date"])
+    if sales_df.empty:
+        return pd.DataFrame()
 
     if reference_date is None:
         reference_date = sales_df["date"].max()
@@ -64,9 +74,10 @@ def segment_customers(rfm_df, n_clusters=5):
         # Return empty/dummy results
         return rfm_df, None, None, pd.DataFrame(), {}
 
-    features = rfm_df[["recency", "frequency", "monetary"]].values
+    features = rfm_df[["recency", "frequency", "monetary"]].fillna(0).values
     scaler = StandardScaler()
     scaled = scaler.fit_transform(features)
+    scaled = np.nan_to_num(scaled, nan=0.0)
 
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     rfm_df = rfm_df.copy()
@@ -98,6 +109,15 @@ def train():
         return pd.DataFrame()
 
     rfm = compute_rfm(sales)
+    if rfm.empty:
+        print("  No valid customer records available for RFM.")
+        joblib.dump({
+            "model": None, "scaler": None, "label_map": {},
+            "segmented_data": [], "cluster_summary": [],
+            "segment_counts": {}, "top_customers": []
+        }, os.path.join(SAVE_DIR, "customer_segments.joblib"))
+        return pd.DataFrame()
+
     segmented, model, scaler, summary, label_map = segment_customers(rfm)
 
     # Merge with customer details

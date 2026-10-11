@@ -97,12 +97,25 @@ def extract_number(msg, default=5):
     return int(m.group(1)) if m else default
 
 
-def extract_time_filter(msg):
+def extract_time_filter(msg, db=None):
     """Extract time period from message.
     Returns (sql_fragment, params_dict, label, matched_text) or (None, {}, None, None).
-    Uses parameterized SQL to prevent injection."""
+    Uses parameterized SQL to prevent injection.
+    Adapts to historical dataset date range if current date has no records."""
     msg_lower = msg.lower()
     now = datetime.now()
+
+    # Anchor 'now' to dataset maximum date if historical data is loaded
+    if db is not None:
+        try:
+            max_row = query_db(db, "SELECT MAX(DATE(timestamp)) as max_dt FROM sales")
+            if max_row and max_row[0].get("max_dt"):
+                max_dt_str = str(max_row[0]["max_dt"]).split()[0]
+                dt_obj = datetime.strptime(max_dt_str, "%Y-%m-%d")
+                if (datetime.now() - dt_obj).days > 60:
+                    now = dt_obj
+        except Exception:
+            pass
 
     if any(k in msg_lower for k in ["today", "today's"]):
         date = now.strftime("%Y-%m-%d")
@@ -165,6 +178,12 @@ def extract_time_filter(msg):
             yr_match = re.search(r'20\d{2}', msg_lower)
             year = yr_match.group(0) if yr_match else str(now.year)
             return "strftime('%Y-%m', timestamp) = :tf_month", {"tf_month": f"{year}-{num}"}, f"{name.capitalize()} {year}", name
+
+    # Standalone 4-digit year (e.g. 2019, 2021)
+    yr_match = re.search(r'\b(19\d{2}|20\d{2})\b', msg_lower)
+    if yr_match:
+        year = yr_match.group(1)
+        return "strftime('%Y', timestamp) = :tf_year", {"tf_year": year}, f"year {year}", yr_match.group(0)
 
     return None, {}, None, None
 
@@ -386,7 +405,7 @@ def respond(intent, msg, db, session_id="default"):
     """Generate response for detected intent."""
     _context = _get_context(session_id)
     # Extract time filter first, then strip it from msg to avoid number conflicts
-    time_where, time_params, time_label, time_matched = extract_time_filter(msg)
+    time_where, time_params, time_label, time_matched = extract_time_filter(msg, db)
     msg_for_number = msg
     if time_matched:
         msg_for_number = msg.lower().replace(time_matched, "").strip()

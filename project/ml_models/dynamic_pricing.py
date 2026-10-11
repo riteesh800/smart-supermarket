@@ -148,7 +148,7 @@ def train():
         print("  No sales or product data available for dynamic pricing.")
         return {"suggestions": [], "action_summary": {}, "avg_change_pct": 0.0}
 
-    # Synthesize inventory if missing/empty
+    # Ensure inventory has records for all products
     if inventory.empty or "current_stock" not in inventory.columns or "product_id" not in inventory.columns:
         inventory = pd.DataFrame({
             "product_id": products["product_id"],
@@ -158,6 +158,19 @@ def train():
             "last_restock_date": "2026-01-01",
             "warehouse_location": "A1"
         })
+    else:
+        existing_inv_pids = set(inventory["product_id"].astype(str))
+        missing_pids = [pid for pid in products["product_id"].astype(str) if pid not in existing_inv_pids]
+        if missing_pids:
+            missing_inv = pd.DataFrame({
+                "product_id": missing_pids,
+                "current_stock": 50,
+                "max_stock": 100,
+                "reorder_point": 10,
+                "last_restock_date": "2026-01-01",
+                "warehouse_location": "A1"
+            })
+            inventory = pd.concat([inventory, missing_inv], ignore_index=True)
 
     metrics = compute_demand_metrics(sales, products, inventory)
     suggestions = suggest_pricing(metrics)

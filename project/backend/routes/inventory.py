@@ -156,11 +156,18 @@ def get_categories(db: Session = Depends(get_db)):
 @router.post("")
 def add_product(product: ProductCreate, db: Session = Depends(get_db)):
     """Add a new product to inventory."""
-    # Generate next product ID atomically
-    last_num = db.execute(text(
-        "SELECT MAX(CAST(SUBSTR(product_id, 2) AS INTEGER)) FROM products"
-    )).scalar() or 0
-    new_id = f"P{last_num + 1:04d}"
+    # Generate next product ID safely without colliding with existing dataset IDs
+    existing_ids = set(db.execute(text("SELECT product_id FROM products")).scalars().all())
+    p_nums = [int(pid[1:]) for pid in existing_ids if pid.startswith("P") and pid[1:].isdigit()]
+    if p_nums:
+        next_num = max(p_nums) + 1
+    else:
+        nums = [int(pid) for pid in existing_ids if pid.isdigit()]
+        next_num = max(nums) + 1 if nums else len(existing_ids) + 1
+    new_id = f"P{next_num:04d}"
+    while new_id in existing_ids:
+        next_num += 1
+        new_id = f"P{next_num:04d}"
 
     # Look up supplier_id if supplier name or id is given
     sup_id = None
