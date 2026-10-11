@@ -185,6 +185,16 @@ async def import_data(
 
             elif file_type == "products":
                 normalized = normalize_products(df, mapping)
+
+                # Map supplier name -> supplier_id for FK linkage
+                try:
+                    sup_df = pd.read_sql("SELECT supplier_id, name FROM suppliers", conn)
+                    if not sup_df.empty:
+                        name_to_id = dict(zip(sup_df["name"], sup_df["supplier_id"]))
+                        normalized["supplier_id"] = normalized["supplier"].map(name_to_id)
+                except Exception:
+                    pass
+
                 _safe_load_to_table(conn, normalized, "products")
 
                 # Auto-generate inventory
@@ -325,12 +335,29 @@ def load_demo_data(_api_key: str = Depends(require_api_key)):
     try:
         # Use a single transaction for all tables
         with engine.begin() as conn:
+            # Clear tables in reverse dependency order to satisfy foreign keys
+            conn.execute(text("DELETE FROM sales"))
+            conn.execute(text("DELETE FROM inventory"))
+            conn.execute(text("DELETE FROM products"))
+            conn.execute(text("DELETE FROM customers"))
+            conn.execute(text("DELETE FROM suppliers"))
+
+            # Load suppliers first (products reference them via FK)
+            sup_path = os.path.join(data_dir, "suppliers.csv")
+            name_to_id = {}
+            if os.path.exists(sup_path):
+                sup_df = pd.read_csv(sup_path)
+                _safe_load_to_table(conn, sup_df, "suppliers")
+                name_to_id = dict(zip(sup_df["name"], sup_df["supplier_id"]))
+
             for filename, table in [("products.csv", "products"), ("customers.csv", "customers"),
-                                     ("sales.csv", "sales"), ("inventory.csv", "inventory"),
-                                     ("suppliers.csv", "suppliers")]:
+                                     ("sales.csv", "sales"), ("inventory.csv", "inventory")]:
                 path = os.path.join(data_dir, filename)
                 if os.path.exists(path):
                     df = pd.read_csv(path)
+                    # Map supplier name -> supplier_id for products FK linkage
+                    if table == "products" and name_to_id and "supplier" in df.columns:
+                        df["supplier_id"] = df["supplier"].map(name_to_id)
                     _safe_load_to_table(conn, df, table)
 
         # Set full feature flags
