@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../services/api';
 
 const FILE_TYPES = ['sales', 'products', 'customers', 'inventory', 'suppliers'];
@@ -20,6 +20,80 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
   const [dragOver, setDragOver] = useState(false);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Drag-to-scroll and horizontal scrolling state for table
+  const tableWrapperRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftState, setScrollLeftState] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = tableWrapperRef.current;
+    if (!el) return;
+    const scrollLeft = el.scrollLeft;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(scrollLeft > 6);
+    setCanScrollRight(maxScroll > 6 && scrollLeft < maxScroll - 6);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(updateScrollState, 60);
+    const el = tableWrapperRef.current;
+    if (el) {
+      el.addEventListener('scroll', updateScrollState, { passive: true });
+    }
+    window.addEventListener('resize', updateScrollState);
+    return () => {
+      clearTimeout(timer);
+      if (el) el.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, [preview, fileType, updateScrollState]);
+
+  const handlePointerDown = (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (['BUTTON', 'SELECT', 'INPUT', 'A'].includes(e.target.tagName)) return;
+    const el = tableWrapperRef.current;
+    if (!el) return;
+
+    setIsDragging(true);
+    setStartX(e.clientX);
+    setScrollLeftState(el.scrollLeft);
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    const el = tableWrapperRef.current;
+    if (!el) return;
+
+    const deltaX = e.clientX - startX;
+    el.scrollLeft = scrollLeftState - deltaX;
+  };
+
+  const handlePointerUp = (e) => {
+    if (isDragging) {
+      setIsDragging(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+  };
+
+  const scrollTable = (direction) => {
+    const el = tableWrapperRef.current;
+    if (!el) return;
+    const distance = 360;
+    el.scrollBy({
+      left: direction === 'left' ? -distance : distance,
+      behavior: 'smooth'
+    });
+  };
 
   const loadStatus = useCallback(async () => {
     try {
@@ -262,7 +336,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
 
           {/* Column Mapping */}
           <div className="card-title" style={{ fontSize: 13, marginBottom: 8 }}>Column Mapping</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))', gap: 10, marginBottom: 20 }}>
             {INTERNAL_FIELDS[fileType]?.map(field => {
               const isAutoDetected = mapping[field] && mapping[field] === preview.detected_mapping?.[field];
               return (
@@ -271,7 +345,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
                     {field.replace(/_/g, ' ')}
                     {isAutoDetected && <span className="auto-badge">auto</span>}
                   </label>
-                  <select className="filter-select" style={{ width: '100%', minWidth: 0 }}
+                  <select className="filter-select" style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}
                     value={mapping[field] || ''}
                     onChange={e => updateMapping(field, e.target.value)}>
                     <option value="">— skip —</option>
@@ -284,37 +358,106 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
             })}
           </div>
 
-          {/* Data Preview Table */}
-          <div className="card-title" style={{ fontSize: 13, marginBottom: 8 }}>Data Preview (first 10 rows)</div>
-          <div className="table-wrapper" style={{ maxHeight: 300 }}>
-            <table>
-              <thead>
-                <tr>
-                  {preview.columns?.map(col => {
-                    const mappedTo = Object.entries(mapping).find(([k, v]) => v === col);
-                    return (
-                      <th key={col}>
-                        {col}
-                        {mappedTo && <div style={{ fontSize: 10, color: 'var(--accent-green)', fontWeight: 400 }}>→ {mappedTo[0]}</div>}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {preview.preview_rows?.map((row, i) => (
-                  <tr key={i}>
-                    {preview.columns?.map(col => (
-                      <td key={col} style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{String(row[col] ?? '')}</td>
-                    ))}
+          {/* Data Preview Header & Table */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div className="card-title" style={{ fontSize: 13, marginBottom: 0 }}>Data Preview (first 10 rows)</div>
+              <span className="badge blue" style={{ fontSize: 11, padding: '2px 8px' }}>
+                {preview.columns?.length || 0} columns
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ color: 'var(--accent-blue)', fontWeight: 700 }}>↔</span> Click & drag table right/left or use scrollbar
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => scrollTable('left')}
+                disabled={!canScrollLeft}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: 12,
+                  opacity: canScrollLeft ? 1 : 0.4,
+                  cursor: canScrollLeft ? 'pointer' : 'default',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+                title="Scroll left to see previous columns"
+              >
+                ◀ Left
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => scrollTable('right')}
+                disabled={!canScrollRight}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: 12,
+                  opacity: canScrollRight ? 1 : 0.4,
+                  cursor: canScrollRight ? 'pointer' : 'default',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+                title="Scroll right to see next columns"
+              >
+                Right ▶
+              </button>
+            </div>
+          </div>
+
+          <div className="table-drag-container">
+            {canScrollLeft && (
+              <div className="table-scroll-fade left" onClick={() => scrollTable('left')} title="Click to scroll left">
+                <span style={{ color: 'var(--accent-blue)', fontSize: 14 }}>◀</span>
+              </div>
+            )}
+            {canScrollRight && (
+              <div className="table-scroll-fade right" onClick={() => scrollTable('right')} title="Click to scroll right">
+                <span style={{ color: 'var(--accent-blue)', fontSize: 14 }}>▶</span>
+              </div>
+            )}
+            <div
+              ref={tableWrapperRef}
+              className={`table-wrapper table-draggable ${isDragging ? 'is-dragging' : ''}`}
+              style={{ maxHeight: 300, cursor: isDragging ? 'grabbing' : 'grab' }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+            >
+              <table>
+                <thead>
+                  <tr>
+                    {preview.columns?.map(col => {
+                      const mappedTo = Object.entries(mapping).find(([k, v]) => v === col);
+                      return (
+                        <th key={col}>
+                          {col}
+                          {mappedTo && <div style={{ fontSize: 10, color: 'var(--accent-green)', fontWeight: 400 }}>→ {mappedTo[0]}</div>}
+                        </th>
+                      );
+                    })}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {preview.preview_rows?.map((row, i) => (
+                    <tr key={i}>
+                      {preview.columns?.map(col => (
+                        <td key={col} style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{String(row[col] ?? '')}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Import Button */}
-          <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
             <button className="btn btn-secondary" onClick={() => setPreview(null)}>Cancel</button>
             <button className="btn btn-primary" onClick={handleImport} disabled={importing}
               style={{ padding: '10px 30px' }}>
