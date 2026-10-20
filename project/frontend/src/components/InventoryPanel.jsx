@@ -243,30 +243,57 @@ export default function InventoryPanel() {
       )}
 
       {/* Low Stock Alerts */}
-      {lowStock.length > 0 && (
-        <div className="card" style={{ marginBottom: 24 }}>
-          <div className="card-header-with-source">
-            <SourceButton sources={SOURCES.inventory.lowStockAlerts} />
-            <div className="card-title">⚠️ Low Stock Alerts ({lowStock.length})</div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 8 }}>
-            {lowStock.slice(0, 8).map(item => (
-              <div className="alert-row" key={item.product_id}>
-                <div className="alert-icon">🔴</div>
-                <div className="alert-info">
-                  <div className="alert-name">{item.name}</div>
-                  <div className="alert-detail">{item.category} • Stock: {item.current_stock} / Reorder: {item.reorder_point}</div>
+      {lowStock.length > 0 && (() => {
+        const invSource = SOURCES.inventory.lowStockAlerts?.find(s => s.file.includes('inventory')) || {
+          file: 'inventory.csv',
+          columns: ['current_stock', 'reorder_point']
+        };
+        const invFile = invSource.file;
+        const stockCol = invSource.columns?.find(c => c.includes('stock')) || 'current_stock';
+        const reorderCol = invSource.columns?.find(c => c.includes('reorder')) || 'reorder_point';
+
+        return (
+          <div className="card" style={{ marginBottom: 24 }}>
+            <div className="card-header-with-source">
+              <SourceButton sources={SOURCES.inventory.lowStockAlerts} />
+              <div className="card-title">⚠️ Low Stock Alerts ({lowStock.length})</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 8 }}>
+              {lowStock.slice(0, 8).map(item => (
+                <div className="alert-row" key={item.product_id}>
+                  <div className="alert-icon">🔴</div>
+                  <div className="alert-info">
+                    <div className="alert-name">{item.name}</div>
+                    <div className="alert-detail">{item.category} • Stock: {item.current_stock} / Reorder: {item.reorder_point}</div>
+                  </div>
+                  <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: 12 }}
+                    onClick={() => handleRestock(item.product_id)}
+                    disabled={restocking === item.product_id}>
+                    {restocking === item.product_id ? '...' : '🔄 Restock'}
+                  </button>
                 </div>
-                <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: 12 }}
-                  onClick={() => handleRestock(item.product_id)}
-                  disabled={restocking === item.product_id}>
-                  {restocking === item.product_id ? '...' : '🔄 Restock'}
-                </button>
+              ))}
+            </div>
+
+            {/* 2-line simple English explanation referencing dynamic dataset and columns */}
+            <div style={{
+              marginTop: 14,
+              paddingTop: 10,
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              fontSize: '11.5px',
+              lineHeight: '1.5',
+              color: 'var(--text-secondary)'
+            }}>
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>• How it works:</strong> An alert triggers when current stock drops to or below the safety limit (from <code style={{ color: 'var(--accent-blue)', background: 'rgba(0,212,255,0.08)', padding: '1px 5px', borderRadius: 3 }}>{invFile}</code> ➔ <code style={{ color: 'var(--accent-blue)', background: 'rgba(0,212,255,0.08)', padding: '1px 5px', borderRadius: 3 }}>{stockCol}</code> ≤ <code style={{ color: 'var(--accent-blue)', background: 'rgba(0,212,255,0.08)', padding: '1px 5px', borderRadius: 3 }}>{reorderCol}</code>).
               </div>
-            ))}
+              <div style={{ marginTop: 3 }}>
+                <strong style={{ color: 'var(--text-primary)' }}>• Reorder Number:</strong> Minimum buffer threshold loaded from <code style={{ color: 'var(--accent-purple)', background: 'rgba(168,85,247,0.08)', padding: '1px 5px', borderRadius: 3 }}>{invFile}</code> (column <code style={{ color: 'var(--accent-purple)', background: 'rgba(168,85,247,0.08)', padding: '1px 5px', borderRadius: 3 }}>{reorderCol}</code>) indicating when to place an order before running out of stock.
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Search & Filter Bar */}
       <div className="card">
