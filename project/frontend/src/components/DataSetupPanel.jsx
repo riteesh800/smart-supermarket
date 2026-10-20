@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../services/api';
 import { confirmDialog } from './ThemeDialog';
 import SampleDataModal from './SampleDataModal';
+import { getFeatureRequirement } from '../constants/featureRequirements';
+import LockedFeaturePopover from './LockedFeaturePopover';
 
 const FILE_TYPES = ['sales', 'products', 'customers', 'inventory', 'suppliers'];
 const INTERNAL_FIELDS = {
@@ -23,6 +25,25 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
   const [dragOver, setDragOver] = useState(false);
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lockedFeatureTooltip, setLockedFeatureTooltip] = useState(null);
+  const lockedTimerRef = useRef(null);
+
+  const handleLockedBadgeEnter = (e, flagKey) => {
+    if (lockedTimerRef.current) {
+      clearTimeout(lockedTimerRef.current);
+      lockedTimerRef.current = null;
+    }
+    const requirement = getFeatureRequirement(flagKey);
+    if (!requirement) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setLockedFeatureTooltip({ requirement, rect, key: flagKey });
+  };
+
+  const handleLockedBadgeLeave = () => {
+    lockedTimerRef.current = setTimeout(() => {
+      setLockedFeatureTooltip(null);
+    }, 180);
+  };
 
   // Drag-to-scroll and horizontal scrolling state for table
   const tableWrapperRef = useRef(null);
@@ -269,13 +290,35 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
             </div>
 
             {/* Feature Availability */}
-            <div className="card-title" style={{ marginTop: 16, fontSize: 13 }}>Available Features</div>
+            <div className="card-title" style={{ marginTop: 16, fontSize: 13 }}>
+              Available Features
+              <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>
+                (Hover over locked 🔒 features to see data &amp; column requirements)
+              </span>
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {Object.entries(flags).filter(([k]) => k.startsWith('enable_')).map(([k, v]) => (
-                <span key={k} className={`badge ${v ? 'green' : 'red'}`} style={{ fontSize: 12, padding: '4px 10px' }}>
-                  {v ? '✓' : '✗'} {k.replace('enable_', '').replace(/_/g, ' ')}
-                </span>
-              ))}
+              {Object.entries(flags).filter(([k]) => k.startsWith('enable_')).map(([k, v]) => {
+                const isLocked = !v;
+                return (
+                  <span
+                    key={k}
+                    className={`badge ${v ? 'green' : 'red'}`}
+                    style={{
+                      fontSize: 12,
+                      padding: '4px 10px',
+                      cursor: isLocked ? 'help' : 'default',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                    onMouseEnter={(e) => isLocked && handleLockedBadgeEnter(e, k)}
+                    onMouseLeave={() => isLocked && handleLockedBadgeLeave()}
+                  >
+                    <span>{v ? '✓' : '🔒'}</span>
+                    <span>{k.replace('enable_', '').replace(/_/g, ' ')}</span>
+                  </span>
+                );
+              })}
             </div>
 
             <div style={{ marginTop: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -567,6 +610,23 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
         onLoadDemo={handleLoadDemo}
         importing={importing}
       />
+
+      {/* Floating Locked Feature Requirement Popover */}
+      {lockedFeatureTooltip && (
+        <LockedFeaturePopover
+          requirement={lockedFeatureTooltip.requirement}
+          targetRect={lockedFeatureTooltip.rect}
+          isOpen={Boolean(lockedFeatureTooltip)}
+          onMouseEnterPopover={() => {
+            if (lockedTimerRef.current) {
+              clearTimeout(lockedTimerRef.current);
+              lockedTimerRef.current = null;
+            }
+          }}
+          onMouseLeavePopover={() => setLockedFeatureTooltip(null)}
+          placement="bottom"
+        />
+      )}
     </div>
   );
 }

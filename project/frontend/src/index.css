@@ -1283,18 +1283,30 @@ tbody tr:hover {
 
 /* ──────────── DISABLED NAV ──────────── */
 .nav-item.disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+  opacity: 0.48;
+  cursor: help;
   pointer-events: auto;
+  position: relative;
+  transition: all 0.2s ease;
 }
 
 .nav-item.disabled:hover {
-  background: transparent;
+  background: rgba(239, 68, 68, 0.08);
+  opacity: 0.95;
+  color: var(--text-primary);
+  border-left: 2px solid rgba(239, 68, 68, 0.6);
+  padding-left: 10px;
 }
 
 .nav-lock {
-  font-size: 10px;
+  font-size: 11px;
   margin-left: auto;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.nav-item.disabled:hover .nav-lock {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
 }
 
 /* ──────────── CHATBOT ──────────── */
@@ -1768,5 +1780,358 @@ tbody tr:hover {
   margin-bottom: 0;
 }
 
+/* ──────────── LOCKED FEATURE REQUIREMENT POPOVER ──────────── */
+.locked-popover-portal {
+  position: absolute;
+  z-index: 99999;
+  background: rgba(14, 17, 34, 0.97);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 12px;
+  padding: 16px 18px;
+  width: 470px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 24px rgba(0, 212, 255, 0.15), 0 0 1px rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: var(--text-primary);
+  animation: lockedFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
 
+@keyframes lockedFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
 
+.locked-popover-arrow {
+  position: absolute;
+  left: -7px;
+  width: 14px;
+  height: 14px;
+  background: rgba(14, 17, 34, 0.97);
+  border-left: 1px solid rgba(0, 212, 255, 0.35);
+  border-bottom: 1px solid rgba(0, 212, 255, 0.35);
+  transform: translateY(-50%) rotate(45deg);
+  border-radius: 2px 0 0 0;
+  z-index: 1;
+}
+
+.locked-popover-header {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.locked-popover-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.locked-popover-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.locked-popover-icon {
+  font-size: 18px;
+}
+
+.locked-popover-title h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.2px;
+}
+
+.locked-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.locked-status-badge .lock-icon {
+  font-size: 10px;
+}
+
+.locked-popover-summary {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+/* Required Dataset Box */
+.locked-popover-dataset {
+  margin-bottom: 12px;
+}
+
+.locked-dataset-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--accent-cyan);
+  margin-bottom: 6px;
+}
+
+.locked-dataset-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 8px;
+}
+
+.locked-dataset-icon {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.locked-dataset-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.locked-dataset-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+  font-size: 13px;
+  color: #fff;
+}
+
+.locked-dataset-file {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 11px;
+  padding: 1px 6px;
+  background: rgba(0, 212, 255, 0.15);
+  color: #38bdf8;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.locked-dataset-desc {
+  font-size: 11.5px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.locked-dataset-alt {
+  font-size: 11px;
+  color: #facc15;
+  margin-top: 3px;
+}
+
+/* Required Columns Section */
+.locked-popover-columns-section {
+  margin-bottom: 14px;
+}
+
+.locked-columns-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.locked-col-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: none;
+}
+
+.locked-columns-table-wrapper {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.locked-columns-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.locked-columns-table thead {
+  position: sticky;
+  top: 0;
+  background: #0f1224;
+  z-index: 2;
+}
+
+.locked-columns-table th {
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.locked-columns-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: top;
+}
+
+.locked-columns-table tr:last-child td {
+  border-bottom: none;
+}
+
+.locked-columns-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.locked-col-name code {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.08);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* Type Pills */
+.locked-type-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  white-space: nowrap;
+}
+
+.locked-type-pill.type-string {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.locked-type-pill.type-int {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.locked-type-pill.type-float {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.locked-type-pill.type-date {
+  background: rgba(192, 132, 252, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(192, 132, 252, 0.3);
+}
+
+/* Requirement Pills */
+.locked-req-pill {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.locked-req-pill.required {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.locked-req-pill.optional {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.locked-col-desc {
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.locked-col-example {
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.locked-col-example code {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Popover Footer */
+.locked-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.locked-footer-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  flex: 1;
+}
+
+.locked-footer-hint strong {
+  color: #fff;
+}
+
+.locked-goto-btn {
+  padding: 7px 14px !important;
+  font-size: 11.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  font-weight: 600 !important;
+}
