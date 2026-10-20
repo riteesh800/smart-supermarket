@@ -161,10 +161,12 @@ export default function DashboardOverview() {
                 <YAxis tick={{ fill: '#9898b8', fontSize: 11 }} />
                 <Tooltip
                   cursor={false}
-                  contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
+                  contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#ffffff' }}
+                  itemStyle={{ color: '#ffffff' }}
+                  labelStyle={{ color: '#ffffff' }}
                   formatter={(val) => [`₹${val.toLocaleString()}`, 'Revenue']}
                 />
-                <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="revenue" fill="url(#blueGrad)" radius={[6, 6, 0, 0]}>
                   {monthlyData.map((entry, index) => (
                     <Cell
                       key={`month-bar-${index}`}

@@ -997,6 +997,14 @@ rect.recharts-tooltip-cursor,
   filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.75)) brightness(1.15) !important;
 }
 
+/* Ensure Recharts tooltip item and label text are always white */
+.recharts-tooltip-item,
+.recharts-default-tooltip .recharts-tooltip-item,
+.recharts-tooltip-label,
+.recharts-default-tooltip .recharts-tooltip-label {
+  color: #ffffff !important;
+}
+
 /* ──────────── RESPONSIVE ──────────── */
 @media (max-width: 1200px) {
   .grid-3 { grid-template-columns: 1fr 1fr; }
