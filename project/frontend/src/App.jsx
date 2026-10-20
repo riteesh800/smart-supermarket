@@ -15,6 +15,7 @@ import DataSetupPanel from './components/DataSetupPanel';
 import ChatBot from './components/ChatBot';
 import ThemeDialog from './components/ThemeDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ColumnMappingProvider } from './context/ColumnMappingContext';
 
 const PANELS = {
   dashboard: DashboardOverview,
@@ -68,7 +69,7 @@ export default function App() {
     : {};
 
   return (
-    <>
+    <ColumnMappingProvider>
       <Sidebar active={active} onNavigate={setActive} flags={flags} />
       <main className="main-content">
         <ErrorBoundary key={active}>
@@ -77,6 +78,6 @@ export default function App() {
       </main>
       <ChatBot />
       <ThemeDialog />
-    </>
+    </ColumnMappingProvider>
   );
 }

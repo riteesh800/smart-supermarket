@@ -4,6 +4,7 @@ import { confirmDialog } from './ThemeDialog';
 import SampleDataModal from './SampleDataModal';
 import { getFeatureRequirement } from '../constants/featureRequirements';
 import LockedFeaturePopover from './LockedFeaturePopover';
+import { useColumnMapping } from '../context/ColumnMappingContext';
 
 const FILE_TYPES = ['sales', 'products', 'customers', 'inventory', 'suppliers'];
 const INTERNAL_FIELDS = {
@@ -15,6 +16,7 @@ const INTERNAL_FIELDS = {
 };
 
 export default function DataSetupPanel({ onFlagsUpdate }) {
+  const { refreshMapping } = useColumnMapping();
   const [status, setStatus] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -196,6 +198,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
         });
         setPreview(null);
         const newStatus = await loadStatus();
+        refreshMapping?.();
         if (onFlagsUpdate && newStatus?.feature_flags) onFlagsUpdate(newStatus.feature_flags);
       }
     } catch (e) {
@@ -220,6 +223,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
       setMessage({ type: 'success', text: 'All data cleared' });
       setPreview(null);
       const newStatus = await loadStatus();
+      refreshMapping?.();
       if (onFlagsUpdate && newStatus?.feature_flags) {
         onFlagsUpdate(newStatus.feature_flags);
       }
@@ -238,6 +242,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
       } else {
         setMessage({ type: 'success', text: 'Demo data loaded with all features!' });
         const newStatus = await loadStatus();
+        refreshMapping?.();
         if (onFlagsUpdate && newStatus?.feature_flags) onFlagsUpdate(newStatus.feature_flags);
       }
     } catch (e) {

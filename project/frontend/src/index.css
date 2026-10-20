@@ -1795,6 +1795,7 @@ polygon.recharts-tooltip-cursor,
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   font-family: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -1813,27 +1814,63 @@ polygon.recharts-tooltip-cursor,
   flex-shrink: 0;
 }
 
-.source-btn:hover {
+.source-btn:hover,
+.source-btn.active {
   background: rgba(0, 212, 255, 0.22);
   border-color: rgba(0, 212, 255, 0.65);
   box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
   transform: translateY(-1px);
 }
 
+.source-btn.pinned {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.source-btn-icon {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
 .source-tooltip-portal {
   position: absolute;
   z-index: 99999;
-  pointer-events: none;
-  background: #111128;
+  background: #0f172a;
   border: 1px solid rgba(0, 212, 255, 0.35);
-  border-radius: 10px;
-  padding: 12px 14px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75), 0 0 16px rgba(0, 212, 255, 0.15);
-  min-width: 220px;
-  max-width: 380px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.82), 0 0 20px rgba(0, 212, 255, 0.15);
+  min-width: 260px;
+  max-width: 420px;
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   animation: sourceFadeIn 0.15s ease-out;
+  pointer-events: auto;
+}
+
+.rich-source-popover {
+  box-sizing: border-box;
+}
+
+/* Custom sleek scrollbar for popover */
+.source-tooltip-portal::-webkit-scrollbar {
+  width: 5px;
+}
+.source-tooltip-portal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+.source-tooltip-portal::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.3);
+  border-radius: 4px;
+}
+.source-tooltip-portal::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.5);
 }
 
 @keyframes sourceFadeIn {
@@ -1841,29 +1878,241 @@ polygon.recharts-tooltip-cursor,
   to { opacity: 1; transform: translateY(0); }
 }
 
+.source-popover-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.source-popover-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.source-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 212, 255, 0.12);
+  color: #00d4ff;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+}
+
+.source-pin-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.source-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+  transition: all 0.15s ease;
+}
+
+.source-close-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.source-feature-title {
+  margin: 4px 0 0 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.2px;
+}
+
+.source-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px 11px;
+}
+
+.source-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.source-section-icon {
+  font-size: 12px;
+}
+
+.source-section-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 1. What It Shows */
+.source-section-what {
+  border-left: 3px solid #38bdf8;
+}
+.source-section-what .source-section-title {
+  color: #38bdf8;
+}
+.source-section-what p {
+  margin: 0;
+  font-size: 11.5px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+/* 2. Calculation & Business Use */
+.source-section-calc {
+  border-left: 3px solid #a855f7;
+}
+.source-section-calc .source-section-title {
+  color: #c084fc;
+}
+
+.source-calc-subblock {
+  margin-bottom: 8px;
+}
+
+.source-sublabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.source-formula-box {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  color: #e2e8f0;
+  background: rgba(0, 0, 0, 0.45);
+  border-left: 2px solid #a855f7;
+  padding: 6px 9px;
+  border-radius: 4px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.source-use-subblock {
+  background: rgba(16, 185, 129, 0.06);
+  border-left: 2px solid #10b981;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.source-use-text {
+  margin: 0;
+  font-size: 11px;
+  color: #a7f3d0;
+  line-height: 1.45;
+}
+
+/* 3. Data Source & Columns */
+.source-section-data {
+  border-left: 3px solid #00d4ff;
+}
+.source-section-data .source-section-title {
+  color: #00d4ff;
+}
+
 .source-item {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 212, 255, 0.15);
 }
 
 .source-item:last-child {
   margin-bottom: 0;
 }
 
+.source-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.source-file-icon {
+  font-size: 11px;
+}
+
 .source-filename {
   font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #00d4ff;
-  margin-bottom: 3px;
   letter-spacing: 0.2px;
 }
 
-.source-columns {
+.source-columns-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.source-col-chip {
   font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  font-size: 11px;
-  color: #cbd5e1;
-  line-height: 1.45;
-  word-break: break-word;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1.5px 7px;
+  border-radius: 4px;
+  background: rgba(0, 212, 255, 0.1);
+  color: #38bdf8;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  line-height: 1.4;
+}
+
+.source-dyn-col-chip {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0.5px 5px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  display: inline-block;
+  margin: 0 1px;
+  vertical-align: baseline;
+}
+
+.source-popover-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.source-footer-hint {
+  display: block;
 }
 
 .card-header-with-source {

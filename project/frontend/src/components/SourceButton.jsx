@@ -1,74 +1,282 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useColumnMapping } from '../context/ColumnMappingContext';
 
 /**
- * SourceButton component that displays a sleek "Source" pill button.
- * On mouse hover, shows a tooltip listing the referenced CSV file name(s)
- * and only the columns used in that feature representation.
+ * Enhanced SourceButton Component
  *
- * @param {Array<{file: string, columns: string[] | string}>} sources
+ * Displays a sleek "Source" pill button. When hovered or clicked, opens a rich
+ * popover showing:
+ * 1. What the feature is and what it shows
+ * 2. How it is calculated (with dynamic column names) & its business use
+ * 3. The currently existing Data Source & Columns section (with dynamic column names)
+ *
+ * @param {Object|Array} sources - Feature metadata object or legacy array of source definitions
+ * @param {Object} [info] - Alternative prop for feature metadata object
  */
-export default function SourceButton({ sources = [] }) {
+export default function SourceButton({ sources, info }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [isPinned, setIsPinned] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0, placement: 'bottom' });
+
   const buttonRef = useRef(null);
+  const popoverRef = useRef(null);
+  const closeTimeoutRef = useRef(null);
+
+  const { resolveColumns, renderDynamicText } = useColumnMapping();
+
+  // Extract metadata cleanly whether passed as object or array
+  const rawData = info || sources || {};
+  const isLegacyArray = Array.isArray(rawData);
+
+  const feature = isLegacyArray ? { sources: rawData } : rawData;
+  const title = feature.title || '';
+  const whatItShows = feature.whatItShows || '';
+  const howItCalculated = feature.howItCalculated || '';
+  const useCase = feature.useCase || '';
+  const sourceList = Array.isArray(feature.sources) ? feature.sources : [];
+
+  const updatePosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+
+    const popoverWidth = Math.min(420, window.innerWidth - 24);
+    const popoverHeight = 440; // estimated
+
+    // Center horizontally on button if possible, but clamp within window
+    let left = rect.left + scrollX + rect.width / 2 - popoverWidth / 2;
+    if (left < scrollX + 12) {
+      left = scrollX + 12;
+    } else if (left + popoverWidth > scrollX + window.innerWidth - 16) {
+      left = scrollX + window.innerWidth - popoverWidth - 16;
+    }
+
+    // Default to placing below button
+    let top = rect.bottom + scrollY + 8;
+    let placement = 'bottom';
+
+    // If bottom overflow and space available above, place above
+    if (rect.bottom + popoverHeight > window.innerHeight && rect.top > popoverHeight + 20) {
+      top = rect.top + scrollY - popoverHeight - 8;
+      placement = 'top';
+    }
+
+    setCoords({ top, left, placement });
+  }, []);
 
   const handleMouseEnter = () => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const scrollX = window.scrollX || window.pageXOffset;
-      const scrollY = window.scrollY || window.pageYOffset;
-
-      let left = rect.left + scrollX;
-      // Prevent tooltip overflow past right edge of window
-      if (rect.left + 300 > window.innerWidth) {
-        left = Math.max(12, window.innerWidth - 320 + scrollX);
-      }
-
-      let top = rect.bottom + scrollY + 6;
-      // If close to bottom of viewport, position above button
-      if (rect.bottom + 180 > window.innerHeight && rect.top > 160) {
-        top = rect.top + scrollY - 8;
-      }
-
-      setCoords({ top, left });
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
     }
+    updatePosition();
     setIsOpen(true);
   };
 
   const handleMouseLeave = () => {
+    if (isPinned) return; // do not close on hover-out if pinned
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 220); // Grace period to move cursor into popover
+  };
+
+  const handlePopoverMouseEnter = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  const handlePopoverMouseLeave = () => {
+    if (isPinned) return;
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 220);
+  };
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (!isOpen) {
+      updatePosition();
+      setIsOpen(true);
+      setIsPinned(true);
+    } else {
+      // If already open, toggle pin state or close
+      if (isPinned) {
+        setIsPinned(false);
+        setIsOpen(false);
+      } else {
+        setIsPinned(true);
+      }
+    }
+  };
+
+  const handleClose = (e) => {
+    e.stopPropagation();
+    setIsPinned(false);
     setIsOpen(false);
   };
+
+  // Close when clicking outside or pressing Escape if pinned
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleDocClick(e) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target)
+      ) {
+        setIsPinned(false);
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        setIsPinned(false);
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleDocClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleDocClick);
+      document.removeEventListener('keydown', handleKeyDown);
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, [isOpen]);
+
+  const hasExtraContent = Boolean(whatItShows || howItCalculated || useCase);
 
   return (
     <>
       <button
         ref={buttonRef}
         type="button"
-        className="source-btn"
+        className={`source-btn ${isOpen ? 'active' : ''} ${isPinned ? 'pinned' : ''}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        aria-label="View data source and columns"
+        onClick={handleClick}
+        aria-label={`View data source and calculation logic for ${title || 'feature'}`}
+        aria-expanded={isOpen}
       >
-        Source
+        <span className="source-btn-icon">ℹ️</span>
+        <span className="source-btn-text">Source</span>
       </button>
 
-      {isOpen && sources && sources.length > 0 && createPortal(
+      {isOpen && (sourceList.length > 0 || hasExtraContent) && createPortal(
         <div
-          className="source-tooltip-portal"
+          ref={popoverRef}
+          className="source-tooltip-portal rich-source-popover"
           style={{
             top: `${coords.top}px`,
             left: `${coords.left}px`,
           }}
+          onMouseEnter={handlePopoverMouseEnter}
+          onMouseLeave={handlePopoverMouseLeave}
+          role="dialog"
+          aria-label={title || 'Feature Source Details'}
         >
-          {sources.map((src, idx) => (
-            <div key={idx} className="source-item">
-              <div className="source-filename">{src.file}</div>
-              <div className="source-columns">
-                {Array.isArray(src.columns) ? src.columns.join(', ') : src.columns}
-              </div>
+          {/* Header */}
+          <div className="source-popover-header">
+            <div className="source-popover-title-row">
+              <span className="source-badge">Feature Intelligence</span>
+              {isPinned && <span className="source-pin-badge">📌 Pinned</span>}
+              <button
+                type="button"
+                className="source-close-btn"
+                onClick={handleClose}
+                aria-label="Close details"
+              >
+                ✕
+              </button>
             </div>
-          ))}
+            {title && <h4 className="source-feature-title">{title}</h4>}
+          </div>
+
+          <div className="source-popover-body">
+            {/* 1. FIRST: What is this feature and what it shows */}
+            {whatItShows && (
+              <div className="source-section source-section-what">
+                <div className="source-section-header">
+                  <span className="source-section-icon">👁️</span>
+                  <span className="source-section-title">What this feature shows</span>
+                </div>
+                <div className="source-section-content">
+                  <p>{renderDynamicText(whatItShows)}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 2. NEXT: How it is calculated and what is the use of this */}
+            {(howItCalculated || useCase) && (
+              <div className="source-section source-section-calc">
+                <div className="source-section-header">
+                  <span className="source-section-icon">🧮</span>
+                  <span className="source-section-title">How It Is Calculated &amp; Business Use</span>
+                </div>
+                <div className="source-section-content">
+                  {howItCalculated && (
+                    <div className="source-calc-subblock">
+                      <div className="source-sublabel">Calculation &amp; Logic:</div>
+                      <div className="source-formula-box">
+                        {renderDynamicText(howItCalculated)}
+                      </div>
+                    </div>
+                  )}
+
+                  {useCase && (
+                    <div className="source-use-subblock">
+                      <div className="source-sublabel">Business Purpose &amp; Action:</div>
+                      <p className="source-use-text">{renderDynamicText(useCase)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 3. NEXT: Keep the currently existed thing (Data Source & Columns) */}
+            {sourceList && sourceList.length > 0 && (
+              <div className="source-section source-section-data">
+                <div className="source-section-header">
+                  <span className="source-section-icon">🗄️</span>
+                  <span className="source-section-title">Data Source &amp; Columns</span>
+                </div>
+                <div className="source-section-content">
+                  {sourceList.map((src, idx) => {
+                    const resolvedCols = resolveColumns(src.file, src.columns);
+                    return (
+                      <div key={idx} className="source-item">
+                        <div className="source-filename-row">
+                          <span className="source-file-icon">📄</span>
+                          <span className="source-filename">{src.file}</span>
+                        </div>
+                        <div className="source-columns-list">
+                          {resolvedCols.map((colName, cIdx) => (
+                            <span key={cIdx} className="source-col-chip">
+                              {colName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer note */}
+          <div className="source-popover-footer">
+            <span className="source-footer-hint">
+              💡 Column names automatically adapt to your uploaded dataset mappings.
+            </span>
+          </div>
         </div>,
         document.body
       )}

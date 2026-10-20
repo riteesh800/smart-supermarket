@@ -68,13 +68,22 @@ def get_status():
     db = SessionLocal()
     try:
         stats = {}
+        cols = {}
         for table in ["products", "customers", "sales", "inventory", "suppliers"]:
             try:
                 count = db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
                 stats[table] = count or 0
+                col_res = db.execute(text(f"PRAGMA table_info({table})")).fetchall()
+                cols[table] = [row[1] for row in col_res] if col_res else []
             except Exception:
                 stats[table] = 0
-        return {"feature_flags": flags, "table_counts": stats}
+                cols[table] = []
+        return {
+            "feature_flags": flags,
+            "table_counts": stats,
+            "mapping_info": store_get_mapping() or {},
+            "table_columns": cols,
+        }
     finally:
         db.close()
 
