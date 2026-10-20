@@ -132,7 +132,6 @@ async def import_data(
     if content is None:
         raise HTTPException(status_code=400, detail="Upload expired or not found. Please re-upload.")
 
-    remove_upload(upload_id)
     mapping = json.loads(mapping_json)
 
     try:
@@ -260,9 +259,12 @@ async def import_data(
 
             elif file_type == "suppliers":
                 normalized = normalize_suppliers(df, mapping)
+
+                # Clear FK references in products before replacing suppliers
+                conn.execute(text("UPDATE products SET supplier_id = NULL"))
                 _safe_load_to_table(conn, normalized, "suppliers")
 
-                # Link existing products to suppliers
+                # Re-link all products to the new suppliers
                 conn.execute(text("""
                     UPDATE products
                     SET supplier_id = (
@@ -270,7 +272,7 @@ async def import_data(
                         WHERE s.name = products.supplier OR s.supplier_id = products.supplier
                         LIMIT 1
                     )
-                    WHERE supplier IS NOT NULL AND (supplier_id IS NULL OR supplier_id = '')
+                    WHERE supplier IS NOT NULL
                 """))
 
                 mapping_info["suppliers"] = {"mapping": mapping, "rows": len(normalized)}
@@ -279,6 +281,7 @@ async def import_data(
                 raise HTTPException(status_code=400, detail=f"Unknown file type: {file_type}")
 
         # Update persistent state (outside transaction — these are metadata)
+        remove_upload(upload_id)
         store_set_mapping(mapping_info)
         flags = compute_feature_flags(mapping_info)
         store_set_flags(flags)

@@ -27,6 +27,7 @@ COLUMN_PATTERNS = {
         r"product.?name", r"prod.?name", r"item.?name", r"description",
         r"product.?desc.*", r"item.?desc.*", r"title", r"article",
         r"merchandise", r"goods.?name", r"item.?title", r"product$",
+        r"name$",
     ],
     "category": [
         r"category", r"product.?category", r"prod.?category", r"dept.*",
@@ -184,7 +185,10 @@ def clean_numeric_series(series, default=0.0):
     # Strip currency symbols and letters: $, ₹, €, £, Rs, INR, USD, commas, spaces
     s = s.str.replace(r'[₹$€£,%\s]|Rs\.?|INR|USD', '', regex=True, flags=re.IGNORECASE)
     # Convert to numeric with fallback
-    return pd.to_numeric(s, errors='coerce').fillna(default)
+    result = pd.to_numeric(s, errors='coerce')
+    if default is not None:
+        result = result.fillna(default)
+    return result
 
 
 def normalize_col_name(name):
