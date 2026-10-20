@@ -82,7 +82,7 @@ export default function InventoryPanel() {
       loadData();
     } catch (e) {
       alertDialog({
-        title: window.location.host || 'localhost:5173',
+        title: 'SmartMart AI',
         subtitle: 'Inventory Management',
         message: 'Error adding product. Please verify fields and try again.',
         type: 'error',
@@ -97,7 +97,7 @@ export default function InventoryPanel() {
       loadData();
     } catch (e) {
       alertDialog({
-        title: window.location.host || 'localhost:5173',
+        title: 'SmartMart AI',
         subtitle: 'Inventory Management',
         message: 'Error restocking product. Please try again.',
         type: 'error',

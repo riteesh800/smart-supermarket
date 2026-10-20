@@ -183,8 +183,8 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
 
   async function handleReset() {
     const confirmed = await confirmDialog({
-      title: window.location.host || 'localhost:5173',
-      subtitle: 'SmartMart AI — Reset Confirmation',
+      title: 'SmartMart AI',
+      subtitle: 'Reset Confirmation',
       message: 'This will delete ALL data. Are you sure?',
       confirmText: 'OK',
       cancelText: 'Cancel',

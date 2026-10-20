@@ -36,8 +36,8 @@ export default function ThemeDialog() {
         new Promise((resolve) => {
           setDialog({
             type: 'confirm',
-            title: opts.title || window.location.host || 'localhost:5173',
-            subtitle: opts.subtitle || 'SmartMart AI',
+            title: opts.title || 'SmartMart AI',
+            subtitle: opts.subtitle || 'Confirmation',
             message: opts.message || '',
             confirmText: opts.confirmText || 'OK',
             cancelText: opts.cancelText || 'Cancel',
@@ -57,8 +57,8 @@ export default function ThemeDialog() {
         new Promise((resolve) => {
           setDialog({
             type: 'alert',
-            title: opts.title || window.location.host || 'localhost:5173',
-            subtitle: opts.subtitle || 'SmartMart AI Notification',
+            title: opts.title || 'SmartMart AI',
+            subtitle: opts.subtitle || 'Notification',
             message: opts.message || '',
             confirmText: opts.confirmText || 'OK',
             icon: opts.icon || (opts.type === 'error' ? '❌' : opts.type === 'success' ? '✅' : 'ℹ️'),

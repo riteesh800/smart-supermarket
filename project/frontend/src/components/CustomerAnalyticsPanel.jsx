@@ -64,7 +64,7 @@ export default function CustomerAnalyticsPanel() {
       setTopCustomers(top);
     } catch (e) {
       alertDialog({
-        title: window.location.host || 'localhost:5173',
+        title: 'SmartMart AI',
         subtitle: 'Customer Intelligence',
         message: 'Error adding customer. Please verify fields and try again.',
         type: 'error',
