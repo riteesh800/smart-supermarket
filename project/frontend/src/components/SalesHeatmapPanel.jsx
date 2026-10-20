@@ -123,7 +123,7 @@ export default function SalesHeatmapPanel() {
           <SourceButton sources={SOURCES.heatmap.hourlyHeatmap} />
           <div className="card-title">Sales Volume — Hour × Day of Week</div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="heatmap-scroll-container">
           <div className="heatmap-grid">
             <div className="heatmap-row">
               <div className="heatmap-label"></div>
@@ -147,19 +147,19 @@ export default function SalesHeatmapPanel() {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 12, justifyContent: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 12, height: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 2, display: 'inline-block', border: '1px solid rgba(255,255,255,0.1)' }}></span> Low
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 12, height: 12, background: '#6366f1', borderRadius: 2, display: 'inline-block' }}></span> Medium
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 12, height: 12, background: '#00d4ff', borderRadius: 2, display: 'inline-block' }}></span> High
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 12, height: 12, background: '#10b981', borderRadius: 2, display: 'inline-block' }}></span> Peak
-            </span>
+        </div>
+        <div className="heatmap-legend">
+          <div className="heatmap-legend-item">
+            <span className="heatmap-legend-box" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}></span> Low
+          </div>
+          <div className="heatmap-legend-item">
+            <span className="heatmap-legend-box" style={{ background: '#6366f1' }}></span> Medium
+          </div>
+          <div className="heatmap-legend-item">
+            <span className="heatmap-legend-box" style={{ background: '#00d4ff' }}></span> High
+          </div>
+          <div className="heatmap-legend-item">
+            <span className="heatmap-legend-box" style={{ background: '#10b981' }}></span> Peak
           </div>
         </div>
       </div>
