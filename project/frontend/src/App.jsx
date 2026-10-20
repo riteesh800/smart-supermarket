@@ -13,6 +13,7 @@ import SupplierPanel from './components/SupplierPanel';
 import SalesHeatmapPanel from './components/SalesHeatmapPanel';
 import DataSetupPanel from './components/DataSetupPanel';
 import ChatBot from './components/ChatBot';
+import ThemeDialog from './components/ThemeDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const PANELS = {
@@ -75,6 +76,7 @@ export default function App() {
         </ErrorBoundary>
       </main>
       <ChatBot />
+      <ThemeDialog />
     </>
   );
 }

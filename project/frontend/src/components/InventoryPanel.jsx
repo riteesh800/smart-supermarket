@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../services/api';
+import { alertDialog } from './ThemeDialog';
 import SourceButton from './SourceButton';
 import { SOURCES } from '../constants/sources';
 import { CHART_COLORS as COLORS } from '../constants/colors';
@@ -79,7 +80,14 @@ export default function InventoryPanel() {
       setShowModal(false);
       setForm({ name: '', category: categories[0] || 'General', price: '', cost: '', supplier: '', shelf_life_days: 30, unit: 'piece', initial_stock: 50, max_stock: 200, reorder_point: 20 });
       loadData();
-    } catch (e) { alert('Error adding product'); }
+    } catch (e) {
+      alertDialog({
+        title: window.location.host || 'localhost:5173',
+        subtitle: 'Inventory Management',
+        message: 'Error adding product. Please verify fields and try again.',
+        type: 'error',
+      });
+    }
   }
 
   async function handleRestock(productId) {
@@ -87,7 +95,14 @@ export default function InventoryPanel() {
     try {
       await api.restockProduct(productId, 50);
       loadData();
-    } catch (e) { alert('Error restocking'); }
+    } catch (e) {
+      alertDialog({
+        title: window.location.host || 'localhost:5173',
+        subtitle: 'Inventory Management',
+        message: 'Error restocking product. Please try again.',
+        type: 'error',
+      });
+    }
     setRestocking(null);
   }
 

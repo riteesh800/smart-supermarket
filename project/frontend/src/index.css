@@ -479,6 +479,151 @@ tbody tr:hover {
   border-color: var(--border-glow);
 }
 
+.btn-danger {
+  background: var(--gradient-red);
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover {
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+/* ──────────── THEMED DIALOG (POPUP REPLACEMENT) ──────────── */
+.theme-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(4, 7, 18, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  animation: fadeIn 0.15s ease-out;
+  padding: 16px;
+}
+
+.theme-dialog-box {
+  background: rgba(17, 17, 40, 0.95);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.25) 100%);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 14px;
+  width: 390px;
+  max-width: min(92vw, 410px);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.75),
+    0 0 35px rgba(0, 212, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: 20px 22px;
+  animation: dialogPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes dialogPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.theme-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 14px;
+}
+
+.theme-dialog-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-dialog-icon {
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  line-height: 1;
+}
+
+.theme-dialog-title-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.theme-dialog-origin {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+.theme-dialog-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.theme-dialog-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-dialog-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.theme-dialog-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  word-break: break-word;
+}
+
+.theme-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-dialog-btn {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 80px;
+  justify-content: center;
+}
+
 /* ──────────── MODAL ──────────── */
 .modal-overlay {
   position: fixed;

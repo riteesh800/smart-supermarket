@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { alertDialog } from './ThemeDialog';
 import SourceButton from './SourceButton';
 import { SOURCES } from '../constants/sources';
 import {
@@ -61,7 +62,14 @@ export default function CustomerAnalyticsPanel() {
       setForm({ first_name: '', last_name: '', age: 30, gender: 'Other', membership_tier: 'Bronze', email: '' });
       const top = await api.getTopCustomers();
       setTopCustomers(top);
-    } catch (e) { alert('Error adding customer'); }
+    } catch (e) {
+      alertDialog({
+        title: window.location.host || 'localhost:5173',
+        subtitle: 'Customer Intelligence',
+        message: 'Error adding customer. Please verify fields and try again.',
+        type: 'error',
+      });
+    }
   }
 
   function handleExportCSV() {

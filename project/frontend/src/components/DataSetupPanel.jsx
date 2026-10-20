@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../services/api';
+import { confirmDialog } from './ThemeDialog';
 
 const FILE_TYPES = ['sales', 'products', 'customers', 'inventory', 'suppliers'];
 const INTERNAL_FIELDS = {
@@ -181,7 +182,16 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
   }
 
   async function handleReset() {
-    if (!window.confirm('This will delete ALL data. Are you sure?')) return;
+    const confirmed = await confirmDialog({
+      title: window.location.host || 'localhost:5173',
+      subtitle: 'SmartMart AI — Reset Confirmation',
+      message: 'This will delete ALL data. Are you sure?',
+      confirmText: 'OK',
+      cancelText: 'Cancel',
+      isDanger: true,
+      icon: '🗑️',
+    });
+    if (!confirmed) return;
     try {
       await api.resetData();
       setMessage({ type: 'success', text: 'All data cleared' });
