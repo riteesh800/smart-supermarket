@@ -106,6 +106,7 @@ export default function SupplierPanel() {
                 <YAxis type="category" dataKey="name" tick={{ fill: '#9898b8', fontSize: 11 }} width={120}
                   tickFormatter={(v) => v.length > 16 ? v.slice(0, 14) + '…' : v} />
                 <Tooltip
+                  cursor={false}
                   contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
                   formatter={(val) => [`₹${val.toLocaleString()}`, 'Revenue']}
                 />
@@ -134,7 +135,7 @@ export default function SupplierPanel() {
                 <XAxis dataKey="name" tick={{ fill: '#9898b8', fontSize: 10 }} angle={-30} textAnchor="end" height={60}
                   tickFormatter={(v) => v.length > 15 ? v.slice(0, 13) + '…' : v} />
                 <YAxis tick={{ fill: '#9898b8', fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }} />
+                <Tooltip cursor={false} contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }} />
                 <Bar dataKey="products" fill="#10b981" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

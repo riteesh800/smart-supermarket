@@ -981,9 +981,15 @@ tbody tr:hover {
 
 /* Remove Recharts default white/gray bar hover overlay */
 rect.recharts-tooltip-cursor,
+path.recharts-tooltip-cursor,
+polygon.recharts-tooltip-cursor,
+.recharts-tooltip-cursor,
 .recharts-bar-cursor {
   fill: transparent !important;
+  stroke: transparent !important;
   opacity: 0 !important;
+  display: none !important;
+  pointer-events: none !important;
 }
 
 /* Monthly revenue chart soft shining hover on individual bar */
@@ -995,6 +1001,19 @@ rect.recharts-tooltip-cursor,
 .monthly-revenue-chart .recharts-bar-rectangle:hover path,
 .monthly-revenue-chart .recharts-rectangle:hover {
   filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.75)) brightness(1.15) !important;
+}
+
+/* Profit margin chart soft shining hover on individual bar */
+.profit-margin-chart .recharts-bar-rectangle path,
+.profit-margin-chart .recharts-bar-rectangle rect,
+.profit-margin-chart .recharts-rectangle {
+  transition: filter 0.25s ease, fill 0.25s ease;
+}
+
+.profit-margin-chart .recharts-bar-rectangle:hover path,
+.profit-margin-chart .recharts-bar-rectangle:hover rect,
+.profit-margin-chart .recharts-rectangle:hover {
+  filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.85)) drop-shadow(0 0 4px rgba(16, 185, 129, 0.7)) brightness(1.2) !important;
 }
 
 /* Ensure Recharts tooltip item and label text are always white */

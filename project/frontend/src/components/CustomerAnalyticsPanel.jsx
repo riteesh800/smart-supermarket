@@ -200,7 +200,7 @@ export default function CustomerAnalyticsPanel() {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="age_group" tick={{ fill: '#9898b8', fontSize: 11 }} />
                   <YAxis tick={{ fill: '#9898b8', fontSize: 11 }} />
-                  <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }} />
+                  <Tooltip cursor={false} contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }} />
                   <Bar dataKey="count" fill="#7c3aed" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

@@ -25,6 +25,7 @@ export default function SalesHeatmapPanel() {
   const [payments, setPayments] = useState([]);
   const [margins, setMargins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeMarginIndex, setActiveMarginIndex] = useState(null);
 
   useEffect(() => {
     Promise.allSettled([
@@ -192,20 +193,55 @@ export default function SalesHeatmapPanel() {
             <SourceButton sources={SOURCES.heatmap.profitMarginByCategory} />
             <div className="card-title">Profit Margin by Category</div>
           </div>
-          <div className="chart-container">
+          <div className="chart-container profit-margin-chart">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={margins} layout="vertical">
+              <BarChart
+                data={margins}
+                layout="vertical"
+                onMouseMove={(state) => {
+                  if (state && state.isTooltipActive && typeof state.activeTooltipIndex === 'number') {
+                    setActiveMarginIndex(state.activeTooltipIndex);
+                  } else {
+                    setActiveMarginIndex(null);
+                  }
+                }}
+                onMouseLeave={() => setActiveMarginIndex(null)}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis type="number" tick={{ fill: '#9898b8', fontSize: 11 }}
                   tickFormatter={v => `${v}%`} />
                 <YAxis type="category" dataKey="category" tick={{ fill: '#9898b8', fontSize: 10 }} width={110} />
-                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
-                  formatter={(val, name) => [name === 'margin_pct' ? `${val}%` : `₹${Math.round(val).toLocaleString()}`, name === 'margin_pct' ? 'Margin' : 'Profit']} />
-                <Bar dataKey="margin_pct" fill="url(#marginGrad)" radius={[0, 6, 6, 0]} />
+                <Tooltip
+                  cursor={false}
+                  contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#ffffff' }}
+                  itemStyle={{ color: '#ffffff' }}
+                  labelStyle={{ color: '#ffffff', fontWeight: 600, marginBottom: 4 }}
+                  formatter={(val, name) => [name === 'margin_pct' ? `${val}%` : `₹${Math.round(val).toLocaleString()}`, name === 'margin_pct' ? 'Margin' : 'Profit']}
+                />
+                <Bar dataKey="margin_pct" fill="url(#marginGrad)" radius={[0, 6, 6, 0]}>
+                  {margins.map((entry, index) => (
+                    <Cell
+                      key={`margin-bar-${index}`}
+                      fill={index === activeMarginIndex ? "url(#marginGradHover)" : "url(#marginGrad)"}
+                      style={{
+                        filter: index === activeMarginIndex
+                          ? 'drop-shadow(0 0 10px rgba(0, 212, 255, 0.85)) drop-shadow(0 0 4px rgba(16, 185, 129, 0.7)) brightness(1.2)'
+                          : 'none',
+                        transition: 'filter 0.25s ease, fill 0.25s ease',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  ))}
+                </Bar>
                 <defs>
                   <linearGradient id="marginGrad" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stopColor="#10b981" />
                     <stop offset="100%" stopColor="#00d4ff" />
+                  </linearGradient>
+                  <linearGradient id="marginGradHover" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#34d399" />
+                    <stop offset="60%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#7aeaff" />
                   </linearGradient>
                 </defs>
               </BarChart>

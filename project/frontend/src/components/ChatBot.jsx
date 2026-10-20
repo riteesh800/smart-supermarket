@@ -101,6 +101,7 @@ function MiniChart({ type, data }) {
             <XAxis dataKey="label" tick={{ fill: '#9898b8', fontSize: 8 }} />
             <YAxis tick={{ fill: '#9898b8', fontSize: 8 }} />
             <Tooltip
+              cursor={false}
               contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, padding: '4px 8px' }}
             />
             <Bar dataKey="value" fill="#7c3aed" radius={[2, 2, 0, 0]}>
