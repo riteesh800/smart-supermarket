@@ -986,6 +986,17 @@ rect.recharts-tooltip-cursor,
   opacity: 0 !important;
 }
 
+/* Monthly revenue chart soft shining hover on individual bar */
+.monthly-revenue-chart .recharts-bar-rectangle path,
+.monthly-revenue-chart .recharts-rectangle {
+  transition: filter 0.25s ease, fill 0.25s ease;
+}
+
+.monthly-revenue-chart .recharts-bar-rectangle:hover path,
+.monthly-revenue-chart .recharts-rectangle:hover {
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.75)) brightness(1.15) !important;
+}
+
 /* ──────────── RESPONSIVE ──────────── */
 @media (max-width: 1200px) {
   .grid-3 { grid-template-columns: 1fr 1fr; }

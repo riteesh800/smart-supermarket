@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import SourceButton from './SourceButton';
 import { SOURCES } from '../constants/sources';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area
 } from 'recharts';
 
@@ -13,6 +13,7 @@ export default function DashboardOverview() {
   const [lowStock, setLowStock] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeBarIndex, setActiveBarIndex] = useState(null);
 
   useEffect(() => {
     Promise.allSettled([
@@ -142,9 +143,19 @@ export default function DashboardOverview() {
             <SourceButton sources={SOURCES.dashboard.monthlyRevenue} />
             <div className="card-title">Monthly Revenue</div>
           </div>
-          <div className="chart-container">
+          <div className="chart-container monthly-revenue-chart">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
+              <BarChart
+                data={monthlyData}
+                onMouseMove={(state) => {
+                  if (state && state.isTooltipActive && typeof state.activeTooltipIndex === 'number') {
+                    setActiveBarIndex(state.activeTooltipIndex);
+                  } else {
+                    setActiveBarIndex(null);
+                  }
+                }}
+                onMouseLeave={() => setActiveBarIndex(null)}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="month" tick={{ fill: '#9898b8', fontSize: 11 }} />
                 <YAxis tick={{ fill: '#9898b8', fontSize: 11 }} />
@@ -153,11 +164,28 @@ export default function DashboardOverview() {
                   contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
                   formatter={(val) => [`₹${val.toLocaleString()}`, 'Revenue']}
                 />
-                <Bar dataKey="revenue" fill="url(#blueGrad)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                  {monthlyData.map((entry, index) => (
+                    <Cell
+                      key={`month-bar-${index}`}
+                      fill={index === activeBarIndex ? "url(#blueGradHover)" : "url(#blueGrad)"}
+                      style={{
+                        filter: index === activeBarIndex ? 'drop-shadow(0 0 8px rgba(0, 212, 255, 0.75)) brightness(1.15)' : 'none',
+                        transition: 'filter 0.25s ease, fill 0.25s ease',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  ))}
+                </Bar>
                 <defs>
                   <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#00d4ff" />
                     <stop offset="100%" stopColor="#0084ff" />
+                  </linearGradient>
+                  <linearGradient id="blueGradHover" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#7aeaff" />
+                    <stop offset="60%" stopColor="#22c4ff" />
+                    <stop offset="100%" stopColor="#0077ff" />
                   </linearGradient>
                 </defs>
               </BarChart>
