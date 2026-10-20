@@ -149,6 +149,7 @@ export default function DashboardOverview() {
                 <XAxis dataKey="month" tick={{ fill: '#9898b8', fontSize: 11 }} />
                 <YAxis tick={{ fill: '#9898b8', fontSize: 11 }} />
                 <Tooltip
+                  cursor={false}
                   contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
                   formatter={(val) => [`₹${val.toLocaleString()}`, 'Revenue']}
                 />

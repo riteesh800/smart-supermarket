@@ -979,6 +979,13 @@ tbody tr:hover {
   height: 400px;
 }
 
+/* Remove Recharts default white/gray bar hover overlay */
+rect.recharts-tooltip-cursor,
+.recharts-bar-cursor {
+  fill: transparent !important;
+  opacity: 0 !important;
+}
+
 /* ──────────── RESPONSIVE ──────────── */
 @media (max-width: 1200px) {
   .grid-3 { grid-template-columns: 1fr 1fr; }
