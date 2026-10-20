@@ -3,7 +3,7 @@ Upload API routes — CSV upload, preview, import, and data management
 """
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import pandas as pd
@@ -416,3 +416,92 @@ def load_demo_data(_api_key: str = Depends(require_api_key)):
         return {"status": "success", "message": "Demo data loaded", "feature_flags": flags}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load demo data: {str(e)}")
+
+
+@router.get("/sample-datasets")
+def get_sample_datasets():
+    """Return all 5 sample CSV datasets with metadata and preview rows."""
+    data_dir = DATA_DIR
+    files_meta = [
+        {
+            "id": "sales",
+            "filename": "sales.csv",
+            "name": "Sales Transactions",
+            "icon": "🛍️",
+            "description": "Retail checkout transactions containing baskets, dates, quantities, unit prices, discounts, and payment methods.",
+            "category": "Transactions",
+        },
+        {
+            "id": "products",
+            "filename": "products.csv",
+            "name": "Products Catalog",
+            "icon": "📦",
+            "description": "Product catalog with categories, retail prices, wholesale unit costs, shelf-life days, and supplier names.",
+            "category": "Catalog",
+        },
+        {
+            "id": "customers",
+            "filename": "customers.csv",
+            "name": "Customer Profiles",
+            "icon": "👥",
+            "description": "Customer demographics with full names, age, gender, loyalty membership tiers, and email contacts.",
+            "category": "Customers",
+        },
+        {
+            "id": "inventory",
+            "filename": "inventory.csv",
+            "name": "Inventory Levels",
+            "icon": "📋",
+            "description": "Warehouse stock levels, safety reorder thresholds, max capacities, and warehouse shelf locations.",
+            "category": "Inventory",
+        },
+        {
+            "id": "suppliers",
+            "filename": "suppliers.csv",
+            "name": "Suppliers & Logistics",
+            "icon": "🚚",
+            "description": "Vendor directory with lead time metrics, supplier contact emails, and reliability performance scores.",
+            "category": "Logistics",
+        },
+    ]
+
+    results = []
+    for item in files_meta:
+        path = os.path.join(data_dir, item["filename"])
+        if os.path.exists(path):
+            file_size = os.path.getsize(path)
+            size_formatted = f"{file_size / (1024 * 1024):.2f} MB" if file_size >= 1024 * 1024 else f"{file_size / 1024:.1f} KB"
+            df = pd.read_csv(path, nrows=15)
+            # Efficient line count
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                total_rows = max(0, sum(1 for _ in f) - 1)
+            
+            results.append({
+                **item,
+                "total_rows": total_rows,
+                "size_bytes": file_size,
+                "size_formatted": size_formatted,
+                "columns": df.columns.tolist(),
+                "preview_rows": df.fillna("").to_dict(orient="records"),
+                "download_url": f"/api/upload/sample-datasets/{item['filename']}/download",
+            })
+    return results
+
+
+@router.get("/sample-datasets/{filename}/download")
+def download_sample_dataset(filename: str):
+    """Download one of the 5 sample CSV datasets."""
+    allowed = {"sales.csv", "products.csv", "customers.csv", "inventory.csv", "suppliers.csv"}
+    if filename not in allowed:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    file_path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Sample dataset file not found on disk")
+    
+    return FileResponse(
+        path=file_path,
+        media_type="text/csv",
+        filename=filename,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )

@@ -129,6 +129,8 @@ export const api = {
     }
     return res.json();
   },
+  getSampleDatasets: () => fetchJSON(`${API_BASE}/upload/sample-datasets`),
+  getSampleDownloadUrl: (filename) => `${API_BASE}/upload/sample-datasets/${filename}/download`,
 
   // Chatbot
   sendChat: (message, sessionId) => postJSON(`${API_BASE}/chat`, { message, session_id: sessionId }),

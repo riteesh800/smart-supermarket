@@ -624,6 +624,201 @@ tbody tr:hover {
   justify-content: center;
 }
 
+/* ──────────── SAMPLE DATA MODAL ──────────── */
+.sample-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(4, 7, 18, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+  padding: 20px;
+}
+
+.sample-modal-box {
+  background: rgba(17, 17, 40, 0.96);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0.25) 100%);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 16px;
+  width: 980px;
+  max-width: 95vw;
+  max-height: 88vh;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(0, 212, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dialogPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sample-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+  gap: 16px;
+}
+
+.sample-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  padding: 14px 24px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sample-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.sample-tab:hover {
+  background: rgba(0, 212, 255, 0.06);
+  border-color: rgba(0, 212, 255, 0.25);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.sample-tab.active {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: var(--accent-blue);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.2);
+}
+
+.sample-tab-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sample-tab-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sample-tab-filename {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sample-tab.active .sample-tab-filename {
+  color: var(--accent-blue);
+}
+
+.sample-tab-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sample-file-banner {
+  padding: 16px 24px;
+  background: rgba(0, 212, 255, 0.04);
+  border-bottom: 1px solid rgba(0, 212, 255, 0.12);
+}
+
+.sample-columns-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 70px;
+  overflow-y: auto;
+}
+
+.sample-column-chip {
+  font-size: 11px;
+  font-family: monospace;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--accent-blue);
+}
+
+.sample-table-section {
+  padding: 14px 24px;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+}
+
+.sample-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  max-height: 280px;
+}
+
+.sample-table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.sample-table-wrapper th {
+  position: sticky;
+  top: 0;
+  background: #151532;
+  color: var(--accent-blue);
+  font-weight: 700;
+  text-transform: none;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.25);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.sample-table-wrapper td {
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.sample-table-wrapper tr:hover td {
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.sample-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 /* ──────────── MODAL ──────────── */
 .modal-overlay {
   position: fixed;

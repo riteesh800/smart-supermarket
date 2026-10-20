@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../services/api';
 import { confirmDialog } from './ThemeDialog';
+import SampleDataModal from './SampleDataModal';
 
 const FILE_TYPES = ['sales', 'products', 'customers', 'inventory', 'suppliers'];
 const INTERNAL_FIELDS = {
@@ -15,6 +16,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
   const [status, setStatus] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [showSampleModal, setShowSampleModal] = useState(false);
   const [preview, setPreview] = useState(null);
   const [mapping, setMapping] = useState({});
   const [fileType, setFileType] = useState('');
@@ -276,22 +278,40 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
               ))}
             </div>
 
-            <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
+            <div style={{ marginTop: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button className="btn btn-secondary" onClick={handleReset}>🗑️ Reset All Data</button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowSampleModal(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                📁 View Sample Data
+              </button>
             </div>
           </>
         ) : (
           <div style={{ textAlign: 'center', padding: '30px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
             <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>No data loaded. Upload your CSV files or load the demo dataset.</p>
-            <button className="btn btn-primary" onClick={handleLoadDemo} disabled={importing}
-              style={{ padding: '12px 30px', fontSize: 15 }}>
-              {importing ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <span className="upload-spinner-inline">⏳</span> Loading...
-                </span>
-              ) : '🚀 Load Demo Dataset'}
-            </button>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button className="btn btn-primary" onClick={handleLoadDemo} disabled={importing}
+                style={{ padding: '12px 30px', fontSize: 15 }}>
+                {importing ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span className="upload-spinner-inline">⏳</span> Loading...
+                  </span>
+                ) : '🚀 Load Demo Dataset'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowSampleModal(true)}
+                style={{ padding: '12px 24px', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8 }}
+              >
+                📁 View Sample Data
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -539,6 +559,14 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
           </span>
         </div>
       </div>
+
+      {/* Sample Data Modal */}
+      <SampleDataModal
+        isOpen={showSampleModal}
+        onClose={() => setShowSampleModal(false)}
+        onLoadDemo={handleLoadDemo}
+        importing={importing}
+      />
     </div>
   );
 }
