@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import SourceButton from './SourceButton';
 import { SOURCES } from '../constants/sources';
+import { useColumnMapping } from '../context/ColumnMappingContext';
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area
 } from 'recharts';
 
 export default function DashboardOverview() {
+  const { resolveColumn } = useColumnMapping();
   const [summary, setSummary] = useState(null);
   const [revenue, setRevenue] = useState(null);
   const [lowStock, setLowStock] = useState([]);
@@ -220,13 +222,22 @@ export default function DashboardOverview() {
 
       {/* Low Stock Alerts */}
       {lowStock.length > 0 && (() => {
-        const invSource = SOURCES.dashboard.lowStockAlerts?.find(s => s.file.includes('inventory')) || {
+        const rawAlertSources = SOURCES?.dashboard?.lowStockAlerts;
+        const invSourcesList = Array.isArray(rawAlertSources)
+          ? rawAlertSources
+          : Array.isArray(rawAlertSources?.sources)
+            ? rawAlertSources.sources
+            : [];
+        const invSource = invSourcesList.find(s => s?.file && s.file.includes('inventory')) || {
           file: 'inventory.csv',
           columns: ['current_stock', 'reorder_point']
         };
-        const invFile = invSource.file;
-        const stockCol = invSource.columns?.find(c => c.includes('stock')) || 'current_stock';
-        const reorderCol = invSource.columns?.find(c => c.includes('reorder')) || 'reorder_point';
+        const invFile = invSource.file || 'inventory.csv';
+        const cols = Array.isArray(invSource.columns) ? invSource.columns : [];
+        const rawStockCol = cols.find(c => typeof c === 'string' && c.includes('stock')) || 'current_stock';
+        const rawReorderCol = cols.find(c => typeof c === 'string' && c.includes('reorder')) || 'reorder_point';
+        const stockCol = resolveColumn ? resolveColumn(invFile, rawStockCol) : rawStockCol;
+        const reorderCol = resolveColumn ? resolveColumn(invFile, rawReorderCol) : rawReorderCol;
 
         return (
           <div className="card">
