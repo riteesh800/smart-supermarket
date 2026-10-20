@@ -114,8 +114,14 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
     }
     setUploading(true);
     setMessage(null);
+    const startTime = Date.now();
     try {
       const result = await api.previewUpload(file);
+      // Ensure smooth visible processing rotation so the user gets clear visual feedback
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 600) {
+        await new Promise(r => setTimeout(r, 600 - elapsed));
+      }
       if (result.error) {
         setMessage({ type: 'error', text: result.error });
       } else {
@@ -270,7 +276,11 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
             <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>No data loaded. Upload your CSV files or load the demo dataset.</p>
             <button className="btn btn-primary" onClick={handleLoadDemo} disabled={importing}
               style={{ padding: '12px 30px', fontSize: 15 }}>
-              {importing ? '⏳ Loading...' : '🚀 Load Demo Dataset'}
+              {importing ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span className="upload-spinner-inline">⏳</span> Loading...
+                </span>
+              ) : '🚀 Load Demo Dataset'}
             </button>
           </div>
         )}
@@ -281,14 +291,25 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
         <div className="card" style={{ marginBottom: 24 }}>
           <div className="card-title">Upload CSV File</div>
           <div
-            className={`upload-dropzone ${dragOver ? 'drag-over' : ''}`}
-            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            className={`upload-dropzone ${dragOver ? 'drag-over' : ''} ${uploading ? 'uploading' : ''}`}
+            onDragOver={e => {
+              e.preventDefault();
+              if (!uploading) setDragOver(true);
+            }}
             onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById('csv-file-input')?.click()}
+            onDrop={uploading ? e => e.preventDefault() : handleDrop}
+            onClick={() => {
+              if (!uploading) document.getElementById('csv-file-input')?.click();
+            }}
           >
             {uploading ? (
-              <div className="upload-icon">⏳</div>
+              <div className="upload-processing-state">
+                <div className="upload-icon upload-spinner" title="Processing data...">⏳</div>
+                <div className="upload-text">
+                  <strong style={{ color: 'var(--accent-blue)' }}>Processing dataset...</strong>
+                  <span>Analyzing columns and previewing data</span>
+                </div>
+              </div>
             ) : (
               <>
                 <div className="upload-icon">📄</div>
@@ -302,7 +323,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
               </>
             )}
             <input id="csv-file-input" type="file" accept=".csv" style={{ display: 'none' }}
-              onChange={handleFileInput} />
+              onChange={handleFileInput} disabled={uploading} />
           </div>
         </div>
       )}
@@ -320,7 +341,7 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
                 Detected as: <strong style={{ color: 'var(--accent-blue)' }}>{fileType}</strong>
               </span>
             </div>
-            <button className="btn btn-secondary" onClick={() => setPreview(null)}>✕ Cancel</button>
+            <button className="btn btn-secondary" onClick={() => setPreview(null)} disabled={importing}>✕ Cancel</button>
           </div>
 
           {/* File Type Selector */}
@@ -458,10 +479,17 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
 
           {/* Import Button */}
           <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-            <button className="btn btn-secondary" onClick={() => setPreview(null)}>Cancel</button>
+            <button className="btn btn-secondary" onClick={() => setPreview(null)} disabled={importing}>Cancel</button>
             <button className="btn btn-primary" onClick={handleImport} disabled={importing}
               style={{ padding: '10px 30px' }}>
-              {importing ? '⏳ Importing & Training ML...' : `📥 Import ${preview.total_rows?.toLocaleString()} rows as ${fileType}`}
+              {importing ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span className="upload-spinner-inline">⏳</span>
+                  <span>Importing &amp; Training ML...</span>
+                </span>
+              ) : (
+                `📥 Import ${preview.total_rows?.toLocaleString()} rows as ${fileType}`
+              )}
             </button>
           </div>
         </div>
