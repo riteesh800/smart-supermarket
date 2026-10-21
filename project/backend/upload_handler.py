@@ -320,8 +320,8 @@ def normalize_sales(df, mapping):
     # Discount
     if "discount" in mapping:
         disc = clean_numeric_series(df[mapping["discount"]], default=0.0).abs()
-        if (disc > 1).any():
-            disc = disc / 100.0
+        # Normalize only values > 1 (treating them as percentages like 15 → 0.15)
+        disc = disc.where(disc <= 1, disc / 100.0)
         result["discount"] = disc.clip(0, 1)
     else:
         result["discount"] = 0.0
@@ -489,8 +489,8 @@ def normalize_suppliers(df, mapping):
     result["lead_time_days"] = clean_numeric_series(df[mapping["lead_time_days"]], default=7).astype(int) if "lead_time_days" in mapping else 7
     if "reliability_score" in mapping:
         rel = clean_numeric_series(df[mapping["reliability_score"]], default=0.5)
-        if (rel > 1).any():
-            rel = rel / 100.0
+        # Normalize only values > 1 (treating them as percentages like 85 → 0.85)
+        rel = rel.where(rel <= 1, rel / 100.0)
         result["reliability_score"] = rel.clip(0, 1).round(2)
     else:
         result["reliability_score"] = 0.5

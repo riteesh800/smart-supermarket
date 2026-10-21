@@ -16,12 +16,15 @@ router = APIRouter(prefix="/api/sales", tags=["sales"])
 @router.get("")
 def get_sales(limit: int = 100, db: Session = Depends(get_db)):
     """Get recent sales transactions."""
+    limit = max(1, min(limit, 1000))
     result = db.execute(text("""
-        SELECT s.sale_id, s.basket_id, s.product_id, p.name as product_name, p.category,
+        SELECT s.sale_id, s.basket_id, s.product_id,
+               COALESCE(p.name, s.product_id) as product_name,
+               COALESCE(p.category, 'General') as category,
                s.customer_id, s.quantity, s.unit_price, s.discount,
                s.total_price, s.timestamp, s.payment_method
         FROM sales s
-        JOIN products p ON s.product_id = p.product_id
+        LEFT JOIN products p ON s.product_id = p.product_id
         ORDER BY s.timestamp DESC
         LIMIT :limit
     """), {"limit": limit})
@@ -68,13 +71,16 @@ def get_revenue(db: Session = Depends(get_db)):
 def get_best_sellers(db: Session = Depends(get_db)):
     """Get top selling products."""
     result = db.execute(text("""
-        SELECT p.product_id, p.name, p.category, p.price,
+        SELECT COALESCE(p.product_id, s.product_id) as product_id,
+               COALESCE(p.name, s.product_id) as name,
+               COALESCE(p.category, 'General') as category,
+               COALESCE(p.price, s.unit_price, 0) as price,
                SUM(s.quantity) as total_quantity,
                SUM(s.total_price) as total_revenue,
                COUNT(s.sale_id) as total_transactions
         FROM sales s
-        JOIN products p ON s.product_id = p.product_id
-        GROUP BY p.product_id
+        LEFT JOIN products p ON s.product_id = p.product_id
+        GROUP BY COALESCE(p.product_id, s.product_id)
         ORDER BY total_revenue DESC
         LIMIT 20
     """))
@@ -87,14 +93,14 @@ def get_best_sellers(db: Session = Depends(get_db)):
 def get_sales_by_category(db: Session = Depends(get_db)):
     """Get sales breakdown by category."""
     result = db.execute(text("""
-        SELECT p.category,
+        SELECT COALESCE(p.category, 'General') as category,
                SUM(s.total_price) as total_revenue,
                SUM(s.quantity) as total_quantity,
                COUNT(s.sale_id) as total_transactions,
                AVG(s.total_price) as avg_transaction
         FROM sales s
-        JOIN products p ON s.product_id = p.product_id
-        GROUP BY p.category
+        LEFT JOIN products p ON s.product_id = p.product_id
+        GROUP BY COALESCE(p.category, 'General')
         ORDER BY total_revenue DESC
     """))
     rows = result.fetchall()
@@ -140,16 +146,16 @@ def get_payment_breakdown(db: Session = Depends(get_db)):
 def get_profit_margins(db: Session = Depends(get_db)):
     """Get profit margin analysis by category."""
     result = db.execute(text("""
-        SELECT p.category,
+        SELECT COALESCE(p.category, 'General') as category,
                SUM(s.total_price) as total_revenue,
-               SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, 0)) as total_cost,
-               SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, 0)) as total_profit,
+               SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, s.unit_price * 0.55, 0)) as total_cost,
+               SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, s.unit_price * 0.55, 0)) as total_profit,
                CASE WHEN SUM(s.total_price) > 0
-                    THEN ROUND((SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, 0))) / SUM(s.total_price) * 100, 1)
+                    THEN ROUND((SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, s.unit_price * 0.55, 0))) / SUM(s.total_price) * 100, 1)
                     ELSE 0.0 END as margin_pct
         FROM sales s
-        JOIN products p ON s.product_id = p.product_id
-        GROUP BY p.category
+        LEFT JOIN products p ON s.product_id = p.product_id
+        GROUP BY COALESCE(p.category, 'General')
         ORDER BY total_profit DESC
     """))
     rows = result.fetchall()

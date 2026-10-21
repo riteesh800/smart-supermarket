@@ -162,7 +162,7 @@ export default function SalesInsightsPanel() {
                   {byCategory.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 10, color: '#e8e8f0' }}
-                  formatter={(val) => `₹${val.toFixed(2)}`} />
+                  formatter={(val) => `₹${Number(val || 0).toFixed(2)}`} />
               </PieChart>
             </ResponsiveContainer>
           </div>

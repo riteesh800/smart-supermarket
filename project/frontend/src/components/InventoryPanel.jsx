@@ -338,7 +338,7 @@ export default function InventoryPanel() {
                   <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.product_id}</td>
                   <td style={{ fontWeight: 600 }}>{item.name}</td>
                   <td><span className="badge blue">{item.category}</span></td>
-                  <td>₹{item.price?.toFixed(2)}</td>
+                  <td>₹{item.price != null ? Number(item.price).toFixed(2) : '0.00'}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span>{item.current_stock}</span>

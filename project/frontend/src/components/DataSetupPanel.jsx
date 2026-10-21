@@ -15,7 +15,7 @@ const INTERNAL_FIELDS = {
   suppliers: ['supplier_id', 'name', 'contact_email', 'lead_time_days', 'reliability_score'],
 };
 
-export default function DataSetupPanel({ onFlagsUpdate }) {
+export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard }) {
   const { refreshMapping } = useColumnMapping();
   const [status, setStatus] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -327,6 +327,16 @@ export default function DataSetupPanel({ onFlagsUpdate }) {
             </div>
 
             <div style={{ marginTop: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {onNavigateToDashboard && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={onNavigateToDashboard}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  📊 Go to Dashboard
+                </button>
+              )}
               <button className="btn btn-secondary" onClick={handleReset}>🗑️ Reset All Data</button>
               <button
                 type="button"

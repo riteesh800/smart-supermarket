@@ -42,7 +42,7 @@ export const api = {
   getExpiringSoon: () => fetchJSON(`${API_BASE}/inventory/expiring-soon`),
   getCategories: () => fetchJSON(`${API_BASE}/inventory/categories`),
   addProduct: (data) => postJSON(`${API_BASE}/inventory`, data),
-  restockProduct: (productId, quantity = 50) => postJSON(`${API_BASE}/inventory/restock/${productId}?quantity=${quantity}`),
+  restockProduct: (productId, quantity = 50) => postJSON(`${API_BASE}/inventory/restock/${productId}?quantity=${quantity}`, {}),
 
   // Sales
   getSales: (limit = 100) => fetchJSON(`${API_BASE}/sales?limit=${limit}`),

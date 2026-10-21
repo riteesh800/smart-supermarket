@@ -190,8 +190,8 @@ def extract_time_filter(msg, db=None):
 
 def get_categories(db):
     """Get all category names from DB."""
-    data = query_db(db, "SELECT DISTINCT category FROM products ORDER BY category")
-    return [d['category'] for d in data]
+    data = query_db(db, "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category")
+    return [d['category'] for d in data if d.get('category')]
 
 
 def extract_category(msg, db):
@@ -503,12 +503,22 @@ def respond(intent, msg, db, session_id="default"):
 
     # ── Daily Revenue ──
     if intent == "daily_revenue":
+        # Anchor to dataset's max date if historical data is loaded
+        today_rows = tq("SELECT MAX(DATE(timestamp)) as max_dt FROM sales")
         today = datetime.now().strftime("%Y-%m-%d")
+        if today_rows and today_rows[0].get("max_dt"):
+            max_dt_str = str(today_rows[0]["max_dt"]).split()[0]
+            try:
+                dt_obj = datetime.strptime(max_dt_str, "%Y-%m-%d")
+                if (datetime.now() - dt_obj).days > 60:
+                    today = max_dt_str
+            except ValueError:
+                pass
         data = tq("SELECT SUM(total_price) as revenue, COUNT(*) as txns FROM sales WHERE DATE(timestamp) = :today", {"today": today})
         r = data[0]
         if not r['revenue']:
-            return {"reply": "📅 No sales recorded for today yet.", "type": "text"}
-        return {"reply": f"📅 **Today's Revenue**: {fmt(r['revenue'])}\n🧾 Transactions: {r['txns']:,}", "type": "metric"}
+            return {"reply": f"📅 No sales recorded for {today}.", "type": "text"}
+        return {"reply": f"📅 **Revenue for {today}**: {fmt(r['revenue'])}\n🧾 Transactions: {r['txns']:,}", "type": "metric"}
 
     # ── Monthly Revenue ──
     if intent == "monthly_revenue":

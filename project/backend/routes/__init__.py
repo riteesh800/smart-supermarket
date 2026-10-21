@@ -1,1 +1,1 @@
-from . import inventory, sales, customers, ml, suppliers, upload
+from . import inventory, sales, customers, ml, suppliers, upload, chatbot

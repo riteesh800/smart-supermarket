@@ -32,6 +32,10 @@ def get_customers(page: int = 1, limit: int = 50, search: Optional[str] = None,
     query = "SELECT * FROM customers WHERE 1=1"
     params = {}
 
+    # Sanitize pagination parameters
+    page = max(1, page)
+    limit = max(1, min(limit, 500))
+
     if search:
         query += " AND (first_name LIKE :search OR last_name LIKE :search OR customer_id LIKE :search OR email LIKE :search)"
         params["search"] = f"%{search}%"
@@ -45,7 +49,7 @@ def get_customers(page: int = 1, limit: int = 50, search: Optional[str] = None,
         count_sql += " AND (first_name LIKE :search OR last_name LIKE :search OR customer_id LIKE :search OR email LIKE :search)"
     if tier:
         count_sql += " AND membership_tier = :tier"
-    total = db.execute(text(count_sql), params).scalar()
+    total = db.execute(text(count_sql), params).scalar() or 0
 
     query += " ORDER BY customer_id LIMIT :limit OFFSET :offset"
     params["limit"] = limit
@@ -56,7 +60,8 @@ def get_customers(page: int = 1, limit: int = 50, search: Optional[str] = None,
     columns = result.keys()
     items = [dict(zip(columns, row)) for row in rows]
 
-    return {"items": items, "total": total, "page": page, "pages": (total + limit - 1) // limit}
+    pages = max(1, (total + limit - 1) // limit) if total > 0 else 1
+    return {"items": items, "total": total, "page": page, "pages": pages}
 
 
 @router.get("/export")

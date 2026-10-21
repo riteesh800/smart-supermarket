@@ -135,8 +135,8 @@ def get_dashboard_summary():
 
         # Total cost (profit calc)
         cost = db.execute(text("""
-            SELECT SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, 0)) FROM sales s
-            JOIN products p ON s.product_id = p.product_id
+            SELECT SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, s.unit_price * 0.55, 0)) FROM sales s
+            LEFT JOIN products p ON s.product_id = p.product_id
         """)).scalar() or 0
 
         # Total products
@@ -164,9 +164,9 @@ def get_dashboard_summary():
 
         # Top category by revenue
         top_cat = db.execute(text("""
-            SELECT p.category, SUM(s.total_price) as rev
-            FROM sales s JOIN products p ON s.product_id = p.product_id
-            GROUP BY p.category ORDER BY rev DESC LIMIT 1
+            SELECT COALESCE(p.category, 'General') as cat, SUM(s.total_price) as rev
+            FROM sales s LEFT JOIN products p ON s.product_id = p.product_id
+            GROUP BY cat ORDER BY rev DESC LIMIT 1
         """)).fetchone()
 
         # Total categories

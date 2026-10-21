@@ -49,8 +49,8 @@ def compute_demand_metrics(sales_df, products_df, inventory_df):
     max_date = sales_df["date"].max()
     if pd.isnull(max_date):
         max_date = pd.Timestamp.now().date()
-    cutoff = max_date - pd.Timedelta(days=30)
-    recent = sales_df[sales_df["date"] >= cutoff.date() if hasattr(cutoff, 'date') else sales_df["date"] >= cutoff]
+    cutoff = (pd.Timestamp(max_date) - pd.Timedelta(days=30)).date()
+    recent = sales_df[sales_df["date"] >= cutoff]
 
     demand = recent.groupby("product_id").agg(
         recent_quantity=("quantity", "sum"),
