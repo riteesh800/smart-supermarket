@@ -72,9 +72,9 @@ def get_best_sellers(db: Session = Depends(get_db)):
     """Get top selling products."""
     result = db.execute(text("""
         SELECT COALESCE(p.product_id, s.product_id) as product_id,
-               COALESCE(p.name, s.product_id) as name,
-               COALESCE(p.category, 'General') as category,
-               COALESCE(p.price, s.unit_price, 0) as price,
+               COALESCE(MAX(p.name), MAX(s.product_id)) as name,
+               COALESCE(MAX(p.category), 'General') as category,
+               COALESCE(MAX(p.price), MAX(s.unit_price), 0) as price,
                SUM(s.quantity) as total_quantity,
                SUM(s.total_price) as total_revenue,
                COUNT(s.sale_id) as total_transactions

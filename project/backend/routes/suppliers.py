@@ -21,7 +21,7 @@ def get_suppliers(db: Session = Depends(get_db)):
                COUNT(p.product_id) as products_supplied
         FROM suppliers s
         LEFT JOIN products p ON p.supplier_id = s.supplier_id
-        GROUP BY s.supplier_id
+        GROUP BY s.supplier_id, s.name, s.contact_email, s.lead_time_days, s.reliability_score
         ORDER BY s.reliability_score DESC
     """))
     rows = result.fetchall()
@@ -41,7 +41,7 @@ def get_supplier_performance(db: Session = Depends(get_db)):
         FROM suppliers s
         LEFT JOIN products p ON p.supplier_id = s.supplier_id
         LEFT JOIN sales sa ON sa.product_id = p.product_id
-        GROUP BY s.supplier_id
+        GROUP BY s.supplier_id, s.name, s.lead_time_days, s.reliability_score
         ORDER BY total_revenue_generated DESC
     """))
     rows = result.fetchall()

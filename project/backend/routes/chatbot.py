@@ -562,7 +562,7 @@ def respond(intent, msg, db, session_id="default"):
             SELECT p.name, p.category, SUM(s.total_price) as revenue, SUM(s.quantity) as qty
             FROM sales s JOIN products p ON s.product_id = p.product_id
             {time_clause.replace('timestamp', 's.timestamp')}
-            GROUP BY p.product_id ORDER BY revenue DESC LIMIT :lim
+            GROUP BY p.product_id, p.name, p.category ORDER BY revenue DESC LIMIT :lim
         """, {"lim": limit})
         lines = [f"🏆 **Top {limit} Best Sellers{time_suffix}**:\n"]
         for i, d in enumerate(data, 1):
@@ -578,7 +578,7 @@ def respond(intent, msg, db, session_id="default"):
             SELECT p.name, p.category, SUM(s.total_price) as revenue, SUM(s.quantity) as qty
             FROM sales s JOIN products p ON s.product_id = p.product_id
             {time_clause.replace('timestamp', 's.timestamp')}
-            GROUP BY p.product_id ORDER BY revenue ASC LIMIT :lim
+            GROUP BY p.product_id, p.name, p.category ORDER BY revenue ASC LIMIT :lim
         """, {"lim": limit})
         lines = [f"📉 **Bottom {limit} Slowest Sellers{time_suffix}**:\n"]
         for i, d in enumerate(data, 1):
@@ -658,7 +658,7 @@ def respond(intent, msg, db, session_id="default"):
                    COUNT(s.sale_id) as items_bought
             FROM sales s JOIN customers c ON s.customer_id = c.customer_id
             {time_clause.replace('timestamp', 's.timestamp')}
-            GROUP BY s.customer_id ORDER BY spent DESC LIMIT :lim
+            GROUP BY s.customer_id, c.first_name, c.last_name, c.membership_tier ORDER BY spent DESC LIMIT :lim
         """, {"lim": limit})
         lines = [f"👑 **Top {limit} Customers{time_suffix}**:\n"]
         for i, d in enumerate(data, 1):
@@ -756,11 +756,13 @@ def respond(intent, msg, db, session_id="default"):
 
     # ── Suppliers ──
     if intent == "suppliers":
-        data = tq("""
+        is_pg = (db.bind.dialect.name == "postgresql")
+        cat_agg = "STRING_AGG(DISTINCT p.category, ', ')" if is_pg else "GROUP_CONCAT(DISTINCT p.category)"
+        data = tq(f"""
             SELECT s.name, s.lead_time_days, s.reliability_score,
-                   COUNT(p.product_id) as products, GROUP_CONCAT(DISTINCT p.category) as categories
+                   COUNT(p.product_id) as products, {cat_agg} as categories
             FROM suppliers s LEFT JOIN products p ON p.supplier_id = s.supplier_id OR p.supplier = s.name
-            GROUP BY s.supplier_id ORDER BY products DESC
+            GROUP BY s.supplier_id, s.name, s.lead_time_days, s.reliability_score ORDER BY products DESC
         """)
         if not data:
             return {"reply": "No supplier data available.", "type": "text"}
@@ -898,7 +900,7 @@ def respond(intent, msg, db, session_id="default"):
                    AVG(s.discount) as avg_discount
             FROM sales s JOIN products p ON s.product_id = p.product_id
             WHERE LOWER(p.name) LIKE :term {time_and}
-            GROUP BY p.product_id ORDER BY revenue DESC LIMIT 3
+            GROUP BY p.product_id, p.name, p.category ORDER BY revenue DESC LIMIT 3
         """, {"term": f"%{term}%"})
         if not data:
             return {"reply": f"No sales data found for \"**{term}**\"{time_suffix}.", "type": "text"}
@@ -1038,7 +1040,7 @@ def respond(intent, msg, db, session_id="default"):
             SELECT p.name, SUM(s.total_price) as revenue
             FROM sales s JOIN products p ON s.product_id = p.product_id
             WHERE p.category = :cat
-            GROUP BY p.product_id ORDER BY revenue DESC LIMIT 3
+            GROUP BY p.product_id, p.name ORDER BY revenue DESC LIMIT 3
         """, {"cat": cat})
         top_lines = "\n".join(f"   {i}. **{t['name']}** — {fmt(t['revenue'])}" for i, t in enumerate(top, 1))
 
