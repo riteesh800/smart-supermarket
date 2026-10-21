@@ -162,10 +162,7 @@ def get_profit_margins(db: Session = Depends(get_db)):
         SELECT COALESCE(p.category, 'General') as category,
                SUM(s.total_price) as total_revenue,
                SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, s.unit_price * 0.55, 0)) as total_cost,
-               SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, s.unit_price * 0.55, 0)) as total_profit,
-               CASE WHEN SUM(s.total_price) > 0
-                    THEN ROUND((SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, s.unit_price * 0.55, 0))) / SUM(s.total_price) * 100, 1)
-                    ELSE 0.0 END as margin_pct
+               SUM(s.total_price) - SUM(s.quantity * COALESCE(p.cost, p.price * 0.55, s.unit_price * 0.55, 0)) as total_profit
         FROM sales s
         LEFT JOIN products p ON s.product_id = p.product_id
         GROUP BY COALESCE(p.category, 'General')
@@ -173,4 +170,11 @@ def get_profit_margins(db: Session = Depends(get_db)):
     """))
     rows = result.fetchall()
     columns = result.keys()
-    return [dict(zip(columns, row)) for row in rows]
+    output = []
+    for row in rows:
+        item = dict(zip(columns, row))
+        rev = float(item.get("total_revenue") or 0)
+        profit = float(item.get("total_profit") or 0)
+        item["margin_pct"] = round(profit / rev * 100, 1) if rev > 0 else 0.0
+        output.append(item)
+    return output

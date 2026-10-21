@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 import sys, os, io, csv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
@@ -150,18 +151,20 @@ def get_demographics(db: Session = Depends(get_db)):
     """Get customer demographic breakdowns."""
     # Age distribution (buckets)
     age = db.execute(text("""
-        SELECT
-            CASE
-                WHEN age IS NULL THEN 'Unknown'
-                WHEN age < 25 THEN '18-24'
-                WHEN age < 35 THEN '25-34'
-                WHEN age < 45 THEN '35-44'
-                WHEN age < 55 THEN '45-54'
-                WHEN age < 65 THEN '55-64'
-                ELSE '65+'
-            END as age_group,
-            COUNT(*) as count
-        FROM customers
+        SELECT age_group, COUNT(*) as count
+        FROM (
+            SELECT
+                CASE
+                    WHEN age IS NULL THEN 'Unknown'
+                    WHEN age < 25 THEN '18-24'
+                    WHEN age < 35 THEN '25-34'
+                    WHEN age < 45 THEN '35-44'
+                    WHEN age < 55 THEN '45-54'
+                    WHEN age < 65 THEN '55-64'
+                    ELSE '65+'
+                END as age_group
+            FROM customers
+        ) sub
         GROUP BY age_group
         ORDER BY
             CASE
@@ -239,14 +242,15 @@ def add_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
         new_id = f"C{next_num:04d}"
 
     email = customer.email or f"customer{next_num}@email.com"
+    today_str = datetime.now().strftime("%Y-%m-%d")
 
     db.execute(text("""
         INSERT INTO customers (customer_id, first_name, last_name, age, gender, membership_tier, email, join_date)
-        VALUES (:cid, :fname, :lname, :age, :gender, :tier, :email, date('now'))
+        VALUES (:cid, :fname, :lname, :age, :gender, :tier, :email, :join_date)
     """), {
         "cid": new_id, "fname": customer.first_name, "lname": customer.last_name,
         "age": customer.age, "gender": customer.gender, "tier": customer.membership_tier,
-        "email": email
+        "email": email, "join_date": today_str
     })
     db.commit()
     return {"message": "Customer added", "customer_id": new_id}

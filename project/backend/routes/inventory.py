@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 import sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
@@ -210,13 +211,15 @@ def add_product(product: ProductCreate, db: Session = Depends(get_db)):
         "shelf": product.shelf_life_days, "unit": product.unit
     })
 
+    today_str = datetime.now().strftime("%Y-%m-%d")
     # Insert inventory record
     db.execute(text("""
         INSERT INTO inventory (product_id, current_stock, max_stock, reorder_point, last_restock_date, warehouse_location)
-        VALUES (:pid, :stock, :max, :reorder, date('now'), 'Aisle-1-Shelf-A')
+        VALUES (:pid, :stock, :max, :reorder, :today, 'Aisle-1-Shelf-A')
     """), {
         "pid": new_id, "stock": product.initial_stock,
-        "max": product.max_stock, "reorder": product.reorder_point
+        "max": product.max_stock, "reorder": product.reorder_point,
+        "today": today_str
     })
 
     db.commit()
@@ -231,12 +234,13 @@ def restock_product(product_id: str, quantity: int = 50, db: Session = Depends(g
     if not prod:
         raise HTTPException(status_code=404, detail="Product not found")
 
+    today_str = datetime.now().strftime("%Y-%m-%d")
     db.execute(text("""
         UPDATE inventory
-        SET current_stock = MIN(current_stock + :qty, max_stock),
-            last_restock_date = date('now')
+        SET current_stock = CASE WHEN current_stock + :qty > max_stock THEN max_stock ELSE current_stock + :qty END,
+            last_restock_date = :today
         WHERE product_id = :pid
-    """), {"pid": product_id, "qty": quantity})
+    """), {"pid": product_id, "qty": quantity, "today": today_str})
     db.commit()
 
     # Get updated stock

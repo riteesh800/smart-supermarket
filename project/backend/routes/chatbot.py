@@ -696,12 +696,16 @@ def respond(intent, msg, db, session_id="default"):
             margin = round(profit / revenue * 100, 1) if revenue else 0
             
             cat_profit = tq(f"""
-                SELECT p.category, SUM(s.total_price) - SUM(s.quantity * p.cost) as profit,
-                       ROUND((SUM(s.total_price) - SUM(s.quantity * p.cost)) / SUM(s.total_price) * 100, 1) as margin
+                SELECT p.category, SUM(s.total_price) as rev,
+                       SUM(s.total_price) - SUM(s.quantity * p.cost) as profit
                 FROM sales s JOIN products p ON s.product_id = p.product_id
                 WHERE p.cost IS NOT NULL AND p.cost > 0 {time_and}
                 GROUP BY p.category ORDER BY profit DESC LIMIT 3
             """)
+            for c in cat_profit:
+                rev_val = c.get('rev') or 0
+                prof_val = c.get('profit') or 0
+                c['margin'] = round(prof_val / rev_val * 100, 1) if rev_val else 0.0
             note = ""
         else:
             data = tq(f"""
@@ -744,14 +748,15 @@ def respond(intent, msg, db, session_id="default"):
     if intent == "categories":
         data = tq("""
             SELECT p.category, COUNT(*) as products,
-                   ROUND(AVG(p.price), 2) as avg_price,
+                   AVG(p.price) as avg_price,
                    SUM(i.current_stock) as total_stock
             FROM products p LEFT JOIN inventory i ON p.product_id = i.product_id
             GROUP BY p.category ORDER BY products DESC
         """)
         lines = [f"📋 **{len(data)} Categories**:\n"]
         for d in data:
-            lines.append(f"• **{d['category']}** — {d['products']} products, avg ₹{d['avg_price']}, {d['total_stock'] or 0:,} units in stock")
+            avg_p = round(float(d['avg_price'] or 0), 2)
+            lines.append(f"• **{d['category']}** — {d['products']} products, avg ₹{avg_p}, {d['total_stock'] or 0:,} units in stock")
         return {"reply": "\n".join(lines), "type": "list"}
 
     # ── Suppliers ──
@@ -779,14 +784,15 @@ def respond(intent, msg, db, session_id="default"):
     if intent == "payment_methods":
         data = tq(f"""
             SELECT payment_method, COUNT(*) as cnt, SUM(total_price) as revenue,
-                   ROUND(AVG(total_price), 2) as avg_txn
+                   AVG(total_price) as avg_txn
             FROM sales {time_clause} GROUP BY payment_method ORDER BY revenue DESC
         """)
         total_rev = sum(d['revenue'] for d in data)
         lines = [f"💳 **Payment Methods{time_suffix}**:\n"]
         for d in data:
             share = (d['revenue'] / total_rev * 100) if total_rev else 0
-            lines.append(f"• **{d['payment_method']}**: {d['cnt']:,} txns ({share:.1f}%)\n  Revenue: {fmt(d['revenue'])} • Avg: {fmt(d['avg_txn'])}")
+            avg_t = round(float(d['avg_txn'] or 0), 2)
+            lines.append(f"• **{d['payment_method']}**: {d['cnt']:,} txns ({share:.1f}%)\n  Revenue: {fmt(d['revenue'])} • Avg: {fmt(avg_t)}")
         return {"reply": "\n".join(lines), "type": "list"}
 
     # ── Expiring ──
@@ -822,21 +828,24 @@ def respond(intent, msg, db, session_id="default"):
     # ── Average Order ──
     if intent == "avg_order":
         data = tq(f"""
-            SELECT ROUND(AVG(basket_total), 2) as avg_basket,
-                   ROUND(AVG(items_count), 1) as avg_items,
-                   ROUND(MAX(basket_total), 2) as max_basket,
+            SELECT AVG(basket_total) as avg_basket,
+                   AVG(items_count) as avg_items,
+                   MAX(basket_total) as max_basket,
                    COUNT(*) as total_baskets
             FROM (
                 SELECT basket_id, SUM(total_price) as basket_total, COUNT(*) as items_count
                 FROM sales {time_clause} GROUP BY basket_id
-            )
+            ) sub
         """)
         r = data[0]
+        avg_b = round(float(r['avg_basket'] or 0), 2)
+        avg_i = round(float(r['avg_items'] or 0), 1)
+        max_b = round(float(r['max_basket'] or 0), 2)
         return {
             "reply": f"🛒 **Basket Analytics{time_suffix}**:\n\n"
-                     f"• Average basket value: **{fmt(r['avg_basket'])}**\n"
-                     f"• Average items per basket: **{r['avg_items']}**\n"
-                     f"• Largest basket: {fmt(r['max_basket'])}\n"
+                     f"• Average basket value: **{fmt(avg_b)}**\n"
+                     f"• Average items per basket: **{avg_i}**\n"
+                     f"• Largest basket: {fmt(max_b)}\n"
                      f"• Total baskets: {r['total_baskets']:,}",
             "type": "metric"
         }
@@ -931,12 +940,16 @@ def respond(intent, msg, db, session_id="default"):
             SELECT p.category, SUM(s.total_price) as revenue, SUM(s.quantity) as qty,
                    COUNT(DISTINCT s.basket_id) as baskets,
                    COUNT(DISTINCT p.product_id) as products,
-                   ROUND((SUM(s.total_price) - SUM(s.quantity * {cost_expr})) / SUM(s.total_price) * 100, 1) as margin
+                   SUM(s.quantity * {cost_expr}) as total_cost
             FROM sales s JOIN products p ON s.product_id = p.product_id
             WHERE p.category IN (:c1, :c2)
             {time_and}
             GROUP BY p.category
         """, {"c1": cat1, "c2": cat2})
+        for d in data:
+            rev_val = d.get('revenue') or 0
+            cost_val = d.get('total_cost') or 0
+            d['margin'] = round((rev_val - cost_val) / rev_val * 100, 1) if rev_val else 0.0
         if len(data) < 2:
             return {"reply": f"Not enough data to compare **{cat1}** and **{cat2}**.", "type": "text"}
         d1 = next(d for d in data if d['category'] == cat1)
@@ -980,17 +993,22 @@ def respond(intent, msg, db, session_id="default"):
     # ── Discounts ──
     if intent == "discounts":
         data = tq(f"""
-            SELECT ROUND(AVG(CASE WHEN discount > 0 THEN discount ELSE NULL END) * 100, 1) as avg_disc,
-                   ROUND(SUM(CASE WHEN discount > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as disc_pct,
+            SELECT AVG(CASE WHEN discount > 0 THEN discount ELSE NULL END) as avg_disc,
+                   SUM(CASE WHEN discount > 0 THEN 1 ELSE 0 END) as disc_cnt,
+                   COUNT(*) as total_cnt,
                    COUNT(CASE WHEN discount > 0 THEN 1 END) as disc_txns,
                    SUM(CASE WHEN discount > 0 THEN unit_price * quantity * discount ELSE 0 END) as total_saved
             FROM sales {time_clause}
         """)
         r = data[0]
+        avg_disc_val = round(float(r['avg_disc'] or 0) * 100, 1)
+        total_cnt = r['total_cnt'] or 0
+        disc_cnt = r['disc_cnt'] or 0
+        disc_pct_val = round((disc_cnt / total_cnt * 100), 1) if total_cnt else 0.0
         return {
             "reply": f"🏷️ **Discount Analysis{time_suffix}**:\n\n"
-                     f"• Average discount: **{r['avg_disc'] or 0}%**\n"
-                     f"• Transactions with discounts: **{r['disc_pct'] or 0}%** ({r['disc_txns'] or 0:,} txns)\n"
+                     f"• Average discount: **{avg_disc_val}%**\n"
+                     f"• Transactions with discounts: **{disc_pct_val}%** ({r['disc_txns'] or 0:,} txns)\n"
                      f"• Total customer savings: **{fmt(r['total_saved'] or 0)}**",
             "type": "metric"
         }
@@ -1028,12 +1046,16 @@ def respond(intent, msg, db, session_id="default"):
             SELECT SUM(s.total_price) as revenue, SUM(s.quantity) as qty,
                    COUNT(DISTINCT p.product_id) as products,
                    COUNT(DISTINCT s.customer_id) as customers,
-                   ROUND(AVG(p.price), 2) as avg_price,
-                   ROUND((SUM(s.total_price) - SUM(s.quantity * {cost_expr})) / SUM(s.total_price) * 100, 1) as margin
+                   AVG(p.price) as avg_price,
+                   SUM(s.quantity * {cost_expr}) as total_cost
             FROM sales s JOIN products p ON s.product_id = p.product_id
             WHERE p.category = :cat
         """, {"cat": cat})
         r = data[0]
+        r_rev = float(r.get('revenue') or 0)
+        r_cost = float(r.get('total_cost') or 0)
+        r['avg_price'] = round(float(r['avg_price'] or 0), 2)
+        r['margin'] = round((r_rev - r_cost) / r_rev * 100, 1) if r_rev else 0.0
 
         # Top 3 products in category
         top = tq("""
@@ -1201,19 +1223,26 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
                     chart_data.append({"label": label, "value": d["cnt"]})
             elif intent == "payment_methods":
                 chart_type = "bar"
-                chart_db = query_db(db, "SELECT payment_method as label, SUM(total_price) as value FROM sales GROUP BY label ORDER BY value DESC")
-                chart_data = [{"label": d["label"], "value": round(d["value"], 2)} for d in chart_db if d["value"]]
+                chart_db = query_db(db, "SELECT payment_method as label, SUM(total_price) as value FROM sales GROUP BY payment_method ORDER BY value DESC")
+                chart_data = [{"label": d["label"], "value": round(float(d["value"] or 0), 2)} for d in chart_db if d["value"]]
             elif intent == "profit":
                 chart_type = "bar"
                 has_cost = query_db(db, "SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")[0]['cnt'] > 0
                 cost_expr = "p.cost" if has_cost else "p.price * 0.65"
                 chart_db = query_db(db, f"""
                     SELECT p.category as label, 
-                           ROUND((SUM(s.total_price) - SUM(s.quantity * {cost_expr})) / SUM(s.total_price) * 100, 1) as value
+                           SUM(s.total_price) as rev,
+                           SUM(s.quantity * {cost_expr}) as cost
                     FROM sales s JOIN products p ON s.product_id = p.product_id
-                    GROUP BY label ORDER BY value DESC
+                    GROUP BY p.category
                 """)
-                chart_data = [{"label": d["label"], "value": d["value"]} for d in chart_db if d["value"]]
+                chart_data = []
+                for d in chart_db:
+                    rev_val = float(d.get("rev") or 0)
+                    cost_val = float(d.get("cost") or 0)
+                    margin_val = round((rev_val - cost_val) / rev_val * 100, 1) if rev_val else 0.0
+                    chart_data.append({"label": d["label"], "value": margin_val})
+                chart_data.sort(key=lambda x: x["value"], reverse=True)
         except Exception as e:
             # Silently log/fallback if query fails
             print(f"Chart data error: {e}")
