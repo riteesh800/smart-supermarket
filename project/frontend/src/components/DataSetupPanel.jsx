@@ -337,6 +337,19 @@ export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard })
                   📊 Go to Dashboard
                 </button>
               )}
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleLoadDemo}
+                disabled={importing}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                {importing ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span className="upload-spinner-inline">⏳</span> Loading...
+                  </span>
+                ) : '🚀 Load Demo Data'}
+              </button>
               <button className="btn btn-secondary" onClick={handleReset}>🗑️ Reset All Data</button>
               <button
                 type="button"
