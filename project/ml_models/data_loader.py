@@ -24,17 +24,27 @@ def load_table(table_name: str, base_dir: str = None) -> pd.DataFrame:
     # 1. Try PostgreSQL (e.g. Supabase via DATABASE_URL)
     db_url = os.getenv("DATABASE_URL")
     if db_url and db_url.strip():
-        db_url = db_url.strip()
-        if db_url.startswith("postgres://"):
-            db_url = db_url.replace("postgres://", "postgresql://", 1)
-        try:
-            engine = create_engine(db_url, pool_pre_ping=True)
-            with engine.connect() as conn:
-                df = pd.read_sql_query(text(f"SELECT * FROM {table_name}"), conn)
-                if not df.empty:
-                    return df
-        except Exception as e:
-            print(f"Notice: Could not load '{table_name}' via DATABASE_URL ({e}). Falling back...")
+        clean = db_url.strip()
+        if clean.startswith("postgres://"):
+            clean = clean.replace("postgres://", "postgresql://", 1)
+
+        candidates = []
+        if not clean.startswith("postgresql+"):
+            candidates.append(clean.replace("postgresql://", "postgresql+psycopg2://", 1))
+            candidates.append(clean.replace("postgresql://", "postgresql+psycopg://", 1))
+        candidates.append(clean)
+
+        for target in candidates:
+            try:
+                engine = create_engine(target, pool_pre_ping=True)
+                with engine.connect() as conn:
+                    df = pd.read_sql_query(text(f"SELECT * FROM {table_name}"), conn)
+                    if not df.empty:
+                        return df
+                break
+            except Exception as e:
+                pass
+
 
     # 2. Try SQLite
     db_path = os.path.join(os.path.dirname(base_dir), "backend", "supermarket.db")

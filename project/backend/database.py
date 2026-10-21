@@ -19,16 +19,33 @@ DATA_DIR = os.path.join(os.path.dirname(BASE_DIR), "data")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+
+def _get_pg_engine(url: str):
+    clean = url.strip()
+    if clean.startswith("postgres://"):
+        clean = clean.replace("postgres://", "postgresql://", 1)
+
+    # Try explicit driver prefixes to prevent ModuleNotFoundError
+    candidates = []
+    if not clean.startswith("postgresql+"):
+        candidates.append(clean.replace("postgresql://", "postgresql+psycopg2://", 1))
+        candidates.append(clean.replace("postgresql://", "postgresql+psycopg://", 1))
+    candidates.append(clean)
+
+    last_err = None
+    for target in candidates:
+        try:
+            eng = create_engine(target, echo=False, pool_pre_ping=True, pool_recycle=300)
+            return eng
+        except Exception as e:
+            last_err = e
+    if last_err:
+        raise last_err
+
+
 if DATABASE_URL and DATABASE_URL.strip():
-    db_url = DATABASE_URL.strip()
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    engine = create_engine(
-        db_url,
-        echo=False,
-        pool_pre_ping=True,
-        pool_recycle=300
-    )
+    engine = _get_pg_engine(DATABASE_URL)
+
 else:
     DB_PATH = os.path.join(BASE_DIR, "supermarket.db")
     engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
