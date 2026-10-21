@@ -8,7 +8,6 @@
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3%2B-F7931E.svg?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![statsmodels](https://img.shields.io/badge/statsmodels-0.14%2B-blueviolet.svg)](https://www.statsmodels.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL%20Mode-003B57.svg?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > **Version 3.0.0 — Portable Enterprise Edition**  
 > An end-to-end, full-stack supermarket intelligence platform combining **5 Machine Learning engines**, a high-performance **FastAPI backend**, an interactive **React 19 dashboard**, an intelligent **data-aware conversational chatbot (SmartBot v2)**, and a **universal CSV importer** capable of adapting to any retail or supermarket dataset in real time.
@@ -692,9 +691,3 @@ SmartMart uses SQLite in **WAL (Write-Ahead Logging)** mode. Ensure no external 
 - **Academic Context:** 6th Semester Final Mini Project
 - **Project Name:** AI-Driven Smart Supermarket Management System (SmartMart AI)
 - **Repository:** [riteesh800/smart-supermarket](https://github.com/riteesh800/smart-supermarket)
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
