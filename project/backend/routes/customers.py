@@ -209,7 +209,7 @@ def get_demographics(db: Session = Depends(get_db)):
 def get_retention(db: Session = Depends(get_db)):
     """Get monthly active customer counts (retention proxy)."""
     result = db.execute(text("""
-        SELECT strftime('%Y-%m', s.timestamp) as month,
+        SELECT SUBSTR(s.timestamp, 1, 7) as month,
                COUNT(DISTINCT s.customer_id) as active_customers,
                COUNT(DISTINCT s.basket_id) as total_baskets,
                SUM(s.total_price) as total_spend

@@ -18,27 +18,11 @@ DATA_DIR = os.path.join(os.path.dirname(BASE_DIR), "data")
 SAVE_DIR = os.path.join(BASE_DIR, "saved")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
+try:
+    from data_loader import load_table
+except ImportError:
+    from ml_models.data_loader import load_table
 
-def load_table(table_name):
-    db_path = os.path.join(os.path.dirname(BASE_DIR), "backend", "supermarket.db")
-    if os.path.exists(db_path):
-        try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute(f"SELECT count(*) FROM sqlite_master WHERE type='table' AND name='{table_name}'")
-            if cursor.fetchone()[0] > 0:
-                df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
-                if len(df) > 0:
-                    conn.close()
-                    return df
-            conn.close()
-        except Exception as e:
-            print(f"Error loading {table_name} from database: {e}")
-    # Fallback to CSV
-    csv_path = os.path.join(DATA_DIR, f"{table_name}.csv")
-    if os.path.exists(csv_path):
-        return pd.read_csv(csv_path)
-    return pd.DataFrame()
 
 
 def load_sales():

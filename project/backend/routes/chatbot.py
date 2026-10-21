@@ -108,7 +108,7 @@ def extract_time_filter(msg, db=None):
     # Anchor 'now' to dataset maximum date if historical data is loaded
     if db is not None:
         try:
-            max_row = query_db(db, "SELECT MAX(DATE(timestamp)) as max_dt FROM sales")
+            max_row = query_db(db, "SELECT MAX(SUBSTR(timestamp, 1, 10)) as max_dt FROM sales")
             if max_row and max_row[0].get("max_dt"):
                 max_dt_str = str(max_row[0]["max_dt"]).split()[0]
                 dt_obj = datetime.strptime(max_dt_str, "%Y-%m-%d")
@@ -120,51 +120,51 @@ def extract_time_filter(msg, db=None):
     if any(k in msg_lower for k in ["today", "today's"]):
         date = now.strftime("%Y-%m-%d")
         matched = next(k for k in ["today's", "today"] if k in msg_lower)
-        return "DATE(timestamp) = :tf_date", {"tf_date": date}, "today", matched
+        return "SUBSTR(timestamp, 1, 10) = :tf_date", {"tf_date": date}, "today", matched
 
     if "yesterday" in msg_lower:
         date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
-        return "DATE(timestamp) = :tf_date", {"tf_date": date}, "yesterday", "yesterday"
+        return "SUBSTR(timestamp, 1, 10) = :tf_date", {"tf_date": date}, "yesterday", "yesterday"
 
     if any(k in msg_lower for k in ["this week", "current week"]):
         start = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
         matched = next(k for k in ["this week", "current week"] if k in msg_lower)
-        return "DATE(timestamp) >= :tf_start", {"tf_start": start}, "this week", matched
+        return "SUBSTR(timestamp, 1, 10) >= :tf_start", {"tf_start": start}, "this week", matched
 
     if any(k in msg_lower for k in ["last week", "previous week"]):
         end = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
         start = (now - timedelta(days=now.weekday() + 7)).strftime("%Y-%m-%d")
         matched = next(k for k in ["last week", "previous week"] if k in msg_lower)
-        return "DATE(timestamp) >= :tf_start AND DATE(timestamp) < :tf_end", {"tf_start": start, "tf_end": end}, "last week", matched
+        return "SUBSTR(timestamp, 1, 10) >= :tf_start AND SUBSTR(timestamp, 1, 10) < :tf_end", {"tf_start": start, "tf_end": end}, "last week", matched
 
     if any(k in msg_lower for k in ["this month", "current month"]):
         month = now.strftime("%Y-%m")
         matched = next(k for k in ["this month", "current month"] if k in msg_lower)
-        return "strftime('%Y-%m', timestamp) = :tf_month", {"tf_month": month}, "this month", matched
+        return "SUBSTR(timestamp, 1, 7) = :tf_month", {"tf_month": month}, "this month", matched
 
     if any(k in msg_lower for k in ["last month", "previous month"]):
         first = now.replace(day=1)
         prev = first - timedelta(days=1)
         month = prev.strftime("%Y-%m")
         matched = next(k for k in ["last month", "previous month"] if k in msg_lower)
-        return "strftime('%Y-%m', timestamp) = :tf_month", {"tf_month": month}, "last month", matched
+        return "SUBSTR(timestamp, 1, 7) = :tf_month", {"tf_month": month}, "last month", matched
 
     if any(k in msg_lower for k in ["this year", "current year"]):
         year = now.strftime("%Y")
         matched = next(k for k in ["this year", "current year"] if k in msg_lower)
-        return "strftime('%Y', timestamp) = :tf_year", {"tf_year": year}, "this year", matched
+        return "SUBSTR(timestamp, 1, 4) = :tf_year", {"tf_year": year}, "this year", matched
 
     if any(k in msg_lower for k in ["last year", "previous year"]):
         year = str(now.year - 1)
         matched = next(k for k in ["last year", "previous year"] if k in msg_lower)
-        return "strftime('%Y', timestamp) = :tf_year", {"tf_year": year}, "last year", matched
+        return "SUBSTR(timestamp, 1, 4) = :tf_year", {"tf_year": year}, "last year", matched
 
     # "last N days"
     m = re.search(r'last\s+(\d+)\s+days?', msg_lower)
     if m:
         days = int(m.group(1))
         date = (now - timedelta(days=days)).strftime("%Y-%m-%d")
-        return "DATE(timestamp) >= :tf_date", {"tf_date": date}, f"last {days} days", m.group(0)
+        return "SUBSTR(timestamp, 1, 10) >= :tf_date", {"tf_date": date}, f"last {days} days", m.group(0)
 
     # Specific month name
     months = {"january": "01", "february": "02", "march": "03", "april": "04",
@@ -177,13 +177,13 @@ def extract_time_filter(msg, db=None):
         if name in msg_lower:
             yr_match = re.search(r'20\d{2}', msg_lower)
             year = yr_match.group(0) if yr_match else str(now.year)
-            return "strftime('%Y-%m', timestamp) = :tf_month", {"tf_month": f"{year}-{num}"}, f"{name.capitalize()} {year}", name
+            return "SUBSTR(timestamp, 1, 7) = :tf_month", {"tf_month": f"{year}-{num}"}, f"{name.capitalize()} {year}", name
 
     # Standalone 4-digit year (e.g. 2019, 2021)
     yr_match = re.search(r'\b(19\d{2}|20\d{2})\b', msg_lower)
     if yr_match:
         year = yr_match.group(1)
-        return "strftime('%Y', timestamp) = :tf_year", {"tf_year": year}, f"year {year}", yr_match.group(0)
+        return "SUBSTR(timestamp, 1, 4) = :tf_year", {"tf_year": year}, f"year {year}", yr_match.group(0)
 
     return None, {}, None, None
 
@@ -504,7 +504,7 @@ def respond(intent, msg, db, session_id="default"):
     # ── Daily Revenue ──
     if intent == "daily_revenue":
         # Anchor to dataset's max date if historical data is loaded
-        today_rows = tq("SELECT MAX(DATE(timestamp)) as max_dt FROM sales")
+        today_rows = tq("SELECT MAX(SUBSTR(timestamp, 1, 10)) as max_dt FROM sales")
         today = datetime.now().strftime("%Y-%m-%d")
         if today_rows and today_rows[0].get("max_dt"):
             max_dt_str = str(today_rows[0]["max_dt"]).split()[0]
@@ -514,7 +514,7 @@ def respond(intent, msg, db, session_id="default"):
                     today = max_dt_str
             except ValueError:
                 pass
-        data = tq("SELECT SUM(total_price) as revenue, COUNT(*) as txns FROM sales WHERE DATE(timestamp) = :today", {"today": today})
+        data = tq("SELECT SUM(total_price) as revenue, COUNT(*) as txns FROM sales WHERE SUBSTR(timestamp, 1, 10) = :today", {"today": today})
         r = data[0]
         if not r['revenue']:
             return {"reply": f"📅 No sales recorded for {today}.", "type": "text"}
@@ -523,7 +523,7 @@ def respond(intent, msg, db, session_id="default"):
     # ── Monthly Revenue ──
     if intent == "monthly_revenue":
         data = tq("""
-            SELECT strftime('%Y-%m', timestamp) as month, SUM(total_price) as revenue, COUNT(*) as txns
+            SELECT SUBSTR(timestamp, 1, 7) as month, SUM(total_price) as revenue, COUNT(*) as txns
             FROM sales GROUP BY month ORDER BY month DESC LIMIT 6
         """)
         lines = ["📅 **Monthly Revenue Breakdown**:\n"]
@@ -789,14 +789,26 @@ def respond(intent, msg, db, session_id="default"):
 
     # ── Expiring ──
     if intent == "expiring":
-        data = tq("""
-            SELECT p.name, p.category, p.shelf_life_days, i.current_stock, i.last_restock_date,
-                   ROUND(julianday(DATE(i.last_restock_date, '+' || p.shelf_life_days || ' days')) - julianday('now')) as days_left
-            FROM inventory i JOIN products p ON i.product_id = p.product_id
-            WHERE p.shelf_life_days IS NOT NULL
-            HAVING days_left < 14 AND days_left >= 0
-            ORDER BY days_left ASC LIMIT 10
-        """)
+        is_pg = (db.bind.dialect.name == "postgresql")
+        if is_pg:
+            data = tq("""
+                SELECT p.name, p.category, p.shelf_life_days, i.current_stock, i.last_restock_date,
+                       ROUND(p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) as days_left
+                FROM inventory i JOIN products p ON i.product_id = p.product_id
+                WHERE p.shelf_life_days IS NOT NULL
+                  AND (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) < 14
+                  AND (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) >= 0
+                ORDER BY days_left ASC LIMIT 10
+            """)
+        else:
+            data = tq("""
+                SELECT p.name, p.category, p.shelf_life_days, i.current_stock, i.last_restock_date,
+                       ROUND(julianday(DATE(i.last_restock_date, '+' || p.shelf_life_days || ' days')) - julianday('now')) as days_left
+                FROM inventory i JOIN products p ON i.product_id = p.product_id
+                WHERE p.shelf_life_days IS NOT NULL
+                HAVING days_left < 14 AND days_left >= 0
+                ORDER BY days_left ASC LIMIT 10
+            """)
         if not data:
             return {"reply": "✅ No products expiring within 14 days!", "type": "text"}
         lines = [f"⏰ **{len(data)} Products Expiring Soon**:\n"]
@@ -830,7 +842,7 @@ def respond(intent, msg, db, session_id="default"):
     # ── Peak Hours ──
     if intent == "peak_hours":
         data = tq(f"""
-            SELECT CAST(strftime('%H', timestamp) AS INTEGER) as hour,
+            SELECT CAST(SUBSTR(timestamp, 12, 2) AS INTEGER) as hour,
                    COUNT(*) as cnt, SUM(total_price) as revenue
             FROM sales {time_clause} GROUP BY hour ORDER BY cnt DESC LIMIT 5
         """)
@@ -947,7 +959,7 @@ def respond(intent, msg, db, session_id="default"):
     # ── Growth / Trend ──
     if intent == "growth":
         data = tq("""
-            SELECT strftime('%Y-%m', timestamp) as month, SUM(total_price) as revenue
+            SELECT SUBSTR(timestamp, 1, 7) as month, SUM(total_price) as revenue
             FROM sales GROUP BY month ORDER BY month DESC LIMIT 3
         """)
         if len(data) >= 2:
@@ -1156,7 +1168,7 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
             if intent == "monthly_revenue":
                 chart_type = "line"
                 chart_db = query_db(db, """
-                    SELECT strftime('%Y-%m', timestamp) as label, SUM(total_price) as value
+                    SELECT SUBSTR(timestamp, 1, 7) as label, SUM(total_price) as value
                     FROM sales GROUP BY label ORDER BY label DESC LIMIT 6
                 """)
                 chart_data = list(reversed([{"label": d["label"], "value": round(d["value"], 2)} for d in chart_db if d["value"]]))
@@ -1175,7 +1187,7 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
             elif intent == "peak_hours":
                 chart_type = "line"
                 chart_db = query_db(db, """
-                    SELECT CAST(strftime('%H', timestamp) AS INTEGER) as hr, COUNT(*) as cnt
+                    SELECT CAST(SUBSTR(timestamp, 12, 2) AS INTEGER) as hr, COUNT(*) as cnt
                     FROM sales GROUP BY hr ORDER BY hr ASC
                 """)
                 chart_data = []

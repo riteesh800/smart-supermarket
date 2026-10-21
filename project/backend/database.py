@@ -1,5 +1,5 @@
 """
-Database setup - SQLite with SQLAlchemy
+Database setup - PostgreSQL (Supabase) / SQLite with SQLAlchemy
 Loads CSV data and provides session management
 """
 
@@ -8,22 +8,42 @@ import pandas as pd
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, ForeignKey, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(os.path.dirname(BASE_DIR), "data")
-DB_PATH = os.path.join(BASE_DIR, "supermarket.db")
 
-engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-@event.listens_for(engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+if DATABASE_URL and DATABASE_URL.strip():
+    db_url = DATABASE_URL.strip()
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    engine = create_engine(
+        db_url,
+        echo=False,
+        pool_pre_ping=True,
+        pool_recycle=300
+    )
+else:
+    DB_PATH = os.path.join(BASE_DIR, "supermarket.db")
+    engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
+
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+
 
 
 

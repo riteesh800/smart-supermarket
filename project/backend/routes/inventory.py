@@ -135,17 +135,32 @@ def get_inventory_by_category(db: Session = Depends(get_db)):
 @router.get("/expiring-soon")
 def get_expiring_soon(db: Session = Depends(get_db)):
     """Get products expiring within 7 days (based on shelf life + last restock)."""
-    result = db.execute(text("""
-        SELECT p.product_id, p.name, p.category, p.shelf_life_days,
-               i.current_stock, i.last_restock_date,
-               julianday('now') - julianday(i.last_restock_date) as days_since_restock,
-               p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) as days_remaining
-        FROM products p
-        JOIN inventory i ON p.product_id = i.product_id
-        WHERE p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) <= 7
-          AND p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) > -30
-        ORDER BY days_remaining ASC
-    """))
+    is_pg = (db.bind.dialect.name == "postgresql")
+    if is_pg:
+        query = """
+            SELECT p.product_id, p.name, p.category, p.shelf_life_days,
+                   i.current_stock, i.last_restock_date,
+                   (CURRENT_DATE - CAST(i.last_restock_date AS DATE)) as days_since_restock,
+                   (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) as days_remaining
+            FROM products p
+            JOIN inventory i ON p.product_id = i.product_id
+            WHERE (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) <= 7
+              AND (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) > -30
+            ORDER BY days_remaining ASC
+        """
+    else:
+        query = """
+            SELECT p.product_id, p.name, p.category, p.shelf_life_days,
+                   i.current_stock, i.last_restock_date,
+                   julianday('now') - julianday(i.last_restock_date) as days_since_restock,
+                   p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) as days_remaining
+            FROM products p
+            JOIN inventory i ON p.product_id = i.product_id
+            WHERE p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) <= 7
+              AND p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) > -30
+            ORDER BY days_remaining ASC
+        """
+    result = db.execute(text(query))
     rows = result.fetchall()
     columns = result.keys()
     return [dict(zip(columns, row)) for row in rows]

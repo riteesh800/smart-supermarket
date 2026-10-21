@@ -10,6 +10,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from database import init_db
 from routes import inventory, sales, customers, ml, suppliers, upload, chatbot
 
@@ -19,14 +25,18 @@ app = FastAPI(
     version="3.0.0"
 )
 
-# CORS for frontend
+# CORS for frontend (configurable via CORS_ORIGINS)
+cors_origins_raw = os.getenv("CORS_ORIGINS", "*")
+cors_origins = [o.strip() for o in cors_origins_raw.split(",")] if cors_origins_raw != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Register routes
 app.include_router(inventory.router)

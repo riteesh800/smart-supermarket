@@ -1,5 +1,6 @@
-const API_BASE = '/api';
-const API_KEY = 'dev-key';  // Match SMARTMART_API_KEY env var on backend
+const rawBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim();
+const API_BASE = rawBase.endsWith('/api') ? rawBase : (rawBase === '/api' || !rawBase ? '/api' : `${rawBase.replace(/\/$/, '')}/api`);
+const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key';  // Match SMARTMART_API_KEY env var on backend
 
 async function fetchJSON(url) {
   const res = await fetch(url);

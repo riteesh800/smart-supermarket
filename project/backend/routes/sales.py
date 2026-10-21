@@ -38,12 +38,12 @@ def get_revenue(db: Session = Depends(get_db)):
     """Get revenue aggregated by day, week, month."""
     # Daily revenue
     daily = db.execute(text("""
-        SELECT DATE(timestamp) as date,
+        SELECT SUBSTR(timestamp, 1, 10) as date,
                SUM(total_price) as revenue,
                COUNT(*) as transactions,
                SUM(quantity) as units_sold
         FROM sales
-        GROUP BY DATE(timestamp)
+        GROUP BY SUBSTR(timestamp, 1, 10)
         ORDER BY date ASC
     """))
     daily_rows = daily.fetchall()
@@ -52,12 +52,12 @@ def get_revenue(db: Session = Depends(get_db)):
 
     # Monthly revenue
     monthly = db.execute(text("""
-        SELECT strftime('%Y-%m', timestamp) as month,
+        SELECT SUBSTR(timestamp, 1, 7) as month,
                SUM(total_price) as revenue,
                COUNT(*) as transactions,
                SUM(quantity) as units_sold
         FROM sales
-        GROUP BY strftime('%Y-%m', timestamp)
+        GROUP BY SUBSTR(timestamp, 1, 7)
         ORDER BY month ASC
     """))
     monthly_rows = monthly.fetchall()
@@ -111,15 +111,28 @@ def get_sales_by_category(db: Session = Depends(get_db)):
 @router.get("/hourly-heatmap")
 def get_hourly_heatmap(db: Session = Depends(get_db)):
     """Get sales count by hour and day-of-week for heatmap."""
-    result = db.execute(text("""
-        SELECT CAST(strftime('%w', timestamp) AS INTEGER) as day_of_week,
-               CAST(strftime('%H', timestamp) AS INTEGER) as hour,
-               COUNT(*) as sales_count,
-               SUM(total_price) as revenue
-        FROM sales
-        GROUP BY day_of_week, hour
-        ORDER BY day_of_week, hour
-    """))
+    is_pg = (db.bind.dialect.name == "postgresql")
+    if is_pg:
+        query = """
+            SELECT CAST(EXTRACT(DOW FROM timestamp::timestamp) AS INTEGER) as day_of_week,
+                   CAST(EXTRACT(HOUR FROM timestamp::timestamp) AS INTEGER) as hour,
+                   COUNT(*) as sales_count,
+                   SUM(total_price) as revenue
+            FROM sales
+            GROUP BY day_of_week, hour
+            ORDER BY day_of_week, hour
+        """
+    else:
+        query = """
+            SELECT CAST(strftime('%w', timestamp) AS INTEGER) as day_of_week,
+                   CAST(strftime('%H', timestamp) AS INTEGER) as hour,
+                   COUNT(*) as sales_count,
+                   SUM(total_price) as revenue
+            FROM sales
+            GROUP BY day_of_week, hour
+            ORDER BY day_of_week, hour
+        """
+    result = db.execute(text(query))
     rows = result.fetchall()
     columns = result.keys()
     return [dict(zip(columns, row)) for row in rows]
