@@ -43,14 +43,22 @@ def _get_pg_engine(url: str):
         raise last_err
 
 
-if DATABASE_URL and DATABASE_URL.strip():
-    engine = _get_pg_engine(DATABASE_URL)
+def _init_engine():
+    if DATABASE_URL and DATABASE_URL.strip():
+        try:
+            eng = _get_pg_engine(DATABASE_URL)
+            with eng.connect() as conn:
+                pass
+            print("✅ Successfully connected to PostgreSQL (Supabase)!")
+            return eng
+        except Exception as e:
+            print(f"⚠️ [WARNING] Could not connect to PostgreSQL ({e}).")
+            print("➡️ Automatically falling back to local SQLite engine so server stays LIVE!")
 
-else:
-    DB_PATH = os.path.join(BASE_DIR, "supermarket.db")
-    engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
+    db_path = os.path.join(BASE_DIR, "supermarket.db")
+    sqlite_eng = create_engine(f"sqlite:///{db_path}", echo=False)
 
-    @event.listens_for(engine, "connect")
+    @event.listens_for(sqlite_eng, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
@@ -58,6 +66,10 @@ else:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
+    return sqlite_eng
+
+
+engine = _init_engine()
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
