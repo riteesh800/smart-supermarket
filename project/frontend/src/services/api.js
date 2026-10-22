@@ -2,8 +2,11 @@ const rawBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim();
 const API_BASE = rawBase.endsWith('/api') ? rawBase : (rawBase === '/api' || !rawBase ? '/api' : `${rawBase.replace(/\/$/, '')}/api`);
 const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key';  // Match SMARTMART_API_KEY env var on backend
 
-async function fetchJSON(url) {
-  const res = await fetch(url);
+async function fetchJSON(url, { token } = {}) {
+  const headers = {};
+  const activeToken = token || localStorage.getItem('smartmart_token');
+  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || `HTTP ${res.status}`);
@@ -11,9 +14,11 @@ async function fetchJSON(url) {
   return res.json();
 }
 
-async function postJSON(url, data, { auth = false } = {}) {
+async function postJSON(url, data, { auth = false, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (auth) headers['X-API-Key'] = API_KEY;
+  const activeToken = token || localStorage.getItem('smartmart_token');
+  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
   const res = await fetch(url, {
     method: 'POST',
     headers,
@@ -135,4 +140,12 @@ export const api = {
 
   // Chatbot
   sendChat: (message, sessionId) => postJSON(`${API_BASE}/chat`, { message, session_id: sessionId }),
+
+  // Authentication & User State
+  register: (name, email, password) => postJSON(`${API_BASE}/auth/register`, { name, email, password }),
+  login: (email, password) => postJSON(`${API_BASE}/auth/login`, { email, password }),
+  loginGoogle: (email, name, avatarUrl) => postJSON(`${API_BASE}/auth/google`, { email, name, avatar_url: avatarUrl }),
+  getMe: (token) => fetchJSON(`${API_BASE}/auth/me`, { token }),
+  saveUserState: (stateData, token) => postJSON(`${API_BASE}/auth/save-state`, { state_data: stateData }, { token }),
+  logout: (token) => postJSON(`${API_BASE}/auth/logout`, {}, { token }),
 };

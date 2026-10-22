@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 from database import init_db
-from routes import inventory, sales, customers, ml, suppliers, upload, chatbot
+from routes import inventory, sales, customers, ml, suppliers, upload, chatbot, auth_routes
 
 app = FastAPI(
     title="Smart Supermarket API",
@@ -39,6 +39,7 @@ app.add_middleware(
 
 
 # Register routes
+app.include_router(auth_routes.router)
 app.include_router(inventory.router)
 app.include_router(sales.router)
 app.include_router(customers.router)

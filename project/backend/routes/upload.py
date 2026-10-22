@@ -69,10 +69,14 @@ def get_status():
     try:
         stats = {}
         cols = {}
+        has_data = bool(flags and flags.get("has_data"))
         for table in ["products", "customers", "sales", "inventory", "suppliers"]:
             try:
-                count = db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
-                stats[table] = count or 0
+                if has_data:
+                    count = db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+                    stats[table] = count or 0
+                else:
+                    stats[table] = 0
                 col_res = db.execute(text(f"PRAGMA table_info({table})")).fetchall()
                 cols[table] = [row[1] for row in col_res] if col_res else []
             except Exception:
@@ -328,9 +332,8 @@ async def import_data(
         raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
 
 
-@router.post("/reset")
-def reset_data(_api_key: str = Depends(require_api_key)):
-    """Clear all data and reset to empty state. Requires API key."""
+def perform_reset_data():
+    """Clear all data and reset to empty state."""
     db = SessionLocal()
     try:
         for table in ["sales", "products", "customers", "inventory", "suppliers"]:
@@ -361,26 +364,21 @@ def reset_data(_api_key: str = Depends(require_api_key)):
     store_set_flags({"has_data": False})
     store_set_mapping({})
     clear_all_uploads()
-
     return {"status": "reset", "message": "All data cleared and models reset"}
 
 
-@router.post("/load-demo")
-def load_demo_data(_api_key: str = Depends(require_api_key)):
-    """Load the built-in demo dataset. Requires API key."""
+def perform_load_demo():
+    """Load the built-in demo dataset and train ML models."""
     data_dir = DATA_DIR
 
     try:
-        # Use a single transaction for all tables
         with engine.begin() as conn:
-            # Clear tables in reverse dependency order to satisfy foreign keys
             conn.execute(text("DELETE FROM sales"))
             conn.execute(text("DELETE FROM inventory"))
             conn.execute(text("DELETE FROM products"))
             conn.execute(text("DELETE FROM customers"))
             conn.execute(text("DELETE FROM suppliers"))
 
-            # Load suppliers first (products reference them via FK)
             sup_path = os.path.join(data_dir, "suppliers.csv")
             name_to_id = {}
             if os.path.exists(sup_path):
@@ -393,12 +391,10 @@ def load_demo_data(_api_key: str = Depends(require_api_key)):
                 path = os.path.join(data_dir, filename)
                 if os.path.exists(path):
                     df = pd.read_csv(path)
-                    # Map supplier name -> supplier_id for products FK linkage
                     if table == "products" and name_to_id and "supplier" in df.columns:
                         df["supplier_id"] = df["supplier"].map(name_to_id)
                     _safe_load_to_table(conn, df, table)
 
-        # Set full feature flags
         flags = {
             "has_data": True, "has_sales": True, "has_products": True,
             "has_customers": True, "has_cost": True, "has_categories": True,
@@ -412,7 +408,6 @@ def load_demo_data(_api_key: str = Depends(require_api_key)):
         store_set_flags(flags)
         store_set_mapping({"sales": {"mapping": {}, "rows": 0}, "products": {"mapping": {}, "rows": 0}, "customers": {"mapping": {}, "rows": 0}})
 
-        # Train ML
         ml_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "ml_models")
         try:
             subprocess.run(
@@ -425,6 +420,18 @@ def load_demo_data(_api_key: str = Depends(require_api_key)):
         return {"status": "success", "message": "Demo data loaded", "feature_flags": flags}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load demo data: {str(e)}")
+
+
+@router.post("/reset")
+def reset_data(_api_key: str = Depends(require_api_key)):
+    """Clear all data and reset to empty state. Requires API key."""
+    return perform_reset_data()
+
+
+@router.post("/load-demo")
+def load_demo_data(_api_key: str = Depends(require_api_key)):
+    """Load the built-in demo dataset. Requires API key."""
+    return perform_load_demo()
 
 
 @router.get("/sample-datasets")

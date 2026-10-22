@@ -5,6 +5,7 @@ import SampleDataModal from './SampleDataModal';
 import { getFeatureRequirement } from '../constants/featureRequirements';
 import LockedFeaturePopover from './LockedFeaturePopover';
 import { useColumnMapping } from '../context/ColumnMappingContext';
+import { useAuth } from '../context/AuthContext';
 
 const FILE_TYPES = ['sales', 'products', 'customers', 'inventory', 'suppliers'];
 const INTERNAL_FIELDS = {
@@ -16,6 +17,7 @@ const INTERNAL_FIELDS = {
 };
 
 export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard }) {
+  const { isLoggedIn, updateUserState } = useAuth();
   const { refreshMapping } = useColumnMapping();
   const [status, setStatus] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -200,6 +202,7 @@ export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard })
         const newStatus = await loadStatus();
         refreshMapping?.();
         if (onFlagsUpdate && newStatus?.feature_flags) onFlagsUpdate(newStatus.feature_flags);
+        if (isLoggedIn && updateUserState) updateUserState({ has_data: true });
       }
     } catch (e) {
       setMessage({ type: 'error', text: 'Import failed: ' + e.message });
@@ -227,6 +230,7 @@ export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard })
       if (onFlagsUpdate && newStatus?.feature_flags) {
         onFlagsUpdate(newStatus.feature_flags);
       }
+      if (isLoggedIn && updateUserState) updateUserState({ has_data: false });
     } catch (e) {
       setMessage({ type: 'error', text: 'Reset failed' });
     }
@@ -244,6 +248,7 @@ export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard })
         const newStatus = await loadStatus();
         refreshMapping?.();
         if (onFlagsUpdate && newStatus?.feature_flags) onFlagsUpdate(newStatus.feature_flags);
+        if (isLoggedIn && updateUserState) updateUserState({ has_data: true });
       }
     } catch (e) {
       setMessage({ type: 'error', text: 'Failed to load demo data' });

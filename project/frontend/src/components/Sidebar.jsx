@@ -3,6 +3,9 @@ import { getFeatureRequirement } from '../constants/featureRequirements';
 import LockedFeaturePopover from './LockedFeaturePopover';
 
 const navItems = [
+  { section: 'Home', items: [
+    { id: 'home', icon: '🏠', label: 'Home', flag: null },
+  ]},
   { section: 'Data', items: [
     { id: 'datasetup', icon: '📁', label: 'Data Setup', flag: null },
   ]},
