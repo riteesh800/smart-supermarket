@@ -426,11 +426,6 @@ export default function HomePage({ onNavigate, flags, onRefreshFlags }) {
             </div>
           </div>
 
-          {!hasData && (
-            <div className="empty-data-hint">
-              <span>💡 First time here? Click <strong>"Generate Demo Data"</strong> above or in Data Setup to populate 40,000+ retail rows and unlock every AI feature instantly.</span>
-            </div>
-          )}
         </div>
       </section>
 
