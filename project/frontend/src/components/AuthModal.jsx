@@ -117,11 +117,9 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                 <span>SmartMart AI Intelligence</span>
               </div>
               <h3>{tab === 'login' ? 'Welcome Back' : 'Create an Account'}</h3>
-              <p>
-                {tab === 'login'
-                  ? 'Sign in to access your saved supermarket data and AI models'
-                  : 'Register to unlock personalized AI retail analytics and store persistence'}
-              </p>
+              {tab === 'login' && (
+                <p>Sign in to access your saved supermarket data and AI models</p>
+              )}
             </div>
 
             {/* Tab Switcher */}
@@ -172,9 +170,6 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                 </svg>
                 <span>{tab === 'login' ? 'Continue with Google' : 'Sign up with Google'}</span>
               </button>
-              <div className="auth-social-note">
-                ⚡ Takes your Gmail name as username & logs in with 1 click
-              </div>
             </div>
 
             {/* Divider */}
