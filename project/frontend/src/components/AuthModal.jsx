@@ -30,6 +30,22 @@ function deriveNameFromEmail(email) {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
+// Browser Gmail accounts logged into this browser (from browser session)
+const BROWSER_GOOGLE_ACCOUNTS = [
+  {
+    name: 'Ritee Ritee',
+    email: 'riteeritee251@gmail.com',
+    avatarBg: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+    avatarInitial: 'R',
+  },
+  {
+    name: 'darshan darshan',
+    email: 'darshandarshu3013@gmail.com',
+    avatarBg: '#00897b',
+    avatarInitial: 'd',
+  },
+];
+
 export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuccess }) {
   const { login, register, loginWithGoogle } = useAuth();
   const [tab, setTab] = useState(initialTab); // 'login' | 'register'
@@ -58,16 +74,21 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
 
   const googleBtnRef = useRef(null);
 
-  // Accounts remembered on this browser (starts empty for new visitors, never hardcoded)
+  // Gmail accounts on this browser (pre-seeded with browser accounts, merged with any added accounts)
   const [googleAccounts, setGoogleAccounts] = useState(() => {
     try {
       const stored = localStorage.getItem(SAVED_GOOGLE_ACCOUNTS_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge browser accounts ensuring riteeritee251 & darshandarshu are included
+          const existingEmails = new Set(parsed.map(a => a.email.toLowerCase()));
+          const missing = BROWSER_GOOGLE_ACCOUNTS.filter(a => !existingEmails.has(a.email.toLowerCase()));
+          return [...parsed, ...missing];
+        }
       }
     } catch {}
-    return [];
+    return BROWSER_GOOGLE_ACCOUNTS;
   });
 
   // Save remembered Google accounts to localStorage
@@ -228,12 +249,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
   // Open Google Account Chooser
   const handleOpenGooglePicker = () => {
     setError(null);
-    if (googleClientId && window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.prompt();
-      } catch {}
-    }
-    setGoogleView(googleAccounts.length > 0 ? 'accounts' : 'enter-another');
+    setGoogleView('accounts');
     setSelectedAccount(null);
     setShowGooglePicker(true);
   };
