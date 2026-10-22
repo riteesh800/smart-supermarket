@@ -374,24 +374,6 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
               )}
             </div>
 
-            {/* Tab Switcher */}
-            <div className="auth-tabs">
-              <button
-                type="button"
-                className={`auth-tab ${tab === 'login' ? 'active' : ''}`}
-                onClick={() => { setTab('login'); setError(null); }}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                className={`auth-tab ${tab === 'register' ? 'active' : ''}`}
-                onClick={() => { setTab('register'); setError(null); }}
-              >
-                Register
-              </button>
-            </div>
-
             {error && <div className="auth-error-banner">{error}</div>}
 
             {/* Google Auth Section */}
