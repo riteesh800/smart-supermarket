@@ -76,7 +76,7 @@ body {
   max-height: 100vh;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  padding: 24px 16px 40px 16px;
+  padding: 24px 16px 8px 16px;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -140,6 +140,11 @@ body {
 
 .nav-section {
   margin-bottom: 24px;
+}
+
+.nav-section:last-child,
+.nav-section:last-child .nav-item:last-child {
+  margin-bottom: 0;
 }
 
 .nav-section-title {
@@ -1064,7 +1069,7 @@ polygon.recharts-tooltip-cursor,
 }
 
 @media (max-width: 900px) {
-  .sidebar { width: 70px; padding: 16px 8px 36px 8px; }
+  .sidebar { width: 70px; padding: 16px 8px 8px 8px; }
   .sidebar-logo h1, .sidebar-logo span, .nav-section-title, .nav-item span { display: none; }
   .nav-item { justify-content: center; padding: 12px; }
   .main-content {
