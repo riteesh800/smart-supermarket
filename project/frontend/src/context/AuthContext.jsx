@@ -82,8 +82,8 @@ export function AuthProvider({ children, onAuthStateChange }) {
     throw new Error(res.message || 'Registration failed');
   }, [onAuthStateChange]);
 
-  const loginWithGoogle = useCallback(async (email, name, avatarUrl) => {
-    const res = await api.loginGoogle(email, name, avatarUrl);
+  const loginWithGoogle = useCallback(async (email, name, avatarUrl, idToken) => {
+    const res = await api.loginGoogle(email, name, avatarUrl, idToken);
     if (res.token && res.user) {
       setToken(res.token);
       setUser(res.user);

@@ -145,7 +145,8 @@ export const api = {
   checkEmail: (email) => postJSON(`${API_BASE}/auth/check-email`, { email }),
   register: (name, email, password) => postJSON(`${API_BASE}/auth/register`, { name, email, password }),
   login: (email, password) => postJSON(`${API_BASE}/auth/login`, { email, password }),
-  loginGoogle: (email, name, avatarUrl) => postJSON(`${API_BASE}/auth/google`, { email, name, avatar_url: avatarUrl }),
+  loginGoogle: (email, name, avatarUrl, idToken) =>
+    postJSON(`${API_BASE}/auth/google`, { email, name, avatar_url: avatarUrl, id_token: idToken }),
   getMe: (token) => fetchJSON(`${API_BASE}/auth/me`, { token }),
   saveUserState: (stateData, token) => postJSON(`${API_BASE}/auth/save-state`, { state_data: stateData }, { token }),
   logout: (token) => postJSON(`${API_BASE}/auth/logout`, {}, { token }),

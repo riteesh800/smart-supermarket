@@ -1,23 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 const SAVED_GOOGLE_ACCOUNTS_KEY = 'smartmart_saved_google_accounts';
+const GOOGLE_CLIENT_ID_KEY = 'smartmart_google_client_id';
 
-const DEFAULT_ACCOUNTS = [
-  {
-    name: 'Ritee Ritee',
-    email: 'riteeritee251@gmail.com',
-    avatarBg: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-    avatarInitial: 'R',
-  },
-  {
-    name: 'darshan darshan',
-    email: 'darshandarshu3013@gmail.com',
-    avatarBg: '#00897b',
-    avatarInitial: 'd',
-  },
-];
+// Decode Google JWT ID Token without external dependencies
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+function deriveNameFromEmail(email) {
+  if (!email || !email.includes('@')) return 'User';
+  const prefix = email.split('@')[0];
+  const cleaned = prefix.replace(/[._-]+/g, ' ').replace(/\d+/g, '').trim();
+  if (!cleaned) return prefix;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
 
 export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuccess }) {
   const { login, register, loginWithGoogle } = useAuth();
@@ -30,24 +41,42 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Google Account Chooser modal states
+  // Google OAuth flow states
   const [showGooglePicker, setShowGooglePicker] = useState(false);
   const [googleView, setGoogleView] = useState('accounts'); // 'accounts' | 'enter-another' | 'confirm-username'
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [customEmail, setCustomEmail] = useState('');
   const [googleUsername, setGoogleUsername] = useState('');
+  const [googleIdToken, setGoogleIdToken] = useState(null);
 
-  // Remembered accounts on this browser
+  // Optional custom Google Client ID configuration
+  const [googleClientId, setGoogleClientId] = useState(() => {
+    return import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem(GOOGLE_CLIENT_ID_KEY) || '';
+  });
+  const [showClientIdConfig, setShowClientIdConfig] = useState(false);
+  const [customClientIdInput, setCustomClientIdInput] = useState('');
+
+  const googleBtnRef = useRef(null);
+
+  // Accounts remembered on this browser (starts empty for new visitors, never hardcoded)
   const [googleAccounts, setGoogleAccounts] = useState(() => {
     try {
       const stored = localStorage.getItem(SAVED_GOOGLE_ACCOUNTS_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    return DEFAULT_ACCOUNTS;
+    return [];
   });
+
+  // Save remembered Google accounts to localStorage
+  const saveGoogleAccounts = (updatedList) => {
+    setGoogleAccounts(updatedList);
+    try {
+      localStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(updatedList));
+    } catch {}
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -58,27 +87,105 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
       setSelectedAccount(null);
       setCustomEmail('');
       setGoogleUsername('');
+      setGoogleIdToken(null);
+      setShowClientIdConfig(false);
     }
   }, [isOpen, initialTab]);
 
+  // Initialize official Google Identity Services (GIS) if Client ID is configured
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const activeClientId = googleClientId.trim();
+    if (activeClientId && window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: activeClientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        if (googleBtnRef.current) {
+          googleBtnRef.current.innerHTML = '';
+          window.google.accounts.id.renderButton(googleBtnRef.current, {
+            theme: 'filled_black',
+            size: 'large',
+            shape: 'rectangular',
+            width: 320,
+            logo_alignment: 'left',
+            text: tab === 'login' ? 'signin_with' : 'signup_with',
+          });
+        }
+      } catch (err) {
+        console.warn('Google Identity Services notice:', err);
+      }
+    }
+  }, [isOpen, tab, googleClientId]);
+
   if (!isOpen) return null;
 
-  // Persist google accounts to localStorage
-  const saveGoogleAccounts = (updatedList) => {
-    setGoogleAccounts(updatedList);
+  // Handle verified response from official Google Identity Services
+  const handleGoogleCredentialResponse = async (response) => {
+    if (!response?.credential) return;
+    setError(null);
+    setLoading(true);
+
     try {
-      localStorage.setItem(SAVED_GOOGLE_ACCOUNTS_KEY, JSON.stringify(updatedList));
-    } catch {}
+      const payload = parseJwt(response.credential);
+      if (!payload || !payload.email) {
+        throw new Error('Could not parse Google ID token.');
+      }
+
+      const googleEmail = payload.email.toLowerCase().trim();
+      const googleName = payload.name || deriveNameFromEmail(googleEmail);
+      const googleAvatar = payload.picture || null;
+
+      // Check if account already exists in database
+      const check = await api.checkEmail(googleEmail);
+
+      // Remember this account on this browser
+      const updatedAccounts = [
+        {
+          name: googleName,
+          email: googleEmail,
+          avatarUrl: googleAvatar,
+          avatarBg: '#1a73e8',
+          avatarInitial: googleName.charAt(0).toUpperCase(),
+        },
+        ...googleAccounts.filter(a => a.email.toLowerCase() !== googleEmail),
+      ];
+      saveGoogleAccounts(updatedAccounts);
+
+      if (check.exists) {
+        // Account exists: Instant passwordless login
+        await loginWithGoogle(googleEmail, check.name || googleName, googleAvatar, response.credential);
+        onClose();
+        if (onSuccess) onSuccess();
+      } else {
+        // Account does not exist yet: prompt for display User Name without password
+        setSelectedAccount({
+          name: googleName,
+          email: googleEmail,
+          avatarUrl: googleAvatar,
+        });
+        setGoogleIdToken(response.credential);
+        setGoogleUsername(check.suggested_name || googleName);
+        setShowGooglePicker(true);
+        setGoogleView('confirm-username');
+      }
+    } catch (err) {
+      setError(err.message || 'Google Sign-In failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEmailChange = (val) => {
     setEmail(val);
     if (!name && val.includes('@')) {
-      const prefix = val.split('@')[0];
-      const suggested = prefix.replace(/[._-]+/g, ' ').replace(/\d+/g, '').trim();
-      if (suggested) {
-        setName(suggested.charAt(0).toUpperCase() + suggested.slice(1));
-      }
+      const suggested = deriveNameFromEmail(val);
+      if (suggested) setName(suggested);
     }
   };
 
@@ -89,31 +196,30 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
     setLoading(true);
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        throw new Error('Please enter a valid email address.');
+      }
+
       if (tab === 'register') {
-        if (!email.trim() || !email.includes('@')) {
-          throw new Error('Please enter a valid email address.');
-        }
-        if (password.length < 4) {
-          throw new Error('Password must be at least 4 characters.');
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters long.');
         }
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match.');
         }
-        await register(name.trim(), email.trim(), password);
+        await register(name.trim(), cleanEmail, password);
       } else {
-        if (!email.trim() || !email.includes('@')) {
-          throw new Error('Please enter your email address.');
-        }
         if (!password) {
           throw new Error('Please enter your password.');
         }
-        await login(email.trim(), password);
+        await login(cleanEmail, password);
       }
 
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      setError(err.message || 'Authentication failed. Please try again.');
+      setError(err.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -122,21 +228,25 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
   // Open Google Account Chooser
   const handleOpenGooglePicker = () => {
     setError(null);
-    setGoogleView('accounts');
+    if (googleClientId && window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.prompt();
+      } catch {}
+    }
+    setGoogleView(googleAccounts.length > 0 ? 'accounts' : 'enter-another');
     setSelectedAccount(null);
     setShowGooglePicker(true);
   };
 
-  // User clicked an account from the Google list
+  // User clicked an account from the remembered Google accounts list
   const handleSelectGoogleAccount = async (account) => {
     setError(null);
     setLoading(true);
     try {
-      // Check if account already exists in database
       const check = await api.checkEmail(account.email);
       if (check.exists) {
         // Account exists! Log in directly without password
-        await loginWithGoogle(account.email, check.name || account.name);
+        await loginWithGoogle(account.email, check.name || account.name, account.avatarUrl || null, null);
         setShowGooglePicker(false);
         if (onSuccess) onSuccess();
         onClose();
@@ -153,7 +263,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
     }
   };
 
-  // Submit custom/new Google account from "Use another account"
+  // Submit custom Google account from "Use another account"
   const handleCustomEmailNext = async (e) => {
     e.preventDefault();
     const cleanEmail = customEmail.trim().toLowerCase();
@@ -166,7 +276,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
     setLoading(true);
     try {
       const check = await api.checkEmail(cleanEmail);
-      const derivedName = check.name || check.suggested_name || cleanEmail.split('@')[0];
+      const derivedName = check.name || check.suggested_name || deriveNameFromEmail(cleanEmail);
       const newAcc = {
         name: derivedName,
         email: cleanEmail,
@@ -174,14 +284,14 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
         avatarInitial: derivedName.charAt(0).toUpperCase(),
       };
 
-      // Add to remembered list if not already present
+      // Add to remembered accounts on this browser
       if (!googleAccounts.some(a => a.email.toLowerCase() === cleanEmail)) {
         saveGoogleAccounts([newAcc, ...googleAccounts]);
       }
 
       if (check.exists) {
         // Account exists -> log in directly without password
-        await loginWithGoogle(cleanEmail, check.name || derivedName);
+        await loginWithGoogle(cleanEmail, check.name || derivedName, null, null);
         setShowGooglePicker(false);
         if (onSuccess) onSuccess();
         onClose();
@@ -210,7 +320,12 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
       if (!googleAccounts.some(a => a.email.toLowerCase() === selectedAccount.email.toLowerCase())) {
         saveGoogleAccounts([...googleAccounts, { ...selectedAccount, name: finalName }]);
       }
-      await loginWithGoogle(selectedAccount.email, finalName);
+      await loginWithGoogle(
+        selectedAccount.email,
+        finalName,
+        selectedAccount.avatarUrl || null,
+        googleIdToken
+      );
       setShowGooglePicker(false);
       if (onSuccess) onSuccess();
       onClose();
@@ -219,6 +334,20 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveGoogleClientId = (e) => {
+    e.preventDefault();
+    const trimmed = customClientIdInput.trim();
+    setGoogleClientId(trimmed);
+    try {
+      if (trimmed) {
+        localStorage.setItem(GOOGLE_CLIENT_ID_KEY, trimmed);
+      } else {
+        localStorage.removeItem(GOOGLE_CLIENT_ID_KEY);
+      }
+    } catch {}
+    setShowClientIdConfig(false);
   };
 
   return (
@@ -265,8 +394,12 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
 
             {error && <div className="auth-error-banner">{error}</div>}
 
-            {/* 1-Click Google Auth Option */}
+            {/* Google Auth Section */}
             <div className="auth-social-section">
+              {/* If official GIS Client ID is configured, render official GIS button */}
+              <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center' }} />
+
+              {/* Universal Google OAuth button */}
               <button
                 type="button"
                 className="google-auth-btn"
@@ -341,7 +474,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                     id="auth-password"
                     type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder={tab === 'register' ? 'Choose a password (min 4 chars)' : 'Enter your password'}
+                    placeholder={tab === 'register' ? 'Choose a password (min 6 chars)' : 'Enter your password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                   />
@@ -414,7 +547,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
           </>
         ) : (
           /* ════════════════════════════════════════════════════════════════
-             AUTHENTIC GOOGLE ACCOUNT CHOOSER (Matching browser Google screen)
+             AUTHENTIC GOOGLE OAUTH ACCOUNT CHOOSER (Matching Image 2)
              ════════════════════════════════════════════════════════════════ */
           <div className="google-oauth-window">
             {/* Top Google Header */}
@@ -434,7 +567,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
 
             {googleView === 'accounts' && (
               <div className="google-oauth-body">
-                {/* Left Side: Brand & Heading */}
+                {/* Left Side: Brand & Destination */}
                 <div className="google-oauth-left">
                   <div className="google-app-badge">
                     <div className="google-app-icon">
@@ -449,21 +582,25 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                   <p className="google-app-dest">to continue to <span>SmartMart AI</span></p>
                 </div>
 
-                {/* Right Side: Accounts List */}
+                {/* Right Side: Account Selection List */}
                 <div className="google-oauth-right">
                   <div className="google-accounts-scroll">
-                    {googleAccounts.map((acc, index) => (
+                    {googleAccounts.map((acc) => (
                       <div
                         key={acc.email}
                         className="google-acc-row"
                         onClick={() => handleSelectGoogleAccount(acc)}
                       >
-                        <div
-                          className="google-acc-avatar"
-                          style={{ background: acc.avatarBg || '#1a73e8' }}
-                        >
-                          {acc.avatarInitial || acc.name.charAt(0).toUpperCase()}
-                        </div>
+                        {acc.avatarUrl ? (
+                          <img src={acc.avatarUrl} alt={acc.name} className="google-acc-avatar" />
+                        ) : (
+                          <div
+                            className="google-acc-avatar"
+                            style={{ background: acc.avatarBg || '#1a73e8' }}
+                          >
+                            {acc.avatarInitial || (acc.name || 'G').charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="google-acc-text">
                           <div className="google-acc-name">{acc.name}</div>
                           <div className="google-acc-email">{acc.email}</div>
@@ -480,8 +617,9 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                       }}
                     >
                       <div className="google-acc-avatar outline">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
                         </svg>
                       </div>
                       <div className="google-acc-text">
@@ -499,7 +637,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
               </div>
             )}
 
-            {/* View: Enter Another Gmail Address */}
+            {/* View: Enter Google Email Address */}
             {googleView === 'enter-another' && (
               <div className="google-oauth-subview">
                 <div className="google-subview-header">
@@ -510,8 +648,8 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                       <rect x="16.5" y="8" width="3.5" height="12" rx="1.5" fill="#a8f09d" />
                     </svg>
                   </div>
-                  <h3>Sign in with another Google account</h3>
-                  <p>Enter your Gmail address to continue</p>
+                  <h3>Sign in with Google</h3>
+                  <p>Enter your Gmail address to continue to SmartMart AI</p>
                 </div>
 
                 <form onSubmit={handleCustomEmailNext} className="google-another-form">
@@ -521,20 +659,34 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                       type="email"
                       autoFocus
                       required
-                      placeholder="e.g. name@gmail.com"
+                      placeholder="e.g. yourname@gmail.com"
                       value={customEmail}
                       onChange={e => setCustomEmail(e.target.value)}
                     />
                   </div>
 
+                  <div className="google-no-password-note">
+                    🔒 Google Sign-In is passwordless. No password is asked when using Google.
+                  </div>
+
                   <div className="google-subview-actions">
-                    <button
-                      type="button"
-                      className="google-btn-back"
-                      onClick={() => { setGoogleView('accounts'); setError(null); }}
-                    >
-                      Back
-                    </button>
+                    {googleAccounts.length > 0 ? (
+                      <button
+                        type="button"
+                        className="google-btn-back"
+                        onClick={() => { setGoogleView('accounts'); setError(null); }}
+                      >
+                        Back to accounts
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="google-btn-back"
+                        onClick={() => setShowGooglePicker(false)}
+                      >
+                        Cancel
+                      </button>
+                    )}
                     <button
                       type="submit"
                       className="google-btn-next"
@@ -551,12 +703,21 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
             {googleView === 'confirm-username' && selectedAccount && (
               <div className="google-oauth-subview">
                 <div className="google-subview-header">
-                  <div
-                    className="google-acc-avatar"
-                    style={{ background: selectedAccount.avatarBg || '#1a73e8', margin: '0 auto 10px auto' }}
-                  >
-                    {selectedAccount.avatarInitial || selectedAccount.name.charAt(0).toUpperCase()}
-                  </div>
+                  {selectedAccount.avatarUrl ? (
+                    <img
+                      src={selectedAccount.avatarUrl}
+                      alt={selectedAccount.name}
+                      className="google-acc-avatar"
+                      style={{ margin: '0 auto 10px auto', width: '48px', height: '48px' }}
+                    />
+                  ) : (
+                    <div
+                      className="google-acc-avatar"
+                      style={{ background: selectedAccount.avatarBg || '#1a73e8', margin: '0 auto 10px auto', width: '48px', height: '48px', fontSize: '18px' }}
+                    >
+                      {selectedAccount.avatarInitial || (selectedAccount.name || 'G').charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <h3>Confirm your User Name</h3>
                   <p>Welcome! Set your display username to complete sign in with <strong>{selectedAccount.email}</strong></p>
                 </div>
@@ -568,7 +729,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                       type="text"
                       autoFocus
                       required
-                      placeholder="Enter user name"
+                      placeholder="Enter your name"
                       value={googleUsername}
                       onChange={e => setGoogleUsername(e.target.value)}
                     />
@@ -582,7 +743,10 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login', onSuc
                     <button
                       type="button"
                       className="google-btn-back"
-                      onClick={() => { setGoogleView('accounts'); setError(null); }}
+                      onClick={() => {
+                        setGoogleView(googleAccounts.length > 0 ? 'accounts' : 'enter-another');
+                        setError(null);
+                      }}
                     >
                       Back
                     </button>
