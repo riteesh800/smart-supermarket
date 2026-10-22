@@ -4068,13 +4068,21 @@ polygon.recharts-tooltip-cursor,
   right: 10px;
   background: none;
   border: none;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
   cursor: pointer;
-  opacity: 0.7;
+  padding: 4px;
+  border-radius: 6px;
+  opacity: 0.75;
+  transition: all 0.2s ease;
 }
 
 .auth-password-toggle:hover {
   opacity: 1;
+  color: var(--accent-blue);
+  background: rgba(0, 212, 255, 0.1);
 }
 
 .auth-submit-btn {
