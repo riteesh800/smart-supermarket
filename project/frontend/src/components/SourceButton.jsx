@@ -39,27 +39,25 @@ export default function SourceButton({ sources, info }) {
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const scrollX = window.scrollX || window.pageXOffset;
-    const scrollY = window.scrollY || window.pageYOffset;
 
     const popoverWidth = Math.min(420, window.innerWidth - 24);
     const popoverHeight = 440; // estimated
 
     // Center horizontally on button if possible, but clamp within window
-    let left = rect.left + scrollX + rect.width / 2 - popoverWidth / 2;
-    if (left < scrollX + 12) {
-      left = scrollX + 12;
-    } else if (left + popoverWidth > scrollX + window.innerWidth - 16) {
-      left = scrollX + window.innerWidth - popoverWidth - 16;
+    let left = rect.left + rect.width / 2 - popoverWidth / 2;
+    if (left < 12) {
+      left = 12;
+    } else if (left + popoverWidth > window.innerWidth - 16) {
+      left = window.innerWidth - popoverWidth - 16;
     }
 
     // Default to placing below button
-    let top = rect.bottom + scrollY + 8;
+    let top = rect.bottom + 8;
     let placement = 'bottom';
 
     // If bottom overflow and space available above, place above
     if (rect.bottom + popoverHeight > window.innerHeight && rect.top > popoverHeight + 20) {
-      top = rect.top + scrollY - popoverHeight - 8;
+      top = rect.top - popoverHeight - 8;
       placement = 'top';
     }
 
@@ -142,14 +140,26 @@ export default function SourceButton({ sources, info }) {
       }
     }
 
+    function handleScrollOrResize() {
+      if (!isPinned) {
+        setIsOpen(false);
+      } else {
+        updatePosition();
+      }
+    }
+
     document.addEventListener('mousedown', handleDocClick);
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
     return () => {
       document.removeEventListener('mousedown', handleDocClick);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
       if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
     };
-  }, [isOpen]);
+  }, [isOpen, isPinned, updatePosition]);
 
   const hasExtraContent = Boolean(whatItShows || howItCalculated || useCase);
 

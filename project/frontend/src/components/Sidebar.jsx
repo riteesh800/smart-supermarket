@@ -77,7 +77,12 @@ export default function Sidebar({ active, onNavigate, flags }) {
 
   return (
     <>
-      <aside className="sidebar">
+      <aside
+        className="sidebar"
+        onScroll={() => {
+          if (activeTooltip) setActiveTooltip(null);
+        }}
+      >
         <div className="sidebar-logo">
           <div className="logo-icon">🏪</div>
           <div>

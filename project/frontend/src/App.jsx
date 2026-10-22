@@ -68,6 +68,14 @@ export default function App() {
     }
   };
 
+  const mainRef = React.useRef(null);
+
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [active]);
+
   const Panel = PANELS[active] || HomePage;
 
   let panelProps = {};
@@ -81,7 +89,7 @@ export default function App() {
     <AuthProvider onAuthStateChange={handleAuthStateChange}>
       <ColumnMappingProvider>
         <Sidebar active={active} onNavigate={setActive} flags={flags} />
-        <main className="main-content">
+        <main ref={mainRef} className="main-content">
           <ErrorBoundary key={active}>
             <Panel {...panelProps} />
           </ErrorBoundary>

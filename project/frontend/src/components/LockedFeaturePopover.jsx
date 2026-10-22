@@ -26,8 +26,6 @@ export default function LockedFeaturePopover({
 
     const popoverWidth = 460;
     const estimatedHeight = 440;
-    const scrollX = window.scrollX || window.pageXOffset || 0;
-    const scrollY = window.scrollY || window.pageYOffset || 0;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
@@ -36,30 +34,30 @@ export default function LockedFeaturePopover({
     let arrowTop = 24;
 
     if (placement === 'right') {
-      left = targetRect.right + scrollX + 12;
+      left = targetRect.right + 12;
 
       // If overflowing right window boundary, try left side of trigger
       if (left + popoverWidth > viewportWidth - 16) {
-        left = Math.max(12, targetRect.left + scrollX - popoverWidth - 12);
+        left = Math.max(12, targetRect.left - popoverWidth - 12);
       }
 
       // Vertically align with trigger top, but clamp inside viewport
       const targetCenterY = targetRect.top + targetRect.height / 2;
-      top = targetRect.top + scrollY - 12;
+      top = targetRect.top - 12;
 
       // Clamp so popover does not overflow bottom of viewport
-      if (top + estimatedHeight > scrollY + viewportHeight - 16) {
-        top = Math.max(scrollY + 16, scrollY + viewportHeight - estimatedHeight - 16);
+      if (top + estimatedHeight > viewportHeight - 16) {
+        top = Math.max(16, viewportHeight - estimatedHeight - 16);
       }
-      if (top < scrollY + 12) {
-        top = scrollY + 12;
+      if (top < 12) {
+        top = 12;
       }
 
       // Calculate arrow position pointing directly to the middle of the trigger
-      arrowTop = Math.max(16, Math.min(estimatedHeight - 24, targetCenterY + scrollY - top));
+      arrowTop = Math.max(16, Math.min(estimatedHeight - 24, targetCenterY - top));
     } else {
       // Top or bottom placement (e.g. for badges in DataSetupPanel)
-      left = targetRect.left + scrollX + targetRect.width / 2 - popoverWidth / 2;
+      left = targetRect.left + targetRect.width / 2 - popoverWidth / 2;
       if (left < 12) left = 12;
       if (left + popoverWidth > viewportWidth - 12) {
         left = viewportWidth - popoverWidth - 12;
@@ -67,9 +65,9 @@ export default function LockedFeaturePopover({
 
       // Check if space below or above
       if (targetRect.bottom + estimatedHeight + 16 <= viewportHeight) {
-        top = targetRect.bottom + scrollY + 10;
+        top = targetRect.bottom + 10;
       } else {
-        top = Math.max(scrollY + 12, targetRect.top + scrollY - estimatedHeight - 10);
+        top = Math.max(12, targetRect.top - estimatedHeight - 10);
       }
     }
 
