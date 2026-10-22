@@ -142,6 +142,7 @@ export const api = {
   sendChat: (message, sessionId) => postJSON(`${API_BASE}/chat`, { message, session_id: sessionId }),
 
   // Authentication & User State
+  checkEmail: (email) => postJSON(`${API_BASE}/auth/check-email`, { email }),
   register: (name, email, password) => postJSON(`${API_BASE}/auth/register`, { name, email, password }),
   login: (email, password) => postJSON(`${API_BASE}/auth/login`, { email, password }),
   loginGoogle: (email, name, avatarUrl) => postJSON(`${API_BASE}/auth/google`, { email, name, avatar_url: avatarUrl }),

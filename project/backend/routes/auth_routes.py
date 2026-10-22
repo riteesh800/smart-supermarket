@@ -98,6 +98,27 @@ class SaveStateRequest(BaseModel):
     state_data: dict
 
 
+class CheckEmailRequest(BaseModel):
+    email: str
+
+
+@router.post("/check-email")
+def check_email(req: CheckEmailRequest, db: Session = Depends(get_db)):
+    email = req.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        return {
+            "exists": True,
+            "name": user.name,
+            "auth_provider": user.auth_provider,
+            "avatar_url": user.avatar_url,
+        }
+    return {
+        "exists": False,
+        "suggested_name": derive_name_from_email(email),
+    }
+
+
 @router.post("/register")
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
