@@ -46,14 +46,29 @@ async def require_api_key(x_api_key: str = Header(default=None, alias="X-API-Key
     return x_api_key
 
 
+class GuestUser:
+    """Represents a temporary unauthenticated guest session isolated from registered users."""
+    def __init__(self, guest_id: str):
+        import re, json
+        clean_id = re.sub(r'[^a-zA-Z0-9_\-]', '', str(guest_id))[:64]
+        self.id = clean_id if clean_id.startswith("guest_") else f"guest_{clean_id}"
+        self.email = f"{self.id}@guest.local"
+        self.name = "Guest User"
+        self.auth_provider = "guest"
+        self.avatar_url = None
+        self.is_guest = True
+        self.state_data = json.dumps({"has_data": False})
+
+
 def get_current_user(
     authorization: Optional[str] = Header(None, alias="Authorization"),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    x_guest_id: Optional[str] = Header(None, alias="X-Guest-ID"),
     db_dep: Optional[Session] = Depends(get_db),
 ):
     """
-    Retrieve currently authenticated user from Bearer session token.
-    Returns None if unauthenticated or session expired.
+    Retrieve currently authenticated user from Bearer session token or Guest session.
+    Returns GuestUser if guest token/header provided, or None if completely unauthenticated.
     """
     from database import SessionLocal, User, UserSession
 
@@ -65,24 +80,30 @@ def get_current_user(
 
     try:
         token = authorization
-        if not token:
-            return None
+        clean_token = token.replace("Bearer ", "").strip() if token else None
 
-        clean_token = token.replace("Bearer ", "").strip()
-        if not clean_token:
-            return None
+        # 1. Handle explicit guest tokens (e.g. Bearer guest_...)
+        if clean_token and clean_token.startswith("guest_"):
+            return GuestUser(clean_token)
 
-        now = time.time()
-        session = db.query(UserSession).filter(
-            UserSession.token == clean_token,
-            UserSession.expires_at > now
-        ).first()
+        # 2. Check authenticated registered user session
+        if clean_token:
+            now = time.time()
+            session = db.query(UserSession).filter(
+                UserSession.token == clean_token,
+                UserSession.expires_at > now
+            ).first()
 
-        if not session:
-            return None
+            if session:
+                user = db.query(User).filter(User.id == session.user_id).first()
+                if user:
+                    return user
 
-        user = db.query(User).filter(User.id == session.user_id).first()
-        return user
+        # 3. Check X-Guest-ID header for guest sessions
+        if x_guest_id and str(x_guest_id).strip():
+            return GuestUser(str(x_guest_id).strip())
+
+        return None
     finally:
         if close_db:
             db.close()

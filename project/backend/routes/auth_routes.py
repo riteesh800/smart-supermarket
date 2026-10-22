@@ -189,34 +189,21 @@ def find_user_by_email(db: Session, email_str: str) -> Optional[User]:
 
 
 def restore_user_data_flags(db: Session, user: User):
-    """Restore dataset state flags based on user preferences."""
-    user_state = {}
-    try:
-        user_state = json.loads(user.state_data or "{}")
-    except Exception:
-        user_state = {}
-
+    """Restore dataset state flags based on user's actual database records and stored uploads."""
     uid = user.id
-    if user_state.get("has_data"):
+    try:
+        from routes.upload import get_feature_flags
+        flags = get_feature_flags(user_id=uid)
+        user_state = {}
         try:
-            count = db.execute(text("SELECT COUNT(*) FROM sales WHERE user_id = :uid"), {"uid": uid}).scalar()
-            if not count or count == 0:
-                perform_load_demo(uid)
-            else:
-                store_set_flags({
-                    "has_data": True, "has_sales": True, "has_products": True,
-                    "has_customers": True, "has_cost": True, "has_categories": True,
-                    "has_timestamps": True, "has_payment": True, "has_basket": True,
-                    "enable_dashboard": True, "enable_inventory": True, "enable_sales": True,
-                    "enable_customers": True, "enable_suppliers": True, "enable_forecast": True,
-                    "enable_recommendations": True, "enable_pricing": True, "enable_heatmap": True,
-                    "enable_anomalies": True, "enable_profit": True, "enable_demographics": True,
-                    "enable_retention": True,
-                }, user_id=uid)
+            user_state = json.loads(user.state_data or "{}")
         except Exception:
-            pass
-    else:
-        store_set_flags({"has_data": False}, user_id=uid)
+            user_state = {}
+        user_state["has_data"] = bool(flags and flags.get("has_data"))
+        user.state_data = json.dumps(user_state)
+        db.commit()
+    except Exception as e:
+        print(f"[restore_user_data_flags notice]: {e}")
 
 
 # ──────────────────────────── GOOGLE OAUTH 2.0 HELPERS ────────────────────────────

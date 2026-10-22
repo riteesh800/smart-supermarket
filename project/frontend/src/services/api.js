@@ -2,10 +2,25 @@ const rawBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim();
 const API_BASE = rawBase.endsWith('/api') ? rawBase : (rawBase === '/api' || !rawBase ? '/api' : `${rawBase.replace(/\/$/, '')}/api`);
 const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key';  // Match SMARTMART_API_KEY env var on backend
 
-async function fetchJSON(url, { token } = {}) {
+function getAuthHeaders(customToken) {
   const headers = {};
-  const activeToken = token || localStorage.getItem('smartmart_token');
-  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+  const activeToken = customToken || localStorage.getItem('smartmart_token');
+  if (activeToken) {
+    headers['Authorization'] = `Bearer ${activeToken}`;
+  } else {
+    let guestId = localStorage.getItem('smartmart_guest_id');
+    if (!guestId) {
+      guestId = 'guest_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      localStorage.setItem('smartmart_guest_id', guestId);
+    }
+    headers['Authorization'] = `Bearer ${guestId}`;
+    headers['X-Guest-ID'] = guestId;
+  }
+  return headers;
+}
+
+async function fetchJSON(url, { token } = {}) {
+  const headers = getAuthHeaders(token);
   const res = await fetch(url, { headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -15,10 +30,8 @@ async function fetchJSON(url, { token } = {}) {
 }
 
 async function postJSON(url, data, { auth = false, token } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 'Content-Type': 'application/json', ...getAuthHeaders(token) };
   if (auth) headers['X-API-Key'] = API_KEY;
-  const activeToken = token || localStorage.getItem('smartmart_token');
-  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
   const res = await fetch(url, {
     method: 'POST',
     headers,
@@ -92,9 +105,7 @@ export const api = {
   previewUpload: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const headers = {};
-    const activeToken = localStorage.getItem('smartmart_token');
-    if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+    const headers = getAuthHeaders();
     const res = await fetch(`${API_BASE}/upload/preview`, { method: 'POST', headers, body: formData });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -107,9 +118,7 @@ export const api = {
     formData.append('upload_id', uploadId);
     formData.append('file_type', fileType);
     formData.append('mapping_json', JSON.stringify(mapping));
-    const headers = {};
-    const activeToken = localStorage.getItem('smartmart_token');
-    if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+    const headers = getAuthHeaders();
     const res = await fetch(`${API_BASE}/upload/import`, { method: 'POST', headers, body: formData });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -118,9 +127,7 @@ export const api = {
     return res.json();
   },
   resetData: async () => {
-    const headers = { 'Content-Type': 'application/json', 'X-API-Key': API_KEY };
-    const activeToken = localStorage.getItem('smartmart_token');
-    if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+    const headers = { 'Content-Type': 'application/json', 'X-API-Key': API_KEY, ...getAuthHeaders() };
     const res = await fetch(`${API_BASE}/upload/reset`, {
       method: 'POST',
       headers,
@@ -133,9 +140,7 @@ export const api = {
     return res.json();
   },
   loadDemoData: async () => {
-    const headers = { 'Content-Type': 'application/json', 'X-API-Key': API_KEY };
-    const activeToken = localStorage.getItem('smartmart_token');
-    if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+    const headers = { 'Content-Type': 'application/json', 'X-API-Key': API_KEY, ...getAuthHeaders() };
     const res = await fetch(`${API_BASE}/upload/load-demo`, {
       method: 'POST',
       headers,

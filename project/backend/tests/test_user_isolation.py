@@ -275,3 +275,90 @@ def test_logout_non_destructive(client):
     dash_a = client.get("/api/dashboard/summary", headers={"Authorization": f"Bearer {new_token_a}"})
     assert dash_a.status_code == 200
     assert dash_a.json()["total_revenue"] == 300.0
+
+
+def test_clean_initial_state_and_remember_uploaded_data_across_sessions(client):
+    """
+    Verifies:
+    1. Simply opening without login or creating a new account does NOT directly show demo data.
+    2. Uploading data is remembered and restored when opening/logging in next time.
+    """
+    # 1. Open without login (guest) -> MUST be clean state
+    anon_status = client.get("/api/upload/status")
+    assert anon_status.status_code == 200
+    data_anon = anon_status.json()
+    assert data_anon["feature_flags"]["has_data"] is False
+    assert data_anon["table_counts"]["sales"] == 0
+    assert data_anon["table_counts"]["products"] == 0
+
+    # 2. Register a new account -> MUST start with clean state (no demo data)
+    resp_new = client.post("/api/auth/register", json={
+        "name": "Fresh User",
+        "email": "fresh.clean.store@gmail.com",
+        "password": "CleanPassword123!"
+    })
+    assert resp_new.status_code == 200
+    token_new = resp_new.json()["token"]
+    user_id_new = resp_new.json()["user"]["id"]
+
+    new_status = client.get("/api/upload/status", headers={"Authorization": f"Bearer {token_new}"})
+    assert new_status.status_code == 200
+    data_new = new_status.json()
+    assert data_new["feature_flags"]["has_data"] is False
+    assert data_new["table_counts"]["sales"] == 0
+    assert data_new["table_counts"]["products"] == 0
+
+    # 3. User uploads products and sales into their store
+    db = TestingSessionLocal()
+    db.add(Product(
+        user_id=user_id_new,
+        product_id="PROD-PERSIST-1",
+        name="Organic Green Tea",
+        category="Beverages",
+        price=120.0,
+        cost=70.0
+    ))
+    db.add(Sale(
+        user_id=user_id_new,
+        sale_id="SALE-PERSIST-1",
+        basket_id="BASKET-P1",
+        product_id="PROD-PERSIST-1",
+        customer_id="CUST-P1",
+        quantity=5,
+        unit_price=120.0,
+        total_price=600.0,
+        timestamp="2026-10-22 10:00:00"
+    ))
+    db.commit()
+    db.close()
+
+    # Verify status now shows their data
+    active_status = client.get("/api/upload/status", headers={"Authorization": f"Bearer {token_new}"})
+    assert active_status.status_code == 200
+    assert active_status.json()["feature_flags"]["has_data"] is True
+    assert active_status.json()["table_counts"]["sales"] == 1
+    assert active_status.json()["table_counts"]["products"] == 1
+
+    # 4. User logs out
+    client.post("/api/auth/logout", headers={"Authorization": f"Bearer {token_new}"})
+
+    # 5. User logs in next time (e.g. next day) -> MUST see what they uploaded previously
+    relogin = client.post("/api/auth/login", json={
+        "email": "fresh.clean.store@gmail.com",
+        "password": "CleanPassword123!"
+    })
+    assert relogin.status_code == 200
+    next_token = relogin.json()["token"]
+
+    next_status = client.get("/api/upload/status", headers={"Authorization": f"Bearer {next_token}"})
+    assert next_status.status_code == 200
+    next_data = next_status.json()
+    assert next_data["feature_flags"]["has_data"] is True
+    assert next_data["table_counts"]["sales"] == 1
+    assert next_data["table_counts"]["products"] == 1
+
+    next_dash = client.get("/api/dashboard/summary", headers={"Authorization": f"Bearer {next_token}"})
+    assert next_dash.status_code == 200
+    assert next_dash.json()["total_revenue"] == 600.0
+    assert next_dash.json()["total_products"] == 1
+

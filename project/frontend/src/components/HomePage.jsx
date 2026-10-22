@@ -246,10 +246,6 @@ export default function HomePage({ onNavigate, flags, onRefreshFlags }) {
   };
 
   const handleLoadDemoData = async () => {
-    if (!isLoggedIn) {
-      setAuthModalOpen(true);
-      return;
-    }
     setLoadingDemo(true);
     setDemoMessage(null);
     try {
@@ -518,7 +514,7 @@ export default function HomePage({ onNavigate, flags, onRefreshFlags }) {
 
             {/* Right: Rich Graphical Mockup Widget */}
             <div className="spotlight-graphic-preview">
-              <FeatureGraphicPreview type={activeFeature.previewType} color={activeFeature.color} />
+              <FeatureGraphicPreview type={activeFeature.previewType} color={activeFeature.color} hasData={hasData} counts={counts} />
             </div>
           </div>
         </div>
@@ -642,28 +638,48 @@ export default function HomePage({ onNavigate, flags, onRefreshFlags }) {
 }
 
 /**
- * Visually rich graphical mockup widgets for each feature preview box
+ * Visually rich graphical mockup widgets for each feature preview box.
+ * When hasData is false, displays clean blueprint placeholders so visitors don't mistake it for live loaded demo data.
  */
-function FeatureGraphicPreview({ type, color }) {
+function FeatureGraphicPreview({ type, color, hasData = false, counts = {} }) {
   switch (type) {
     case 'datasetup':
       return (
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">CSV Schema Auto-Detector</span>
-            <span className="mockup-badge green">Auto-Mapped</span>
+            <span className={`mockup-badge ${hasData ? 'green' : 'gray'}`}>
+              {hasData ? 'Auto-Mapped' : 'Blueprint'}
+            </span>
           </div>
           <div className="schema-chips-list">
-            <div className="schema-chip valid"><span>✓ sales.csv</span> <small>40,148 rows</small></div>
-            <div className="schema-chip valid"><span>✓ products.csv</span> <small>224 SKUs</small></div>
-            <div className="schema-chip valid"><span>✓ customers.csv</span> <small>2,000 users</small></div>
-            <div className="schema-chip valid"><span>✓ inventory.csv</span> <small>224 rows</small></div>
-            <div className="schema-chip valid"><span>✓ suppliers.csv</span> <small>20 vendors</small></div>
+            <div className={`schema-chip ${hasData ? 'valid' : 'pending'}`}>
+              <span>{hasData ? '✓' : '○'} sales.csv</span>
+              <small>{hasData ? `${counts?.sales?.toLocaleString() || 40148} rows` : 'Ready for ingestion'}</small>
+            </div>
+            <div className={`schema-chip ${hasData ? 'valid' : 'pending'}`}>
+              <span>{hasData ? '✓' : '○'} products.csv</span>
+              <small>{hasData ? `${counts?.products?.toLocaleString() || 224} SKUs` : 'Ready for ingestion'}</small>
+            </div>
+            <div className={`schema-chip ${hasData ? 'valid' : 'pending'}`}>
+              <span>{hasData ? '✓' : '○'} customers.csv</span>
+              <small>{hasData ? `${counts?.customers?.toLocaleString() || 2000} profiles` : 'Ready for ingestion'}</small>
+            </div>
+            <div className={`schema-chip ${hasData ? 'valid' : 'pending'}`}>
+              <span>{hasData ? '✓' : '○'} inventory.csv</span>
+              <small>{hasData ? `${counts?.inventory?.toLocaleString() || 224} rows` : 'Ready for ingestion'}</small>
+            </div>
+            <div className={`schema-chip ${hasData ? 'valid' : 'pending'}`}>
+              <span>{hasData ? '✓' : '○'} suppliers.csv</span>
+              <small>{hasData ? `${counts?.suppliers?.toLocaleString() || 20} vendors` : 'Ready for ingestion'}</small>
+            </div>
           </div>
           <div className="mockup-progress-bar">
-            <div className="progress-fill" style={{ width: '100%', background: color }} />
+            <div className="progress-fill" style={{ width: hasData ? '100%' : '15%', background: color }} />
           </div>
-          <div className="mockup-note">Schema validated with 100% column precision</div>
+          <div className="mockup-note">
+            {hasData ? 'Schema validated with 100% column precision' : 'Awaiting data: Click "Generate Demo Data" or "Upload Your CSV"'}
+          </div>
         </div>
       );
 
@@ -672,27 +688,29 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">Executive Sales Velocity</span>
-            <span className="mockup-badge blue">Real-Time</span>
+            <span className={`mockup-badge ${hasData ? 'blue' : 'gray'}`}>
+              {hasData ? 'Real-Time' : 'Blueprint'}
+            </span>
           </div>
           <div className="mini-kpi-grid">
             <div className="mini-kpi">
-              <span className="mini-kpi-val">$1,248,390</span>
+              <span className="mini-kpi-val">{hasData ? '₹1,248,390' : '₹ --'}</span>
               <span className="mini-kpi-lbl">Total Gross Revenue</span>
             </div>
             <div className="mini-kpi">
-              <span className="mini-kpi-val">40,148</span>
+              <span className="mini-kpi-val">{hasData ? (counts?.sales?.toLocaleString() || '40,148') : '--'}</span>
               <span className="mini-kpi-lbl">Total Transactions</span>
             </div>
             <div className="mini-kpi">
-              <span className="mini-kpi-val">$31.09</span>
+              <span className="mini-kpi-val">{hasData ? '₹31.09' : '--'}</span>
               <span className="mini-kpi-lbl">Avg Basket Value</span>
             </div>
             <div className="mini-kpi">
-              <span className="mini-kpi-val">99.4%</span>
+              <span className="mini-kpi-val">{hasData ? '99.4%' : 'Standby'}</span>
               <span className="mini-kpi-lbl">System Health</span>
             </div>
           </div>
-          <div className="mini-sparkline">
+          <div className="mini-sparkline" style={{ opacity: hasData ? 1 : 0.35 }}>
             <div className="spark-bar" style={{ height: '40%' }} />
             <div className="spark-bar" style={{ height: '65%' }} />
             <div className="spark-bar" style={{ height: '50%' }} />
@@ -700,6 +718,11 @@ function FeatureGraphicPreview({ type, color }) {
             <div className="spark-bar" style={{ height: '70%' }} />
             <div className="spark-bar active" style={{ height: '100%', background: color }} />
           </div>
+          {!hasData && (
+            <div className="mockup-note" style={{ textAlign: 'center', marginTop: 10 }}>
+              Live KPI calculations activate upon data load or demo generation
+            </div>
+          )}
         </div>
       );
 
@@ -708,23 +731,36 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">Warehouse Safety Thresholds</span>
-            <span className="mockup-badge orange">Stock Monitor</span>
+            <span className={`mockup-badge ${hasData ? 'orange' : 'gray'}`}>
+              {hasData ? 'Stock Monitor' : 'Blueprint'}
+            </span>
           </div>
-          <div className="inventory-bars-list">
+          <div className="inventory-bars-list" style={{ opacity: hasData ? 1 : 0.45 }}>
             <div className="inv-item">
-              <div className="inv-meta"><span>Organic Bananas</span> <small className="text-green">In Stock (142)</small></div>
-              <div className="inv-bar"><div className="inv-fill green" style={{ width: '85%' }} /></div>
+              <div className="inv-meta">
+                <span>{hasData ? 'Organic Bananas' : 'SKU Slot A'}</span>
+                <small className={hasData ? 'text-green' : ''}>{hasData ? 'In Stock (142)' : 'Threshold Ready'}</small>
+              </div>
+              <div className="inv-bar"><div className="inv-fill green" style={{ width: hasData ? '85%' : '0%' }} /></div>
             </div>
             <div className="inv-item">
-              <div className="inv-meta"><span>Whole Milk 1L</span> <small className="text-orange">Reorder Soon (28)</small></div>
-              <div className="inv-bar"><div className="inv-fill orange" style={{ width: '32%' }} /></div>
+              <div className="inv-meta">
+                <span>{hasData ? 'Whole Milk 1L' : 'SKU Slot B'}</span>
+                <small className={hasData ? 'text-orange' : ''}>{hasData ? 'Reorder Soon (28)' : 'Reorder Trigger Ready'}</small>
+              </div>
+              <div className="inv-bar"><div className="inv-fill orange" style={{ width: hasData ? '32%' : '0%' }} /></div>
             </div>
             <div className="inv-item">
-              <div className="inv-meta"><span>Fresh Sourdough</span> <small className="text-red">Critical Stock (8)</small></div>
-              <div className="inv-bar"><div className="inv-fill red" style={{ width: '12%' }} /></div>
+              <div className="inv-meta">
+                <span>{hasData ? 'Fresh Sourdough' : 'SKU Slot C'}</span>
+                <small className={hasData ? 'text-red' : ''}>{hasData ? 'Critical Stock (8)' : 'Safety Point Ready'}</small>
+              </div>
+              <div className="inv-bar"><div className="inv-fill red" style={{ width: hasData ? '12%' : '0%' }} /></div>
             </div>
           </div>
-          <div className="mockup-reorder-btn">⚡ Automated Safety Stock Trigger Active</div>
+          <div className="mockup-reorder-btn">
+            {hasData ? '⚡ Automated Safety Stock Trigger Active' : '⚡ Safety Stock Engine Ready for Ingestion'}
+          </div>
         </div>
       );
 
@@ -733,15 +769,19 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">Payment Mode Distribution</span>
-            <span className="mockup-badge pink">Financial</span>
+            <span className={`mockup-badge ${hasData ? 'pink' : 'gray'}`}>
+              {hasData ? 'Financial' : 'Blueprint'}
+            </span>
           </div>
           <div className="payment-pills-list">
-            <div className="pay-row"><span>Credit / Debit Card</span> <strong>52.4%</strong></div>
-            <div className="pay-row"><span>UPI / Instant Pay</span> <strong>28.1%</strong></div>
-            <div className="pay-row"><span>Digital Wallets</span> <strong>12.5%</strong></div>
-            <div className="pay-row"><span>Cash at Counter</span> <strong>7.0%</strong></div>
+            <div className="pay-row"><span>Credit / Debit Card</span> <strong>{hasData ? '52.4%' : '--'}</strong></div>
+            <div className="pay-row"><span>UPI / Instant Pay</span> <strong>{hasData ? '28.1%' : '--'}</strong></div>
+            <div className="pay-row"><span>Digital Wallets</span> <strong>{hasData ? '12.5%' : '--'}</strong></div>
+            <div className="pay-row"><span>Cash at Counter</span> <strong>{hasData ? '7.0%' : '--'}</strong></div>
           </div>
-          <div className="profit-margin-badge">Gross Margin: <strong>34.8% Average</strong></div>
+          <div className="profit-margin-badge">
+            {hasData ? <>Gross Margin: <strong>34.8% Average</strong></> : 'Financial breakdowns calculate upon data load'}
+          </div>
         </div>
       );
 
@@ -750,28 +790,30 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">RFM Algorithmic Clusters</span>
-            <span className="mockup-badge purple">2,000 Profiles</span>
+            <span className={`mockup-badge ${hasData ? 'purple' : 'gray'}`}>
+              {hasData ? '2,000 Profiles' : 'Blueprint'}
+            </span>
           </div>
-          <div className="rfm-clusters-grid">
+          <div className="rfm-clusters-grid" style={{ opacity: hasData ? 1 : 0.65 }}>
             <div className="rfm-card gold">
               <span className="rfm-emoji">🏆</span>
               <strong>Champions</strong>
-              <small>Top 18% spenders</small>
+              <small>{hasData ? 'Top 18% spenders' : 'Auto-segmentation'}</small>
             </div>
             <div className="rfm-card blue">
               <span className="rfm-emoji">⭐</span>
               <strong>Loyalists</strong>
-              <small>High frequency</small>
+              <small>{hasData ? 'High frequency' : 'Auto-segmentation'}</small>
             </div>
             <div className="rfm-card orange">
               <span className="rfm-emoji">⚠️</span>
               <strong>At-Risk</strong>
-              <small>Dormant 45+ days</small>
+              <small>{hasData ? 'Dormant 45+ days' : 'Churn risk modeling'}</small>
             </div>
             <div className="rfm-card gray">
               <span className="rfm-emoji">💤</span>
               <strong>Hibernating</strong>
-              <small>Re-engage promo</small>
+              <small>{hasData ? 'Re-engage promo' : 'Re-engagement triggers'}</small>
             </div>
           </div>
         </div>
@@ -782,28 +824,30 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">Vendor Scorecard Matrix</span>
-            <span className="mockup-badge blue">Logistics</span>
+            <span className={`mockup-badge ${hasData ? 'blue' : 'gray'}`}>
+              {hasData ? 'Logistics' : 'Blueprint'}
+            </span>
           </div>
-          <div className="vendor-row">
+          <div className="vendor-row" style={{ opacity: hasData ? 1 : 0.5 }}>
             <div className="vendor-info">
-              <strong>FarmFresh Organic Co.</strong>
-              <small>Lead Time: 2 days • 48 SKUs</small>
+              <strong>{hasData ? 'FarmFresh Organic Co.' : 'Vendor Partner 1'}</strong>
+              <small>{hasData ? 'Lead Time: 2 days • 48 SKUs' : 'Replenishment lead times'}</small>
             </div>
-            <div className="vendor-score green">98.5%</div>
+            <div className="vendor-score green">{hasData ? '98.5%' : '--'}</div>
           </div>
-          <div className="vendor-row">
+          <div className="vendor-row" style={{ opacity: hasData ? 1 : 0.5 }}>
             <div className="vendor-info">
-              <strong>Metro Bakery Distribution</strong>
-              <small>Lead Time: 1 day • 16 SKUs</small>
+              <strong>{hasData ? 'Metro Bakery Distribution' : 'Vendor Partner 2'}</strong>
+              <small>{hasData ? 'Lead Time: 1 day • 16 SKUs' : 'Replenishment lead times'}</small>
             </div>
-            <div className="vendor-score green">96.2%</div>
+            <div className="vendor-score green">{hasData ? '96.2%' : '--'}</div>
           </div>
-          <div className="vendor-row">
+          <div className="vendor-row" style={{ opacity: hasData ? 1 : 0.5 }}>
             <div className="vendor-info">
-              <strong>Global Beverages Ltd.</strong>
-              <small>Lead Time: 4 days • 35 SKUs</small>
+              <strong>{hasData ? 'Global Beverages Ltd.' : 'Vendor Partner 3'}</strong>
+              <small>{hasData ? 'Lead Time: 4 days • 35 SKUs' : 'Replenishment lead times'}</small>
             </div>
-            <div className="vendor-score orange">91.0%</div>
+            <div className="vendor-score orange">{hasData ? '91.0%' : '--'}</div>
           </div>
         </div>
       );
@@ -813,9 +857,11 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">7-Day Predictive ML Curve</span>
-            <span className="mockup-badge cyan">95% Confidence</span>
+            <span className={`mockup-badge ${hasData ? 'cyan' : 'gray'}`}>
+              {hasData ? '95% Confidence' : 'Predictive ML Model'}
+            </span>
           </div>
-          <div className="forecast-curve-visual">
+          <div className="forecast-curve-visual" style={{ opacity: hasData ? 1 : 0.4 }}>
             <svg viewBox="0 0 300 120" className="forecast-svg">
               <defs>
                 <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
@@ -823,16 +869,15 @@ function FeatureGraphicPreview({ type, color }) {
                   <stop offset="100%" stopColor="#00d4ff" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              {/* Confidence Band */}
               <path d="M 10 90 Q 75 40 150 60 T 290 20 L 290 55 Q 225 85 150 85 T 10 110 Z" fill="#00d4ff" opacity="0.15" />
-              {/* Projected Line */}
               <path d="M 10 100 Q 75 50 150 70 T 290 35" fill="none" stroke="#00d4ff" strokeWidth="3" />
-              {/* Forecast Area */}
               <circle cx="290" cy="35" r="5" fill="#00d4ff" />
             </svg>
           </div>
           <div className="forecast-stat-row">
-            <span>Expected Uplift: <strong>+18.4% this weekend</strong></span>
+            <span>
+              {hasData ? <>Expected Uplift: <strong>+18.4% this weekend</strong></> : 'Time-series ARIMA/Holt-Winters models train upon data load'}
+            </span>
           </div>
         </div>
       );
@@ -842,21 +887,23 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">Apriori Market Basket Pair</span>
-            <span className="mockup-badge purple">Association Lift 3.8x</span>
+            <span className={`mockup-badge ${hasData ? 'purple' : 'gray'}`}>
+              {hasData ? 'Association Lift 3.8x' : 'Apriori Algorithm'}
+            </span>
           </div>
-          <div className="paired-items-visual">
+          <div className="paired-items-visual" style={{ opacity: hasData ? 1 : 0.5 }}>
             <div className="paired-box">
               <span className="paired-icon">🍌</span>
-              <span>Organic Bananas</span>
+              <span>{hasData ? 'Organic Bananas' : 'Item Antecedent'}</span>
             </div>
-            <div className="paired-arrow">➔ 94%</div>
+            <div className="paired-arrow">➔ {hasData ? '94%' : '--'}</div>
             <div className="paired-box">
               <span className="paired-icon">🥣</span>
-              <span>Greek Yogurt</span>
+              <span>{hasData ? 'Greek Yogurt' : 'Item Consequent'}</span>
             </div>
           </div>
           <div className="recommendation-pill">
-            Recommendation: Place Yogurt display adjacent to Fresh Fruit aisle.
+            {hasData ? 'Recommendation: Place Yogurt display adjacent to Fresh Fruit aisle.' : 'Association rules and cross-sell affinities compute upon ingestion.'}
           </div>
         </div>
       );
@@ -866,20 +913,22 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">Price Elasticity Simulation</span>
-            <span className="mockup-badge green">Optimal Margin</span>
+            <span className={`mockup-badge ${hasData ? 'green' : 'gray'}`}>
+              {hasData ? 'Optimal Margin' : 'Dynamic Elasticity'}
+            </span>
           </div>
           <div className="pricing-calc-box">
             <div className="calc-row">
-              <span>Current Price:</span> <strong>$4.99</strong>
+              <span>Current Price:</span> <strong>{hasData ? '$4.99' : '--'}</strong>
             </div>
             <div className="calc-row">
-              <span>Optimized Point:</span> <strong className="text-green">$4.49 (-10%)</strong>
+              <span>Optimized Point:</span> <strong className="text-green">{hasData ? '$4.49 (-10%)' : 'Awaiting Data'}</strong>
             </div>
             <div className="calc-row">
-              <span>Projected Volume:</span> <strong>+28% unit sales</strong>
+              <span>Projected Volume:</span> <strong>{hasData ? '+28% unit sales' : '--'}</strong>
             </div>
             <div className="calc-row">
-              <span>Net Gross Margin:</span> <strong className="text-green">+$1,420 / week</strong>
+              <span>Net Gross Margin:</span> <strong className="text-green">{hasData ? '+$1,420 / week' : '--'}</strong>
             </div>
           </div>
         </div>
@@ -890,18 +939,20 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">24x7 Peak Register Traffic</span>
-            <span className="mockup-badge orange">Peak: Fri 6 PM</span>
+            <span className={`mockup-badge ${hasData ? 'orange' : 'gray'}`}>
+              {hasData ? 'Peak: Fri 6 PM' : 'Traffic Matrix'}
+            </span>
           </div>
-          <div className="mini-heatmap-grid">
+          <div className="mini-heatmap-grid" style={{ opacity: hasData ? 1 : 0.3 }}>
             {Array.from({ length: 28 }).map((_, i) => {
               const intensity = (i * 17) % 100;
-              const alpha = Math.max(0.1, intensity / 100);
+              const alpha = hasData ? Math.max(0.1, intensity / 100) : 0.15;
               return (
                 <div
                   key={i}
                   className="heat-cell"
                   style={{ background: `rgba(249, 115, 22, ${alpha})` }}
-                  title={`Hour ${i % 24}: Traffic index ${intensity}`}
+                  title={hasData ? `Hour ${i % 24}: Traffic index ${intensity}` : 'Awaiting data'}
                 />
               );
             })}
@@ -919,16 +970,18 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">Isolation Forest ML Detection</span>
-            <span className="mockup-badge red">Alert Triggered</span>
+            <span className={`mockup-badge ${hasData ? 'red' : 'gray'}`}>
+              {hasData ? 'Alert Triggered' : 'Isolation Forest'}
+            </span>
           </div>
-          <div className="anomaly-alert-card">
-            <div className="anomaly-badge high">HIGH RISK OUTLIER</div>
+          <div className="anomaly-alert-card" style={{ opacity: hasData ? 1 : 0.6 }}>
+            <div className={`anomaly-badge ${hasData ? 'high' : 'gray'}`}>{hasData ? 'HIGH RISK OUTLIER' : 'SCANNER STANDBY'}</div>
             <div className="anomaly-detail">
-              <span>Basket #48291 • Total: <strong>$849.50</strong></span>
-              <small>Quantity: 45 units of single SKU (4.8 standard deviations above norm)</small>
+              <span>{hasData ? <>Basket #48291 • Total: <strong>$849.50</strong></> : 'Unsupervised Outlier Detection'}</span>
+              <small>{hasData ? 'Quantity: 45 units of single SKU (4.8 standard deviations above norm)' : 'Scans transactions for spikes, bulk sweeps, and anomalies upon data load'}</small>
             </div>
           </div>
-          <div className="anomaly-stat">Status: Flagged for cashier terminal verification</div>
+          <div className="anomaly-stat">{hasData ? 'Status: Flagged for cashier terminal verification' : 'Status: Ready to analyze checkout registers'}</div>
         </div>
       );
 
@@ -938,14 +991,18 @@ function FeatureGraphicPreview({ type, color }) {
         <div className="graphic-card-mockup">
           <div className="mockup-header">
             <span className="mockup-title">Interactive Store Copilot</span>
-            <span className="mockup-badge cyan">AI Assistant</span>
+            <span className={`mockup-badge ${hasData ? 'cyan' : 'gray'}`}>
+              {hasData ? 'AI Assistant' : 'Standby'}
+            </span>
           </div>
           <div className="chat-bubbles-preview">
             <div className="chat-bubble user">
               "Which dairy items have low stock today?"
             </div>
             <div className="chat-bubble bot">
-              "Whole Milk 1L (28 units left) and Cheddar Cheese (12 units) are below safety thresholds. Supplier FarmFresh has a 2-day lead time."
+              {hasData
+                ? "Whole Milk 1L (28 units left) and Cheddar Cheese (12 units) are below safety thresholds. Supplier FarmFresh has a 2-day lead time."
+                : "SmartBot is ready! Ask questions about inventory, revenue, or customer trends once store data is loaded."}
             </div>
           </div>
           <div className="chat-input-mock">Ask Copilot anything about your store...</div>

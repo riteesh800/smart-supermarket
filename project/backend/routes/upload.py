@@ -15,7 +15,8 @@ import sys
 import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
-from database import get_db, engine, Base, SessionLocal, DATA_DIR, User
+import database
+from database import get_db, Base, DATA_DIR, User
 from auth import require_api_key, get_current_user, require_current_user, API_KEY
 from upload_store import (
     generate_upload_id, store_upload, get_upload, remove_upload, clear_all_uploads,
@@ -35,39 +36,98 @@ from typing import Optional
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
 
-def get_feature_flags(user_id: Optional[str] = None):
-    """Get current feature flags for a user, with lazy initialization from DB data."""
+def get_feature_flags(user_id: Optional[str] = None, db: Optional[Session] = None):
+    """Get current feature flags for a user, with automatic detection from actual DB records."""
     if not user_id:
         return {"has_data": False}
 
-    flags = store_get_flags(user_id=user_id)
-    if not flags or not flags.get("has_data"):
-        db = SessionLocal()
-        try:
-            count = db.execute(text("SELECT COUNT(*) FROM sales WHERE user_id = :uid"), {"uid": user_id}).scalar()
-            if count and count > 0:
-                flags = {
-                    "has_data": True, "has_sales": True, "has_products": True,
-                    "has_customers": True, "has_cost": True, "has_categories": True,
-                    "has_timestamps": True, "has_payment": True, "has_basket": True,
-                    "enable_dashboard": True, "enable_inventory": True, "enable_sales": True,
-                    "enable_customers": True, "enable_suppliers": True, "enable_forecast": True,
-                    "enable_recommendations": True, "enable_pricing": True, "enable_heatmap": True,
-                    "enable_anomalies": True, "enable_profit": True, "enable_demographics": True,
-                    "enable_retention": True,
-                }
-            else:
-                flags = {"has_data": False}
-        except Exception:
+    close_db = False
+    if db is None:
+        db = database.SessionLocal()
+        close_db = True
+    try:
+        sales_count = db.execute(text("SELECT COUNT(*) FROM sales WHERE user_id = :uid"), {"uid": str(user_id)}).scalar() or 0
+        products_count = db.execute(text("SELECT COUNT(*) FROM products WHERE user_id = :uid"), {"uid": str(user_id)}).scalar() or 0
+        customers_count = db.execute(text("SELECT COUNT(*) FROM customers WHERE user_id = :uid"), {"uid": str(user_id)}).scalar() or 0
+        inventory_count = db.execute(text("SELECT COUNT(*) FROM inventory WHERE user_id = :uid"), {"uid": str(user_id)}).scalar() or 0
+        suppliers_count = db.execute(text("SELECT COUNT(*) FROM suppliers WHERE user_id = :uid"), {"uid": str(user_id)}).scalar() or 0
+
+        has_any_data = (sales_count > 0 or products_count > 0 or customers_count > 0 or inventory_count > 0 or suppliers_count > 0)
+        if not has_any_data:
             flags = {"has_data": False}
-        finally:
-            db.close()
+            store_set_flags(flags, user_id=user_id)
+            return flags
+
+        # Check if saved flags exist and reflect has_data
+        existing_flags = store_get_flags(user_id=user_id)
+        existing_mapping = store_get_mapping(user_id=user_id)
+        if existing_mapping:
+            flags = compute_feature_flags(existing_mapping)
+            flags["has_data"] = True
+            flags["has_sales"] = (sales_count > 0)
+            flags["has_products"] = (products_count > 0)
+            flags["has_customers"] = (customers_count > 0)
+            flags["has_inventory"] = (inventory_count > 0)
+            flags["has_suppliers"] = (suppliers_count > 0)
+            flags["enable_dashboard"] = (sales_count > 0)
+            flags["enable_inventory"] = (inventory_count > 0 or products_count > 0)
+            flags["enable_sales"] = (sales_count > 0)
+            flags["enable_customers"] = (customers_count > 0)
+            flags["enable_suppliers"] = (suppliers_count > 0)
+            flags["enable_forecast"] = (sales_count >= 10)
+            flags["enable_recommendations"] = (sales_count >= 10)
+            flags["enable_pricing"] = (sales_count > 0 or products_count > 0)
+            flags["enable_heatmap"] = (sales_count > 0)
+            flags["enable_anomalies"] = (sales_count >= 10)
+            flags["enable_profit"] = (sales_count > 0)
+            flags["enable_demographics"] = (customers_count > 0 or sales_count > 0)
+            flags["enable_retention"] = (sales_count > 0)
+        elif existing_flags and existing_flags.get("has_data"):
+            flags = existing_flags
+        else:
+            has_sales = (sales_count > 0)
+            has_products = (products_count > 0)
+            has_customers = (customers_count > 0)
+            has_inventory = (inventory_count > 0)
+            has_suppliers = (suppliers_count > 0)
+            flags = {
+                "has_data": True,
+                "has_sales": has_sales,
+                "has_products": has_products,
+                "has_customers": has_customers,
+                "has_inventory": has_inventory,
+                "has_suppliers": has_suppliers,
+                "has_cost": has_products,
+                "has_categories": has_products or has_sales,
+                "has_timestamps": has_sales,
+                "has_payment": has_sales,
+                "has_basket": has_sales,
+                "enable_dashboard": has_sales,
+                "enable_inventory": has_inventory or has_products,
+                "enable_sales": has_sales,
+                "enable_customers": has_customers,
+                "enable_suppliers": has_suppliers,
+                "enable_forecast": has_sales and sales_count >= 10,
+                "enable_recommendations": has_sales and sales_count >= 10,
+                "enable_pricing": has_sales or has_products,
+                "enable_heatmap": has_sales,
+                "enable_anomalies": has_sales and sales_count >= 10,
+                "enable_profit": has_sales,
+                "enable_demographics": has_customers or has_sales,
+                "enable_retention": has_sales,
+            }
         store_set_flags(flags, user_id=user_id)
-    return flags
+        return flags
+    except Exception as e:
+        print(f"[get_feature_flags error]: {e}")
+        return {"has_data": False}
+    finally:
+        if close_db:
+            db.close()
 
 
 @router.get("/status")
-def get_status(current_user: Optional[User] = Depends(get_current_user)):
+def get_status(current_user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get current data status and feature flags for the authenticated user."""
     if not current_user:
         return {
@@ -79,33 +139,29 @@ def get_status(current_user: Optional[User] = Depends(get_current_user)):
         }
 
     uid = current_user.id
-    flags = get_feature_flags(user_id=uid)
-    db = SessionLocal()
-    try:
-        stats = {}
-        cols = {}
-        has_data = bool(flags and flags.get("has_data"))
-        for table in ["products", "customers", "sales", "inventory", "suppliers"]:
-            try:
-                if has_data:
-                    count = db.execute(text(f"SELECT COUNT(*) FROM {table} WHERE user_id = :uid"), {"uid": uid}).scalar()
-                    stats[table] = count or 0
-                else:
-                    stats[table] = 0
-                col_res = db.execute(text(f"PRAGMA table_info({table})")).fetchall()
-                cols[table] = [row[1] for row in col_res if row[1] != "user_id"] if col_res else []
-            except Exception:
+    flags = get_feature_flags(user_id=uid, db=db)
+    stats = {}
+    cols = {}
+    has_data = bool(flags and flags.get("has_data"))
+    for table in ["products", "customers", "sales", "inventory", "suppliers"]:
+        try:
+            if has_data:
+                count = db.execute(text(f"SELECT COUNT(*) FROM {table} WHERE user_id = :uid"), {"uid": uid}).scalar()
+                stats[table] = count or 0
+            else:
                 stats[table] = 0
-                cols[table] = []
-        return {
-            "feature_flags": flags,
-            "table_counts": stats,
-            "mapping_info": store_get_mapping(user_id=uid) or {},
-            "table_columns": cols,
-            "user_id": uid,
-        }
-    finally:
-        db.close()
+            col_res = db.execute(text(f"PRAGMA table_info({table})")).fetchall()
+            cols[table] = [row[1] for row in col_res if row[1] != "user_id"] if col_res else []
+        except Exception:
+            stats[table] = 0
+            cols[table] = []
+    return {
+        "feature_flags": flags,
+        "table_counts": stats,
+        "mapping_info": store_get_mapping(user_id=uid) or {},
+        "table_columns": cols,
+        "user_id": uid,
+    }
 
 
 @router.post("/preview")
@@ -161,7 +217,8 @@ async def import_data(
     upload_id: str = Form(...),
     file_type: str = Form(...),
     mapping_json: str = Form(...),
-    current_user: Optional[User] = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Import CSV with confirmed column mapping into user's isolated data space."""
     uid = current_user.id if current_user else "default_owner"
@@ -179,8 +236,9 @@ async def import_data(
     mapping_info = store_get_mapping(user_id=uid)
 
     # Wrap entire import in a single transaction
+    target_engine = db.get_bind() if db else database.engine
     try:
-        with engine.begin() as conn:
+        with target_engine.begin() as conn:
             if file_type == "sales":
                 if "product_id" not in mapping and "name" not in mapping and "category" not in mapping:
                     raise HTTPException(
@@ -306,13 +364,28 @@ async def import_data(
         flags = compute_feature_flags(mapping_info)
         store_set_flags(flags, user_id=uid)
 
+        # Update User.state_data in DB so user data is permanently remembered across sessions
+        try:
+            usr = db.query(User).filter(User.id == uid).first()
+            if usr:
+                try:
+                    s_data = json.loads(usr.state_data or "{}")
+                except Exception:
+                    s_data = {}
+                s_data["has_data"] = True
+                s_data["last_imported_type"] = file_type
+                usr.state_data = json.dumps(s_data)
+                db.commit()
+        except Exception:
+            pass
+
         # Train ML models specifically for this user
         ml_status = None
-        db = SessionLocal()
+        sales_count = 0
         try:
             sales_count = db.execute(text("SELECT COUNT(*) FROM sales WHERE user_id = :uid"), {"uid": uid}).scalar() or 0
-        finally:
-            db.close()
+        except Exception:
+            pass
 
         if sales_count >= 10:
             try:
@@ -343,7 +416,7 @@ def perform_reset_data(user_id: Optional[str] = None, db: Optional[Session] = No
     """Clear data and reset to empty state (strictly isolated to user_id if provided)."""
     close_db = False
     if db is None:
-        db = SessionLocal()
+        db = database.SessionLocal()
         close_db = True
     try:
         for table in ["sales", "products", "customers", "inventory", "suppliers"]:
@@ -351,6 +424,20 @@ def perform_reset_data(user_id: Optional[str] = None, db: Optional[Session] = No
                 db.execute(text(f"DELETE FROM {table} WHERE user_id = :uid"), {"uid": str(user_id)})
             else:
                 db.execute(text(f"DELETE FROM {table}"))
+        
+        # Sync User.state_data in DB
+        if user_id:
+            try:
+                usr = db.query(User).filter(User.id == str(user_id)).first()
+                if usr:
+                    try:
+                        s_data = json.loads(usr.state_data or "{}")
+                    except Exception:
+                        s_data = {}
+                    s_data["has_data"] = False
+                    usr.state_data = json.dumps(s_data)
+            except Exception:
+                pass
         db.commit()
     except Exception as e:
         db.rollback()
@@ -385,6 +472,7 @@ def perform_reset_data(user_id: Optional[str] = None, db: Optional[Session] = No
     store_set_flags({"has_data": False}, user_id=user_id)
     store_set_mapping({}, user_id=user_id)
     clear_all_uploads(user_id=user_id)
+
     return {"status": "reset", "message": "All data cleared and models reset for account"}
 
 
@@ -392,7 +480,7 @@ def perform_load_demo(user_id: Optional[str] = None, db: Optional[Session] = Non
     """Load the built-in demo dataset and train ML models for a user."""
     data_dir = DATA_DIR
     uid = user_id or "default_owner"
-    target_engine = db.get_bind() if db else engine
+    target_engine = db.get_bind() if db else database.engine
 
     try:
         with target_engine.begin() as conn:
@@ -431,6 +519,28 @@ def perform_load_demo(user_id: Optional[str] = None, db: Optional[Session] = Non
         store_set_flags(flags, user_id=uid)
         store_set_mapping({"sales": {"mapping": {}, "rows": 0}, "products": {"mapping": {}, "rows": 0}, "customers": {"mapping": {}, "rows": 0}}, user_id=uid)
 
+        # Sync User.state_data in DB
+        close_db_demo = False
+        db_user = db
+        if db_user is None:
+            db_user = database.SessionLocal()
+            close_db_demo = True
+        try:
+            usr = db_user.query(User).filter(User.id == uid).first()
+            if usr:
+                try:
+                    s_data = json.loads(usr.state_data or "{}")
+                except Exception:
+                    s_data = {}
+                s_data["has_data"] = True
+                usr.state_data = json.dumps(s_data)
+                db_user.commit()
+        except Exception:
+            pass
+        finally:
+            if close_db_demo:
+                db_user.close()
+
         ml_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "ml_models")
         try:
             subprocess.run(
@@ -451,12 +561,12 @@ def reset_data(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db),
 ):
-    """Clear data and reset to empty state. Strictly isolated to current user."""
+    """Clear data and reset to empty state. Strictly isolated to current user or guest."""
     if current_user:
         return perform_reset_data(user_id=current_user.id, db=db)
     if x_api_key and x_api_key == API_KEY:
         return perform_reset_data(user_id=None, db=db)
-    raise HTTPException(status_code=401, detail="Please sign in to clear your data.")
+    return perform_reset_data(user_id="default_owner", db=db)
 
 
 @router.post("/load-demo")
@@ -465,12 +575,13 @@ def load_demo_data(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db),
 ):
-    """Load the built-in demo dataset for current user."""
+    """Load the built-in demo dataset for current user or guest."""
     if current_user:
         return perform_load_demo(user_id=current_user.id, db=db)
     if x_api_key and x_api_key == API_KEY:
         return perform_load_demo(user_id=None, db=db)
-    raise HTTPException(status_code=401, detail="Please sign in to load demo data.")
+    # Allow guest user exploration
+    return perform_load_demo(user_id="default_owner", db=db)
 
 
 @router.get("/sample-datasets")
