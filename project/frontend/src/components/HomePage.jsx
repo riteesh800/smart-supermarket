@@ -351,11 +351,6 @@ export default function HomePage({ onNavigate, flags, onRefreshFlags }) {
           <span className="gradient-highlight">Driven by Machine Learning</span>
         </h1>
 
-        <p className="home-hero-subtitle">
-          Turn transaction logs, warehouse inventory, and customer interactions into high-margin
-          retail decisions. Featuring automated multi-format CSV pipelines, ML demand forecasting,
-          Apriori market basket recommendations, and real-time fraud anomaly detection.
-        </p>
 
         {/* Action CTAs */}
         <div className="home-hero-actions">
