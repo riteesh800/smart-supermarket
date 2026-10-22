@@ -2,8 +2,9 @@
 Upload API routes — CSV upload, preview, import, and data management
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks, Header
 from fastapi.responses import JSONResponse, FileResponse
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import pandas as pd
@@ -14,8 +15,8 @@ import sys
 import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
-from database import get_db, engine, Base, SessionLocal, DATA_DIR
-from auth import require_api_key
+from database import get_db, engine, Base, SessionLocal, DATA_DIR, User
+from auth import require_api_key, get_current_user, require_current_user, API_KEY
 from upload_store import (
     generate_upload_id, store_upload, get_upload, remove_upload, clear_all_uploads,
     get_feature_flags as store_get_flags, set_feature_flags as store_set_flags,
@@ -29,17 +30,21 @@ from upload_handler import (
     extract_suppliers_from_products,
     generate_inventory_from_products, compute_feature_flags
 )
+from typing import Optional
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
 
-def get_feature_flags():
-    """Get current feature flags, with lazy initialization from DB data."""
-    flags = store_get_flags()
-    if not flags:
+def get_feature_flags(user_id: Optional[str] = None):
+    """Get current feature flags for a user, with lazy initialization from DB data."""
+    if not user_id:
+        return {"has_data": False}
+
+    flags = store_get_flags(user_id=user_id)
+    if not flags or not flags.get("has_data"):
         db = SessionLocal()
         try:
-            count = db.execute(text("SELECT COUNT(*) FROM sales")).scalar()
+            count = db.execute(text("SELECT COUNT(*) FROM sales WHERE user_id = :uid"), {"uid": user_id}).scalar()
             if count and count > 0:
                 flags = {
                     "has_data": True, "has_sales": True, "has_products": True,
@@ -57,14 +62,24 @@ def get_feature_flags():
             flags = {"has_data": False}
         finally:
             db.close()
-        store_set_flags(flags)
+        store_set_flags(flags, user_id=user_id)
     return flags
 
 
 @router.get("/status")
-def get_status():
-    """Get current data status and feature flags."""
-    flags = get_feature_flags()
+def get_status(current_user: Optional[User] = Depends(get_current_user)):
+    """Get current data status and feature flags for the authenticated user."""
+    if not current_user:
+        return {
+            "feature_flags": {"has_data": False},
+            "table_counts": {"products": 0, "customers": 0, "sales": 0, "inventory": 0, "suppliers": 0},
+            "mapping_info": {},
+            "table_columns": {},
+            "user_id": None,
+        }
+
+    uid = current_user.id
+    flags = get_feature_flags(user_id=uid)
     db = SessionLocal()
     try:
         stats = {}
@@ -73,27 +88,31 @@ def get_status():
         for table in ["products", "customers", "sales", "inventory", "suppliers"]:
             try:
                 if has_data:
-                    count = db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+                    count = db.execute(text(f"SELECT COUNT(*) FROM {table} WHERE user_id = :uid"), {"uid": uid}).scalar()
                     stats[table] = count or 0
                 else:
                     stats[table] = 0
                 col_res = db.execute(text(f"PRAGMA table_info({table})")).fetchall()
-                cols[table] = [row[1] for row in col_res] if col_res else []
+                cols[table] = [row[1] for row in col_res if row[1] != "user_id"] if col_res else []
             except Exception:
                 stats[table] = 0
                 cols[table] = []
         return {
             "feature_flags": flags,
             "table_counts": stats,
-            "mapping_info": store_get_mapping() or {},
+            "mapping_info": store_get_mapping(user_id=uid) or {},
             "table_columns": cols,
+            "user_id": uid,
         }
     finally:
         db.close()
 
 
 @router.post("/preview")
-async def preview_upload(file: UploadFile = File(...)):
+async def preview_upload(
+    file: UploadFile = File(...),
+    current_user: Optional[User] = Depends(get_current_user)
+):
     """Upload CSV and get preview + auto-detected column mapping."""
     content = await file.read()
     try:
@@ -105,13 +124,12 @@ async def preview_upload(file: UploadFile = File(...)):
     mapping, unmapped = detect_column_mapping(columns)
     file_type = detect_file_type(columns, mapping)
 
-    # Store full content for later import (persistent, with uuid4 ID)
+    # Store full content for later import (persistent, with uuid4 ID and user ownership)
     upload_id = generate_upload_id()
-    store_upload(upload_id, content)
+    uid = current_user.id if current_user else None
+    store_upload(upload_id, content, user_id=uid)
 
     preview_rows = df.head(10).fillna("").to_dict(orient="records")
-
-    # Get total row count
     total_rows = len(pd.read_csv(io.BytesIO(content)))
 
     return {
@@ -126,10 +144,15 @@ async def preview_upload(file: UploadFile = File(...)):
     }
 
 
-def _safe_load_to_table(conn, df, table_name):
-    """Load DataFrame into an existing table by deleting rows then appending.
-    Preserves the schema/constraints created by Base.metadata.create_all()."""
-    conn.execute(text(f"DELETE FROM {table_name}"))
+def _safe_load_to_table(conn, df, table_name, user_id=""):
+    """Load DataFrame into an existing table scoped by user_id.
+    Deletes existing rows for this user then appends."""
+    if user_id:
+        conn.execute(text(f"DELETE FROM {table_name} WHERE user_id = :uid"), {"uid": user_id})
+        df = df.copy()
+        df["user_id"] = user_id
+    else:
+        conn.execute(text(f"DELETE FROM {table_name}"))
     df.to_sql(table_name, conn, if_exists="append", index=False)
 
 
@@ -137,11 +160,12 @@ def _safe_load_to_table(conn, df, table_name):
 async def import_data(
     upload_id: str = Form(...),
     file_type: str = Form(...),
-    mapping_json: str = Form(...)
+    mapping_json: str = Form(...),
+    current_user: Optional[User] = Depends(get_current_user)
 ):
-    """Import CSV with confirmed column mapping.
-    Uses a single transaction so partial failures roll back entirely."""
-    content = get_upload(upload_id)
+    """Import CSV with confirmed column mapping into user's isolated data space."""
+    uid = current_user.id if current_user else "default_owner"
+    content = get_upload(upload_id, user_id=uid)
     if content is None:
         raise HTTPException(status_code=400, detail="Upload expired or not found. Please re-upload.")
 
@@ -152,13 +176,12 @@ async def import_data(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Cannot parse CSV: {str(e)}")
 
-    mapping_info = store_get_mapping()
+    mapping_info = store_get_mapping(user_id=uid)
 
     # Wrap entire import in a single transaction
     try:
         with engine.begin() as conn:
             if file_type == "sales":
-                # Validate: require at least one product-identifying column (product_id, name, or category)
                 if "product_id" not in mapping and "name" not in mapping and "category" not in mapping:
                     raise HTTPException(
                         status_code=400,
@@ -166,38 +189,35 @@ async def import_data(
                     )
 
                 normalized = normalize_sales(df, mapping)
-                _safe_load_to_table(conn, normalized, "sales")
+                _safe_load_to_table(conn, normalized, "sales", user_id=uid)
 
-                # Auto-extract and synchronize products if products table is empty or doesn't match the new sales
-                products_count = conn.execute(text("SELECT COUNT(*) FROM products")).scalar() or 0
-                existing_pids = set(conn.execute(text("SELECT product_id FROM products")).scalars().all())
+                # Auto-extract and synchronize products for this user
+                products_count = conn.execute(text("SELECT COUNT(*) FROM products WHERE user_id = :uid"), {"uid": uid}).scalar() or 0
+                existing_pids = set(conn.execute(text("SELECT product_id FROM products WHERE user_id = :uid"), {"uid": uid}).scalars().all())
                 sales_pids = set(normalized["product_id"].unique())
                 overlap = len(existing_pids & sales_pids)
                 should_sync_products = (products_count == 0) or (overlap < len(sales_pids) * 0.5)
 
                 if should_sync_products:
                     products = extract_products_from_sales(normalized, df, mapping)
-                    _safe_load_to_table(conn, products, "products")
+                    _safe_load_to_table(conn, products, "products", user_id=uid)
 
-                    # Auto-generate matching inventory
                     inventory = generate_inventory_from_products(products)
-                    _safe_load_to_table(conn, inventory, "inventory")
+                    _safe_load_to_table(conn, inventory, "inventory", user_id=uid)
 
-                    # If supplier names exist in products, extract suppliers
                     suppliers = extract_suppliers_from_products(products)
                     if not suppliers.empty:
-                        _safe_load_to_table(conn, suppliers, "suppliers")
+                        _safe_load_to_table(conn, suppliers, "suppliers", user_id=uid)
                         name_to_id = dict(zip(suppliers["name"], suppliers["supplier_id"]))
                         products["supplier_id"] = products["supplier"].map(name_to_id)
-                        _safe_load_to_table(conn, products, "products")
+                        _safe_load_to_table(conn, products, "products", user_id=uid)
                         mapping_info["suppliers"] = {"mapping": {"supplier_id": "auto", "name": "auto"}, "rows": len(suppliers)}
 
                     mapping_info["products"] = {"mapping": {"product_id": "auto", "name": "auto", "category": "auto"}, "rows": len(products)}
                     mapping_info["inventory"] = {"mapping": {"product_id": "auto"}, "rows": len(inventory)}
 
-                # Auto-extract and synchronize customers if empty or doesn't match the new sales
-                customers_count = conn.execute(text("SELECT COUNT(*) FROM customers")).scalar() or 0
-                existing_cids = set(conn.execute(text("SELECT customer_id FROM customers")).scalars().all())
+                customers_count = conn.execute(text("SELECT COUNT(*) FROM customers WHERE user_id = :uid"), {"uid": uid}).scalar() or 0
+                existing_cids = set(conn.execute(text("SELECT customer_id FROM customers WHERE user_id = :uid"), {"uid": uid}).scalars().all())
                 sales_cids = set(normalized["customer_id"].unique()) - {"UNKNOWN"}
                 cust_overlap = len(existing_cids & sales_cids)
                 should_sync_customers = (customers_count == 0) or (len(sales_cids) > 0 and cust_overlap < len(sales_cids) * 0.5)
@@ -205,35 +225,29 @@ async def import_data(
                 if should_sync_customers and len(sales_cids) > 0:
                     customers = extract_customers_from_sales(normalized, df, mapping)
                     if not customers.empty:
-                        _safe_load_to_table(conn, customers, "customers")
+                        _safe_load_to_table(conn, customers, "customers", user_id=uid)
                         mapping_info["customers"] = {"mapping": {"customer_id": "auto"}, "rows": len(customers)}
 
                 mapping_info["sales"] = {"mapping": mapping, "rows": len(normalized)}
 
             elif file_type == "products":
                 normalized = normalize_products(df, mapping)
-
-                # Map supplier name -> supplier_id for FK linkage
                 try:
-                    sup_df = pd.read_sql("SELECT supplier_id, name FROM suppliers", conn)
+                    sup_df = pd.read_sql_query(text("SELECT supplier_id, name FROM suppliers WHERE user_id = :uid"), conn, params={"uid": uid})
                     if not sup_df.empty:
                         name_to_id = dict(zip(sup_df["name"], sup_df["supplier_id"]))
                         normalized["supplier_id"] = normalized["supplier"].map(name_to_id)
                 except Exception:
                     pass
 
-                _safe_load_to_table(conn, normalized, "products")
-
-                # Auto-generate inventory
+                _safe_load_to_table(conn, normalized, "products", user_id=uid)
                 inventory = generate_inventory_from_products(normalized)
-                _safe_load_to_table(conn, inventory, "inventory")
-
+                _safe_load_to_table(conn, inventory, "inventory", user_id=uid)
                 mapping_info["products"] = {"mapping": mapping, "rows": len(normalized)}
 
             elif file_type == "customers":
                 normalized = normalize_customers(df, mapping)
-                _safe_load_to_table(conn, normalized, "customers")
-
+                _safe_load_to_table(conn, normalized, "customers", user_id=uid)
                 mapping_info["customers"] = {"mapping": mapping, "rows": len(normalized)}
 
             elif file_type == "inventory":
@@ -243,11 +257,8 @@ async def import_data(
                         detail="Inventory data requires a product ID column. Please map a column to 'product_id'."
                     )
                 normalized = normalize_inventory(df, mapping)
-
-                # Inventory screens join from products, so add minimal product
-                # records for inventory IDs that do not have a catalog entry yet.
                 existing_product_ids = set(
-                    conn.execute(text("SELECT product_id FROM products")).scalars().all()
+                    conn.execute(text("SELECT product_id FROM products WHERE user_id = :uid"), {"uid": uid}).scalars().all()
                 )
                 missing_product_ids = [
                     product_id for product_id in normalized["product_id"].unique()
@@ -255,6 +266,7 @@ async def import_data(
                 ]
                 if missing_product_ids:
                     placeholders = pd.DataFrame({
+                        "user_id": uid,
                         "product_id": missing_product_ids,
                         "name": missing_product_ids,
                         "category": "General",
@@ -266,44 +278,39 @@ async def import_data(
                     })
                     placeholders.to_sql("products", conn, if_exists="append", index=False)
 
-                _safe_load_to_table(conn, normalized, "inventory")
-
+                _safe_load_to_table(conn, normalized, "inventory", user_id=uid)
                 mapping_info["inventory"] = {"mapping": mapping, "rows": len(normalized)}
 
             elif file_type == "suppliers":
                 normalized = normalize_suppliers(df, mapping)
-
-                # Clear FK references in products before replacing suppliers
-                conn.execute(text("UPDATE products SET supplier_id = NULL"))
-                _safe_load_to_table(conn, normalized, "suppliers")
-
-                # Re-link all products to the new suppliers
+                conn.execute(text("UPDATE products SET supplier_id = NULL WHERE user_id = :uid"), {"uid": uid})
+                _safe_load_to_table(conn, normalized, "suppliers", user_id=uid)
                 conn.execute(text("""
                     UPDATE products
                     SET supplier_id = (
                         SELECT s.supplier_id FROM suppliers s
-                        WHERE s.name = products.supplier OR s.supplier_id = products.supplier
+                        WHERE (s.name = products.supplier OR s.supplier_id = products.supplier)
+                          AND s.user_id = products.user_id
                         LIMIT 1
                     )
-                    WHERE supplier IS NOT NULL
-                """))
-
+                    WHERE user_id = :uid AND supplier IS NOT NULL
+                """), {"uid": uid})
                 mapping_info["suppliers"] = {"mapping": mapping, "rows": len(normalized)}
 
             else:
                 raise HTTPException(status_code=400, detail=f"Unknown file type: {file_type}")
 
-        # Update persistent state (outside transaction — these are metadata)
+        # Update persistent user state
         remove_upload(upload_id)
-        store_set_mapping(mapping_info)
+        store_set_mapping(mapping_info, user_id=uid)
         flags = compute_feature_flags(mapping_info)
-        store_set_flags(flags)
+        store_set_flags(flags, user_id=uid)
 
-        # Train ML models if we have enough data
+        # Train ML models specifically for this user
         ml_status = None
         db = SessionLocal()
         try:
-            sales_count = db.execute(text("SELECT COUNT(*) FROM sales")).scalar() or 0
+            sales_count = db.execute(text("SELECT COUNT(*) FROM sales WHERE user_id = :uid"), {"uid": uid}).scalar() or 0
         finally:
             db.close()
 
@@ -311,7 +318,7 @@ async def import_data(
             try:
                 ml_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "ml_models")
                 result = subprocess.run(
-                    [sys.executable, os.path.join(ml_dir, "train_all.py")],
+                    [sys.executable, os.path.join(ml_dir, "train_all.py"), "--user-id", uid],
                     capture_output=True, text=True, timeout=120, cwd=ml_dir
                 )
                 ml_status = "trained" if result.returncode == 0 else f"error: {result.stderr[:200]}"
@@ -332,58 +339,74 @@ async def import_data(
         raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
 
 
-def perform_reset_data():
-    """Clear all data and reset to empty state."""
-    db = SessionLocal()
+def perform_reset_data(user_id: Optional[str] = None, db: Optional[Session] = None):
+    """Clear data and reset to empty state (strictly isolated to user_id if provided)."""
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
     try:
         for table in ["sales", "products", "customers", "inventory", "suppliers"]:
-            db.execute(text(f"DELETE FROM {table}"))
+            if user_id:
+                db.execute(text(f"DELETE FROM {table} WHERE user_id = :uid"), {"uid": str(user_id)})
+            else:
+                db.execute(text(f"DELETE FROM {table}"))
         db.commit()
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Reset failed: {str(e)}")
     finally:
-        db.close()
+        if close_db:
+            db.close()
 
-    # Clear saved ML models from disk
+    # Clear saved ML models for this user
     try:
-        ml_saved_dir = os.path.join(
+        base_ml_saved = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
             "ml_models", "saved"
         )
-        if os.path.exists(ml_saved_dir):
-            for f in os.listdir(ml_saved_dir):
-                if f.endswith(".joblib"):
-                    try:
-                        os.remove(os.path.join(ml_saved_dir, f))
-                    except Exception:
-                        pass
+        if user_id:
+            user_saved = os.path.join(base_ml_saved, str(user_id))
+            if os.path.exists(user_saved):
+                import shutil
+                shutil.rmtree(user_saved, ignore_errors=True)
+        else:
+            if os.path.exists(base_ml_saved):
+                for f in os.listdir(base_ml_saved):
+                    full_p = os.path.join(base_ml_saved, f)
+                    if os.path.isfile(full_p) and f.endswith(".joblib"):
+                        try:
+                            os.remove(full_p)
+                        except Exception:
+                            pass
     except Exception:
         pass
 
-    store_set_flags({"has_data": False})
-    store_set_mapping({})
-    clear_all_uploads()
-    return {"status": "reset", "message": "All data cleared and models reset"}
+    store_set_flags({"has_data": False}, user_id=user_id)
+    store_set_mapping({}, user_id=user_id)
+    clear_all_uploads(user_id=user_id)
+    return {"status": "reset", "message": "All data cleared and models reset for account"}
 
 
-def perform_load_demo():
-    """Load the built-in demo dataset and train ML models."""
+def perform_load_demo(user_id: Optional[str] = None, db: Optional[Session] = None):
+    """Load the built-in demo dataset and train ML models for a user."""
     data_dir = DATA_DIR
+    uid = user_id or "default_owner"
+    target_engine = db.get_bind() if db else engine
 
     try:
-        with engine.begin() as conn:
-            conn.execute(text("DELETE FROM sales"))
-            conn.execute(text("DELETE FROM inventory"))
-            conn.execute(text("DELETE FROM products"))
-            conn.execute(text("DELETE FROM customers"))
-            conn.execute(text("DELETE FROM suppliers"))
+        with target_engine.begin() as conn:
+            conn.execute(text("DELETE FROM sales WHERE user_id = :uid"), {"uid": uid})
+            conn.execute(text("DELETE FROM inventory WHERE user_id = :uid"), {"uid": uid})
+            conn.execute(text("DELETE FROM products WHERE user_id = :uid"), {"uid": uid})
+            conn.execute(text("DELETE FROM customers WHERE user_id = :uid"), {"uid": uid})
+            conn.execute(text("DELETE FROM suppliers WHERE user_id = :uid"), {"uid": uid})
 
             sup_path = os.path.join(data_dir, "suppliers.csv")
             name_to_id = {}
             if os.path.exists(sup_path):
                 sup_df = pd.read_csv(sup_path)
-                _safe_load_to_table(conn, sup_df, "suppliers")
+                _safe_load_to_table(conn, sup_df, "suppliers", user_id=uid)
                 name_to_id = dict(zip(sup_df["name"], sup_df["supplier_id"]))
 
             for filename, table in [("products.csv", "products"), ("customers.csv", "customers"),
@@ -393,7 +416,7 @@ def perform_load_demo():
                     df = pd.read_csv(path)
                     if table == "products" and name_to_id and "supplier" in df.columns:
                         df["supplier_id"] = df["supplier"].map(name_to_id)
-                    _safe_load_to_table(conn, df, table)
+                    _safe_load_to_table(conn, df, table, user_id=uid)
 
         flags = {
             "has_data": True, "has_sales": True, "has_products": True,
@@ -405,13 +428,13 @@ def perform_load_demo():
             "enable_anomalies": True, "enable_profit": True, "enable_demographics": True,
             "enable_retention": True,
         }
-        store_set_flags(flags)
-        store_set_mapping({"sales": {"mapping": {}, "rows": 0}, "products": {"mapping": {}, "rows": 0}, "customers": {"mapping": {}, "rows": 0}})
+        store_set_flags(flags, user_id=uid)
+        store_set_mapping({"sales": {"mapping": {}, "rows": 0}, "products": {"mapping": {}, "rows": 0}, "customers": {"mapping": {}, "rows": 0}}, user_id=uid)
 
         ml_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "ml_models")
         try:
             subprocess.run(
-                [sys.executable, os.path.join(ml_dir, "train_all.py")],
+                [sys.executable, os.path.join(ml_dir, "train_all.py"), "--user-id", uid],
                 capture_output=True, text=True, timeout=120, cwd=ml_dir
             )
         except Exception:
@@ -423,15 +446,31 @@ def perform_load_demo():
 
 
 @router.post("/reset")
-def reset_data(_api_key: str = Depends(require_api_key)):
-    """Clear all data and reset to empty state. Requires API key."""
-    return perform_reset_data()
+def reset_data(
+    current_user: Optional[User] = Depends(get_current_user),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db),
+):
+    """Clear data and reset to empty state. Strictly isolated to current user."""
+    if current_user:
+        return perform_reset_data(user_id=current_user.id, db=db)
+    if x_api_key and x_api_key == API_KEY:
+        return perform_reset_data(user_id=None, db=db)
+    raise HTTPException(status_code=401, detail="Please sign in to clear your data.")
 
 
 @router.post("/load-demo")
-def load_demo_data(_api_key: str = Depends(require_api_key)):
-    """Load the built-in demo dataset. Requires API key."""
-    return perform_load_demo()
+def load_demo_data(
+    current_user: Optional[User] = Depends(get_current_user),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db),
+):
+    """Load the built-in demo dataset for current user."""
+    if current_user:
+        return perform_load_demo(user_id=current_user.id, db=db)
+    if x_api_key and x_api_key == API_KEY:
+        return perform_load_demo(user_id=None, db=db)
+    raise HTTPException(status_code=401, detail="Please sign in to load demo data.")
 
 
 @router.get("/sample-datasets")

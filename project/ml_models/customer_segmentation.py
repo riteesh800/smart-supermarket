@@ -84,12 +84,19 @@ def segment_customers(rfm_df, n_clusters=5):
     return rfm_df, kmeans, scaler, cluster_summary, label_map
 
 
-def train():
-    sales = load_table("sales")
-    customers = load_table("customers")
+def train(user_id=None, save_dir=None):
+    sales = load_table("sales", user_id=user_id)
+    customers = load_table("customers", user_id=user_id)
+    target_dir = save_dir or (os.path.join(SAVE_DIR, user_id) if user_id else SAVE_DIR)
+    os.makedirs(target_dir, exist_ok=True)
 
     if sales.empty or "customer_id" not in sales.columns:
         print("  No sales data available for customer segmentation.")
+        joblib.dump({
+            "model": None, "scaler": None, "label_map": {},
+            "segmented_data": [], "cluster_summary": [],
+            "segment_counts": {}, "top_customers": []
+        }, os.path.join(target_dir, "customer_segments.joblib"))
         return pd.DataFrame()
 
     rfm = compute_rfm(sales)
@@ -99,7 +106,7 @@ def train():
             "model": None, "scaler": None, "label_map": {},
             "segmented_data": [], "cluster_summary": [],
             "segment_counts": {}, "top_customers": []
-        }, os.path.join(SAVE_DIR, "customer_segments.joblib"))
+        }, os.path.join(target_dir, "customer_segments.joblib"))
         return pd.DataFrame()
 
     segmented, model, scaler, summary, label_map = segment_customers(rfm)
@@ -134,7 +141,7 @@ def train():
             ["customer_id", "first_name", "last_name", "segment",
              "recency", "frequency", "monetary", "membership_tier"]
         ].to_dict(orient="records") if "segment" in result.columns else []
-    }, os.path.join(SAVE_DIR, "customer_segments.joblib"))
+    }, os.path.join(target_dir, "customer_segments.joblib"))
 
     if "segment" in result.columns:
         print(f"  Segmented {len(result)} customers into segments:")

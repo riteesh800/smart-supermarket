@@ -99,11 +99,16 @@ def detect_anomalies(daily_df, contamination=0.05):
     return daily_df, model, anomalies
 
 
-def train():
-    sales = load_table("sales")
+def train(user_id=None, save_dir=None):
+    sales = load_table("sales", user_id=user_id)
+    target_dir = save_dir or (os.path.join(SAVE_DIR, user_id) if user_id else SAVE_DIR)
+    os.makedirs(target_dir, exist_ok=True)
+
     if sales.empty:
         print("  No sales data available for anomaly detection.")
-        return {"anomalies": [], "total_anomalies": 0, "spikes": 0, "drops": 0, "daily_summary": []}
+        res = {"anomalies": [], "total_anomalies": 0, "spikes": 0, "drops": 0, "daily_summary": []}
+        joblib.dump(res, os.path.join(target_dir, "anomaly_detection.joblib"))
+        return res
 
     daily = prepare_daily_features(sales)
     daily_all, model, anomalies = detect_anomalies(daily)
@@ -132,7 +137,7 @@ def train():
         ).to_dict(orient="records")
     }
 
-    joblib.dump(result, os.path.join(SAVE_DIR, "anomaly_detection.joblib"))
+    joblib.dump(result, os.path.join(target_dir, "anomaly_detection.joblib"))
     print(f"  Detected {len(anomalies)} anomalies ({result['spikes']} spikes, {result['drops']} drops)")
     return result
 

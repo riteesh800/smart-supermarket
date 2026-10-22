@@ -246,6 +246,10 @@ export default function HomePage({ onNavigate, flags, onRefreshFlags }) {
   };
 
   const handleLoadDemoData = async () => {
+    if (!isLoggedIn) {
+      setAuthModalOpen(true);
+      return;
+    }
     setLoadingDemo(true);
     setDemoMessage(null);
     try {

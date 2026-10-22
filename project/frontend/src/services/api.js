@@ -92,7 +92,10 @@ export const api = {
   previewUpload: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${API_BASE}/upload/preview`, { method: 'POST', body: formData });
+    const headers = {};
+    const activeToken = localStorage.getItem('smartmart_token');
+    if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+    const res = await fetch(`${API_BASE}/upload/preview`, { method: 'POST', headers, body: formData });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.detail || `Upload failed: HTTP ${res.status}`);
@@ -104,7 +107,10 @@ export const api = {
     formData.append('upload_id', uploadId);
     formData.append('file_type', fileType);
     formData.append('mapping_json', JSON.stringify(mapping));
-    const res = await fetch(`${API_BASE}/upload/import`, { method: 'POST', body: formData });
+    const headers = {};
+    const activeToken = localStorage.getItem('smartmart_token');
+    if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+    const res = await fetch(`${API_BASE}/upload/import`, { method: 'POST', headers, body: formData });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.detail || `Import failed: HTTP ${res.status}`);
@@ -112,9 +118,12 @@ export const api = {
     return res.json();
   },
   resetData: async () => {
+    const headers = { 'Content-Type': 'application/json', 'X-API-Key': API_KEY };
+    const activeToken = localStorage.getItem('smartmart_token');
+    if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
     const res = await fetch(`${API_BASE}/upload/reset`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      headers,
       body: JSON.stringify({}),
     });
     if (!res.ok) {
@@ -124,9 +133,12 @@ export const api = {
     return res.json();
   },
   loadDemoData: async () => {
+    const headers = { 'Content-Type': 'application/json', 'X-API-Key': API_KEY };
+    const activeToken = localStorage.getItem('smartmart_token');
+    if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
     const res = await fetch(`${API_BASE}/upload/load-demo`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      headers,
       body: JSON.stringify({}),
     });
     if (!res.ok) {

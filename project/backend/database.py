@@ -80,6 +80,7 @@ Base = declarative_base()
 
 class Supplier(Base):
     __tablename__ = "suppliers"
+    user_id = Column(String(64), primary_key=True, default="", index=True)
     supplier_id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     contact_email = Column(String)
@@ -89,19 +90,21 @@ class Supplier(Base):
 
 class Product(Base):
     __tablename__ = "products"
+    user_id = Column(String(64), primary_key=True, default="", index=True)
     product_id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     category = Column(String, nullable=False)
     price = Column(Float, nullable=False)
     cost = Column(Float)
     supplier = Column(String)
-    supplier_id = Column(String, ForeignKey("suppliers.supplier_id"))
+    supplier_id = Column(String)
     shelf_life_days = Column(Integer)
     unit = Column(String)
 
 
 class Customer(Base):
     __tablename__ = "customers"
+    user_id = Column(String(64), primary_key=True, default="", index=True)
     customer_id = Column(String, primary_key=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
@@ -118,6 +121,7 @@ class Customer(Base):
 
 class Sale(Base):
     __tablename__ = "sales"
+    user_id = Column(String(64), primary_key=True, default="", index=True)
     sale_id = Column(String, primary_key=True)
     basket_id = Column(String)
     product_id = Column(String)
@@ -132,6 +136,7 @@ class Sale(Base):
 
 class Inventory(Base):
     __tablename__ = "inventory"
+    user_id = Column(String(64), primary_key=True, default="", index=True)
     product_id = Column(String, primary_key=True)
     current_stock = Column(Integer)
     max_stock = Column(Integer)
@@ -144,6 +149,7 @@ class User(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True)
     email = Column(String, unique=True, index=True, nullable=False)
+    canonical_email = Column(String, index=True, nullable=True)
     name = Column(String, nullable=False)
     auth_provider = Column(String, default="email")  # "email" or "google"
     password_hash = Column(String, nullable=True)     # None for google auth
@@ -151,6 +157,18 @@ class User(Base):
     created_at = Column(String, nullable=False)
     last_login_at = Column(String, nullable=False)
     state_data = Column(Text, default="{}")          # JSON string storing user session state
+
+    def __init__(self, **kwargs):
+        if "email" in kwargs and kwargs["email"]:
+            raw_email = kwargs["email"].strip().lower()
+            kwargs["email"] = raw_email
+            if "canonical_email" not in kwargs or not kwargs["canonical_email"]:
+                try:
+                    from auth import normalize_email
+                    kwargs["canonical_email"] = normalize_email(raw_email)
+                except Exception:
+                    kwargs["canonical_email"] = raw_email
+        super().__init__(**kwargs)
 
 
 class UserSession(Base):
@@ -200,11 +218,14 @@ class AccountLinkingTicket(Base):
     expires_at = Column(Float, nullable=False)
 
 
-# ──────────────────────────── INIT ────────────────────────────
-
 def init_db():
-    """Create tables (preserving schema/constraints). CSV data is loaded on demand when user requests demo data."""
+    """Create tables (preserving schema/constraints) and ensure multi-tenant user isolation."""
     Base.metadata.create_all(engine)
+    try:
+        from migrate_multitenant import run_multitenant_migration
+        run_multitenant_migration(engine)
+    except Exception as e:
+        print(f"[-] Multi-tenant migration check notice: {e}")
     print("Database tables initialized!")
 
 

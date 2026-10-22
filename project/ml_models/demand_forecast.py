@@ -25,9 +25,9 @@ except ImportError:
 
 
 
-def load_sales():
-    sales = load_table("sales")
-    products = load_table("products")
+def load_sales(user_id=None):
+    sales = load_table("sales", user_id=user_id)
+    products = load_table("products", user_id=user_id)
 
     if sales.empty or "product_id" not in sales.columns:
         return pd.DataFrame(columns=["product_id", "category", "timestamp", "quantity", "total_price", "date"])
@@ -189,12 +189,14 @@ def fallback_seasonal_naive(daily_demand, steps=30, start_date=None):
     })
 
 
-def train_all_categories():
-    sales = load_sales()
+def train_all_categories(user_id=None, save_dir=None):
+    sales = load_sales(user_id=user_id)
+    target_dir = save_dir or (os.path.join(SAVE_DIR, user_id) if user_id else SAVE_DIR)
+    os.makedirs(target_dir, exist_ok=True)
     if sales.empty or "category" not in sales.columns:
         print("  No sales data available for demand forecasting.")
         results = {}
-        joblib.dump(results, os.path.join(SAVE_DIR, "demand_forecasts.joblib"))
+        joblib.dump(results, os.path.join(target_dir, "demand_forecasts.joblib"))
         return results
 
     categories = [c for c in sales["category"].unique() if pd.notnull(c)]
@@ -247,8 +249,8 @@ def train_all_categories():
             "model": model_used,
         }
 
-    joblib.dump(results, os.path.join(SAVE_DIR, "demand_forecasts.joblib"))
-    print(f"  Saved forecasts for {len(results)} categories")
+    joblib.dump(results, os.path.join(target_dir, "demand_forecasts.joblib"))
+    print(f"  Saved forecasts for {len(results)} categories to {target_dir}")
     return results
 
 

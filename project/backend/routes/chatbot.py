@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
 from database import get_db
+from auth import get_current_user, User
 
 router = APIRouter(prefix="/api/chat", tags=["chatbot"])
 
@@ -55,8 +56,35 @@ class ChatMessage(BaseModel):
 
 # ── Helpers ──
 
-def query_db(db, sql, params=None):
-    result = db.execute(text(sql), params or {})
+_SQL_KEYWORDS = {'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'GROUP', 'ORDER', 'LIMIT', 'ON', 'SET', 'VALUES', 'UNION', 'AND', 'OR', 'HAVING', 'USING', 'NATURAL', 'CROSS'}
+_DATA_TABLES = ['sales', 'products', 'customers', 'inventory', 'suppliers']
+
+
+def scope_sql(sql: str) -> str:
+    """Rewrite tables in query to be isolated by user_id subqueries."""
+    for t in _DATA_TABLES:
+        pattern = rf'(\b(?:FROM|JOIN)\s+)({t})(?:\s+([a-zA-Z_][a-zA-Z0-9_]*))?'
+        def repl(m):
+            prefix = m.group(1)
+            tbl = m.group(2)
+            alias = m.group(3)
+            if alias and alias.upper() not in _SQL_KEYWORDS:
+                return f'{prefix}(SELECT * FROM {tbl} WHERE user_id = :_bot_uid) {alias}'
+            elif alias:
+                return f'{prefix}(SELECT * FROM {tbl} WHERE user_id = :_bot_uid) {tbl} {alias}'
+            else:
+                return f'{prefix}(SELECT * FROM {tbl} WHERE user_id = :_bot_uid) {tbl}'
+        sql = re.sub(pattern, repl, sql, flags=re.IGNORECASE)
+    return sql
+
+
+def query_db(db, sql, params=None, user_id=None):
+    if not user_id:
+        return []
+    p = dict(params or {})
+    scoped_sql = scope_sql(sql)
+    p["_bot_uid"] = str(user_id)
+    result = db.execute(text(scoped_sql), p)
     rows = result.fetchall()
     cols = result.keys()
     return [dict(zip(cols, r)) for r in rows]
@@ -97,7 +125,7 @@ def extract_number(msg, default=5):
     return int(m.group(1)) if m else default
 
 
-def extract_time_filter(msg, db=None):
+def extract_time_filter(msg, db=None, user_id=None):
     """Extract time period from message.
     Returns (sql_fragment, params_dict, label, matched_text) or (None, {}, None, None).
     Uses parameterized SQL to prevent injection.
@@ -108,7 +136,7 @@ def extract_time_filter(msg, db=None):
     # Anchor 'now' to dataset maximum date if historical data is loaded
     if db is not None:
         try:
-            max_row = query_db(db, "SELECT MAX(SUBSTR(timestamp, 1, 10)) as max_dt FROM sales")
+            max_row = query_db(db, "SELECT MAX(SUBSTR(timestamp, 1, 10)) as max_dt FROM sales", user_id=user_id)
             if max_row and max_row[0].get("max_dt"):
                 max_dt_str = str(max_row[0]["max_dt"]).split()[0]
                 dt_obj = datetime.strptime(max_dt_str, "%Y-%m-%d")
@@ -188,15 +216,15 @@ def extract_time_filter(msg, db=None):
     return None, {}, None, None
 
 
-def get_categories(db):
-    """Get all category names from DB."""
-    data = query_db(db, "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category")
+def get_categories(db, user_id=None):
+    """Get all category names from DB isolated by user."""
+    data = query_db(db, "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category", user_id=user_id)
     return [d['category'] for d in data if d.get('category')]
 
 
-def extract_category(msg, db):
+def extract_category(msg, db, user_id=None):
     """Extract category from message using fuzzy matching."""
-    categories = get_categories(db)
+    categories = get_categories(db, user_id=user_id)
     msg_lower = msg.lower()
 
     # Direct match first
@@ -401,11 +429,11 @@ def score_intent(msg):
 
 # ── Response Generators ──
 
-def respond(intent, msg, db, session_id="default"):
+def respond(intent, msg, db, session_id="default", user_id=None):
     """Generate response for detected intent."""
     _context = _get_context(session_id)
     # Extract time filter first, then strip it from msg to avoid number conflicts
-    time_where, time_params, time_label, time_matched = extract_time_filter(msg, db)
+    time_where, time_params, time_label, time_matched = extract_time_filter(msg, db, user_id=user_id)
     msg_for_number = msg
     if time_matched:
         msg_for_number = msg.lower().replace(time_matched, "").strip()
@@ -419,7 +447,7 @@ def respond(intent, msg, db, session_id="default"):
         params = dict(time_params) if time_params else {}
         if extra_params:
             params.update(extra_params)
-        return query_db(db, sql, params)
+        return query_db(db, sql, params, user_id=user_id)
 
     # ── Greeting ──
     if intent == "greeting":
@@ -925,7 +953,7 @@ def respond(intent, msg, db, session_id="default"):
 
     # ── Compare Categories ──
     if intent == "compare_categories":
-        cats = extract_compared_categories(msg, db)
+        cats = extract_compared_categories(msg, db, user_id=user_id)
         if not cats or len(cats) < 2:
             return {"reply": "⚖️ Which categories? Try: \"compare Dairy vs Bakery\"", "type": "text"}
         cat1, cat2 = cats[0], cats[1]
@@ -1033,7 +1061,7 @@ def respond(intent, msg, db, session_id="default"):
 
     # ── Category Detail (fallback when category detected) ──
     if intent == "category_detail":
-        cat = extract_category(msg, db)
+        cat = extract_category(msg, db, user_id=user_id)
         if not cat:
             return None  # Let it fall through
             
@@ -1080,9 +1108,9 @@ def respond(intent, msg, db, session_id="default"):
     return None
 
 
-def extract_compared_categories(msg, db):
+def extract_compared_categories(msg, db, user_id=None):
     """Extract two categories from a comparison query."""
-    categories = get_categories(db)
+    categories = get_categories(db, user_id=user_id)
     found = []
     msg_lower = msg.lower()
 
@@ -1108,19 +1136,36 @@ def extract_compared_categories(msg, db):
 # ── Main Endpoint ──
 
 @router.post("")
-def chat(body: ChatMessage, db: Session = Depends(get_db)):
-    session_id = body.session_id or "default"
+def chat(
+    body: ChatMessage,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    user_id = current_user.id if current_user else None
+    raw_session = body.session_id or "default"
+    session_id = f"{user_id}:{raw_session}" if user_id else f"anon:{raw_session}"
     msg = body.message.strip()
 
     if not msg:
         return {"reply": "Say something! I'm listening 👂", "type": "text"}
+
+    if not current_user:
+        intent, score = score_intent(msg)
+        if intent in ["greeting", "help"]:
+            response = respond(intent, msg, db, session_id=session_id, user_id=None)
+            if response:
+                return response
+        return {
+            "reply": "🔒 Please sign in to your account to query and view your store's data, metrics, and insights.",
+            "type": "text"
+        }
 
     # Score intents
     intent, score = score_intent(msg)
 
     # If low confidence, try category detection as fallback
     if score < 1.5:
-        cat = extract_category(msg, db)
+        cat = extract_category(msg, db, user_id=user_id)
         if cat:
             intent = "category_detail"
             score = 2.0
@@ -1129,13 +1174,13 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
     if score < 1.0:
         # Check if it looks like a product name query
         products = query_db(db, "SELECT name FROM products WHERE LOWER(name) LIKE :term LIMIT 1",
-                           {"term": f"%{msg.lower()[:20]}%"})
+                           {"term": f"%{msg.lower()[:20]}%"}, user_id=user_id)
         if products:
             intent = "product_search"
             score = 2.0
 
     # Generate response
-    response = respond(intent, msg, db, session_id=session_id)
+    response = respond(intent, msg, db, session_id=session_id, user_id=user_id)
 
     if response:
         # Define intent-specific suggestions & chart data
@@ -1187,14 +1232,14 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
         elif intent == "category_detail":
             suggestions = ["compare categories", "best sellers", "total revenue"]
 
-        # 2. Add chart data for specific intents
+        # 2. Add chart data for specific intents strictly isolated by user_id
         try:
             if intent == "monthly_revenue":
                 chart_type = "line"
                 chart_db = query_db(db, """
                     SELECT SUBSTR(timestamp, 1, 7) as label, SUM(total_price) as value
                     FROM sales GROUP BY label ORDER BY label DESC LIMIT 6
-                """)
+                """, user_id=user_id)
                 chart_data = list(reversed([{"label": d["label"], "value": round(d["value"], 2)} for d in chart_db if d["value"]]))
             elif intent == "category_revenue":
                 chart_type = "bar"
@@ -1202,18 +1247,18 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
                     SELECT p.category as label, SUM(s.total_price) as value
                     FROM sales s JOIN products p ON s.product_id = p.product_id
                     GROUP BY label ORDER BY value DESC
-                """)
+                """, user_id=user_id)
                 chart_data = [{"label": d["label"], "value": round(d["value"], 2)} for d in chart_db if d["value"]]
             elif intent == "customer_segments":
                 chart_type = "pie"
-                chart_db = query_db(db, "SELECT membership_tier as label, COUNT(*) as value FROM customers GROUP BY label ORDER BY value DESC")
+                chart_db = query_db(db, "SELECT membership_tier as label, COUNT(*) as value FROM customers GROUP BY label ORDER BY value DESC", user_id=user_id)
                 chart_data = [{"label": d["label"], "value": d["value"]} for d in chart_db if d["value"]]
             elif intent == "peak_hours":
                 chart_type = "line"
                 chart_db = query_db(db, """
                     SELECT CAST(SUBSTR(timestamp, 12, 2) AS INTEGER) as hr, COUNT(*) as cnt
                     FROM sales GROUP BY hr ORDER BY hr ASC
-                """)
+                """, user_id=user_id)
                 chart_data = []
                 for d in chart_db:
                     h = d["hr"]
@@ -1223,11 +1268,12 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
                     chart_data.append({"label": label, "value": d["cnt"]})
             elif intent == "payment_methods":
                 chart_type = "bar"
-                chart_db = query_db(db, "SELECT payment_method as label, SUM(total_price) as value FROM sales GROUP BY payment_method ORDER BY value DESC")
+                chart_db = query_db(db, "SELECT payment_method as label, SUM(total_price) as value FROM sales GROUP BY payment_method ORDER BY value DESC", user_id=user_id)
                 chart_data = [{"label": d["label"], "value": round(float(d["value"] or 0), 2)} for d in chart_db if d["value"]]
             elif intent == "profit":
                 chart_type = "bar"
-                has_cost = query_db(db, "SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0")[0]['cnt'] > 0
+                has_cost_check = query_db(db, "SELECT COUNT(*) as cnt FROM products WHERE cost IS NOT NULL AND cost > 0", user_id=user_id)
+                has_cost = has_cost_check[0]['cnt'] > 0 if has_cost_check else False
                 cost_expr = "p.cost" if has_cost else "p.price * 0.65"
                 chart_db = query_db(db, f"""
                     SELECT p.category as label, 
@@ -1235,7 +1281,7 @@ def chat(body: ChatMessage, db: Session = Depends(get_db)):
                            SUM(s.quantity * {cost_expr}) as cost
                     FROM sales s JOIN products p ON s.product_id = p.product_id
                     GROUP BY p.category
-                """)
+                """, user_id=user_id)
                 chart_data = []
                 for d in chart_db:
                     rev_val = float(d.get("rev") or 0)

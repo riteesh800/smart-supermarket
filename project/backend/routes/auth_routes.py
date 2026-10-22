@@ -44,6 +44,7 @@ from database import (
     OAuthState,
     AccountLinkingTicket,
 )
+from auth import normalize_email
 from upload_store import (
     get_feature_flags as store_get_flags,
     set_feature_flags as store_set_flags,
@@ -176,6 +177,17 @@ def get_user_from_token(token: Optional[str], db: Session) -> Optional[User]:
     return db.query(User).filter(User.id == session.user_id).first()
 
 
+def find_user_by_email(db: Session, email_str: str) -> Optional[User]:
+    """Look up user by raw email or canonical normalized Gmail ID."""
+    if not email_str:
+        return None
+    raw = email_str.strip().lower()
+    canon = normalize_email(raw)
+    return db.query(User).filter(
+        (User.canonical_email == canon) | (User.email == raw) | (User.email == canon)
+    ).first()
+
+
 def restore_user_data_flags(db: Session, user: User):
     """Restore dataset state flags based on user preferences."""
     user_state = {}
@@ -184,11 +196,12 @@ def restore_user_data_flags(db: Session, user: User):
     except Exception:
         user_state = {}
 
+    uid = user.id
     if user_state.get("has_data"):
         try:
-            count = db.execute(text("SELECT COUNT(*) FROM sales")).scalar()
+            count = db.execute(text("SELECT COUNT(*) FROM sales WHERE user_id = :uid"), {"uid": uid}).scalar()
             if not count or count == 0:
-                perform_load_demo()
+                perform_load_demo(uid)
             else:
                 store_set_flags({
                     "has_data": True, "has_sales": True, "has_products": True,
@@ -199,14 +212,11 @@ def restore_user_data_flags(db: Session, user: User):
                     "enable_recommendations": True, "enable_pricing": True, "enable_heatmap": True,
                     "enable_anomalies": True, "enable_profit": True, "enable_demographics": True,
                     "enable_retention": True,
-                })
+                }, user_id=uid)
         except Exception:
             pass
     else:
-        try:
-            perform_reset_data()
-        except Exception:
-            store_set_flags({"has_data": False})
+        store_set_flags({"has_data": False}, user_id=uid)
 
 
 # ──────────────────────────── GOOGLE OAUTH 2.0 HELPERS ────────────────────────────
@@ -528,7 +538,9 @@ async def google_oauth_callback(
         )
 
     google_sub = claims.get("sub")
-    google_email = (claims.get("email") or "").strip().lower()
+    raw_google_email = (claims.get("email") or "").strip().lower()
+    canonical_google_email = normalize_email(raw_google_email)
+    google_email = raw_google_email
     google_name = claims.get("name") or derive_name_from_email(google_email)
     google_avatar = claims.get("picture")
 
@@ -568,8 +580,8 @@ async def google_oauth_callback(
             status_code=302
         )
 
-    # Check if user exists with this email
-    existing_user = db.query(User).filter(User.email == google_email).first()
+    # Check if user exists with this email / canonical Gmail ID
+    existing_user = find_user_by_email(db, raw_google_email)
 
     if not existing_user:
         # Case 2: New user -> automatically register
@@ -583,6 +595,7 @@ async def google_oauth_callback(
         new_user = User(
             id=user_id,
             email=google_email,
+            canonical_email=canonical_google_email,
             name=google_name,
             auth_provider="google",
             password_hash=None,
@@ -740,8 +753,7 @@ def link_google_account(req: LinkAccountRequest, db: Session = Depends(get_db)):
 @router.post("/check-email")
 def check_email(req: CheckEmailRequest, db: Session = Depends(get_db)):
     """Check if an account already exists for an email address."""
-    email = req.email.strip().lower()
-    user = db.query(User).filter(User.email == email).first()
+    user = find_user_by_email(db, req.email)
     if user:
         return {
             "exists": True,
@@ -751,24 +763,25 @@ def check_email(req: CheckEmailRequest, db: Session = Depends(get_db)):
         }
     return {
         "exists": False,
-        "suggested_name": derive_name_from_email(email),
+        "suggested_name": derive_name_from_email(req.email),
     }
 
 
 @router.post("/register")
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     """Register a new user account with Email and Password."""
-    email = req.email.strip().lower()
-    if not email or not EMAIL_REGEX.match(email):
+    raw_email = req.email.strip().lower()
+    if not raw_email or not EMAIL_REGEX.match(raw_email):
         raise HTTPException(status_code=400, detail="Please provide a valid email address.")
     if len(req.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters long.")
 
-    existing = db.query(User).filter(User.email == email).first()
+    existing = find_user_by_email(db, raw_email)
     if existing:
-        raise HTTPException(status_code=400, detail="An account with this email already exists. Please sign in.")
+        raise HTTPException(status_code=400, detail="An account with this email/Gmail address already exists. Please sign in.")
 
-    name = req.name.strip() if req.name and req.name.strip() else derive_name_from_email(email)
+    canon_email = normalize_email(raw_email)
+    name = req.name.strip() if req.name and req.name.strip() else derive_name_from_email(raw_email)
     user_id = secrets.token_hex(16)
     now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -780,7 +793,8 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
     user = User(
         id=user_id,
-        email=email,
+        email=raw_email,
+        canonical_email=canon_email,
         name=name,
         auth_provider="email",
         password_hash=hash_password(req.password),
@@ -812,12 +826,13 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(req: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate existing user via Email & Password with rate-limiting and timing attack defense."""
-    email = req.email.strip().lower()
-    check_rate_limit(email)
+    raw_email = req.email.strip().lower()
+    canon_email = normalize_email(raw_email)
+    check_rate_limit(canon_email)
 
-    user = db.query(User).filter(User.email == email).first()
+    user = find_user_by_email(db, raw_email)
     if not user:
-        record_failed_attempt(email)
+        record_failed_attempt(canon_email)
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     if user.auth_provider == "google" and not user.password_hash:
@@ -827,10 +842,10 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
         )
 
     if not verify_password(req.password, user.password_hash):
-        record_failed_attempt(email)
+        record_failed_attempt(canon_email)
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-    clear_failed_attempts(email)
+    clear_failed_attempts(canon_email)
 
     if user.password_hash and not user.password_hash.startswith("pbkdf2:sha256:"):
         user.password_hash = hash_password(req.password)
@@ -872,7 +887,9 @@ def google_auth_direct(req: GoogleAuthRequest, db: Session = Depends(get_db)):
     if req.id_token:
         google_payload = verify_google_token(req.id_token, GOOGLE_CLIENT_ID)
         if google_payload:
-            verified_email = google_payload.get("email", "").lower().strip()
+            raw_email = (google_payload.get("email") or "").strip().lower()
+            verified_email = raw_email
+            canonical_email = normalize_email(raw_email)
             verified_name = req.name.strip() if req.name and req.name.strip() else (google_payload.get("name") or derive_name_from_email(verified_email))
             verified_avatar = google_payload.get("picture")
             google_sub = google_payload.get("sub")
@@ -904,7 +921,7 @@ def google_auth_direct(req: GoogleAuthRequest, db: Session = Depends(get_db)):
             user.avatar_url = verified_avatar
         db.commit()
     else:
-        user = db.query(User).filter(User.email == verified_email).first()
+        user = find_user_by_email(db, verified_email)
         if not user:
             # Register new Google user
             user_id = secrets.token_hex(16)
@@ -916,6 +933,7 @@ def google_auth_direct(req: GoogleAuthRequest, db: Session = Depends(get_db)):
             user = User(
                 id=user_id,
                 email=verified_email,
+                canonical_email=canonical_email,
                 name=verified_name,
                 auth_provider="google",
                 password_hash=None,
@@ -925,6 +943,21 @@ def google_auth_direct(req: GoogleAuthRequest, db: Session = Depends(get_db)):
                 state_data=json.dumps(initial_state),
             )
             db.add(user)
+            db.flush()
+
+            if google_sub:
+                new_oauth = OAuthAccount(
+                    id=secrets.token_hex(16),
+                    user_id=user.id,
+                    provider="google",
+                    provider_user_id=google_sub,
+                    email=verified_email,
+                    email_verified=1,
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+                db.add(new_oauth)
+            db.commit()
             db.flush()
 
             if google_sub:
@@ -1046,14 +1079,10 @@ def save_user_state(
 
 @router.post("/logout")
 def logout(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    """Terminate session and reset database to fresh guest state."""
+    """Terminate session. Preserves user data securely for their next login."""
     if authorization:
         clean_token = authorization.replace("Bearer ", "").strip()
         db.query(UserSession).filter(UserSession.token == clean_token).delete()
         db.commit()
 
-    try:
-        perform_reset_data()
-    except Exception:
-        store_set_flags({"has_data": False})
     return {"status": "success", "message": "Logged out successfully"}

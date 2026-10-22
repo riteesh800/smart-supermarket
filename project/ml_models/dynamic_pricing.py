@@ -123,14 +123,18 @@ def suggest_pricing(metrics_df):
     return sorted(suggestions, key=lambda x: abs(x["price_change_pct"]), reverse=True)
 
 
-def train():
-    sales = load_table("sales")
-    products = load_table("products")
-    inventory = load_table("inventory")
+def train(user_id=None, save_dir=None):
+    sales = load_table("sales", user_id=user_id)
+    products = load_table("products", user_id=user_id)
+    inventory = load_table("inventory", user_id=user_id)
+    target_dir = save_dir or (os.path.join(SAVE_DIR, user_id) if user_id else SAVE_DIR)
+    os.makedirs(target_dir, exist_ok=True)
 
     if sales.empty or products.empty:
         print("  No sales or product data available for dynamic pricing.")
-        return {"suggestions": [], "action_summary": {}, "avg_change_pct": 0.0}
+        res = {"suggestions": [], "action_summary": {}, "avg_change_pct": 0.0}
+        joblib.dump(res, os.path.join(target_dir, "dynamic_pricing.joblib"))
+        return res
 
     # Ensure inventory has records for all products
     if inventory.empty or "current_stock" not in inventory.columns or "product_id" not in inventory.columns:
@@ -174,7 +178,7 @@ def train():
         "avg_change_pct": avg_change,
     }
 
-    joblib.dump(result, os.path.join(SAVE_DIR, "dynamic_pricing.joblib"))
+    joblib.dump(result, os.path.join(target_dir, "dynamic_pricing.joblib"))
 
     increase = action_summary.get("Increase", 0)
     decrease = action_summary.get("Decrease", 0)

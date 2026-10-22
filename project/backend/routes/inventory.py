@@ -1,5 +1,5 @@
 """
-Inventory API routes
+Inventory API routes — Strictly Isolated Per User
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,7 +11,8 @@ from datetime import datetime
 import sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
-from database import get_db
+from database import get_db, User
+from auth import get_current_user, require_current_user
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
@@ -30,21 +31,30 @@ class ProductCreate(BaseModel):
 
 
 @router.get("")
-def get_inventory(search: Optional[str] = None, category: Optional[str] = None,
-                  page: int = 1, limit: int = 50, db: Session = Depends(get_db)):
-    """Get inventory with optional search, filter, pagination."""
+def get_inventory(
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get inventory for authenticated user with optional search, filter, pagination."""
+    if not current_user:
+        return {"items": [], "total": 0, "page": 1, "pages": 1}
+
+    uid = current_user.id
     query = """
         SELECT p.product_id, p.name, p.category, p.price, p.cost, p.supplier,
                p.shelf_life_days, p.unit,
                i.current_stock, i.max_stock, i.reorder_point,
                i.last_restock_date, i.warehouse_location
         FROM products p
-        LEFT JOIN inventory i ON p.product_id = i.product_id
-        WHERE 1=1
+        LEFT JOIN inventory i ON p.product_id = i.product_id AND i.user_id = :uid
+        WHERE p.user_id = :uid
     """
-    params = {}
+    params = {"uid": uid}
 
-    # Sanitize pagination parameters
     page = max(1, page)
     limit = max(1, min(limit, 500))
 
@@ -55,12 +65,11 @@ def get_inventory(search: Optional[str] = None, category: Optional[str] = None,
         query += " AND p.category = :category"
         params["category"] = category
 
-    # Get total count — separate query to avoid fragile string replacement
     count_sql = """
         SELECT COUNT(*)
         FROM products p
-        LEFT JOIN inventory i ON p.product_id = i.product_id
-        WHERE 1=1
+        LEFT JOIN inventory i ON p.product_id = i.product_id AND i.user_id = :uid
+        WHERE p.user_id = :uid
     """
     if search:
         count_sql += " AND (p.name LIKE :search OR p.product_id LIKE :search)"
@@ -82,41 +91,57 @@ def get_inventory(search: Optional[str] = None, category: Optional[str] = None,
 
 
 @router.get("/all")
-def get_all_inventory(db: Session = Depends(get_db)):
-    """Get full inventory (no pagination, for charts)."""
+def get_all_inventory(
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get full inventory for authenticated user (for charts)."""
+    if not current_user:
+        return []
     result = db.execute(text("""
         SELECT p.product_id, p.name, p.category, p.price, p.supplier,
                p.shelf_life_days, p.unit,
                i.current_stock, i.max_stock, i.reorder_point,
                i.last_restock_date, i.warehouse_location
         FROM products p
-        LEFT JOIN inventory i ON p.product_id = i.product_id
+        LEFT JOIN inventory i ON p.product_id = i.product_id AND i.user_id = :uid
+        WHERE p.user_id = :uid
         ORDER BY i.current_stock ASC
-    """))
+    """), {"uid": current_user.id})
     rows = result.fetchall()
     columns = result.keys()
     return [dict(zip(columns, row)) for row in rows]
 
 
 @router.get("/low-stock")
-def get_low_stock(db: Session = Depends(get_db)):
-    """Get products below reorder point."""
+def get_low_stock(
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get products below reorder point for authenticated user."""
+    if not current_user:
+        return []
     result = db.execute(text("""
         SELECT p.product_id, p.name, p.category, p.price,
                i.current_stock, i.reorder_point, i.max_stock
         FROM products p
-        JOIN inventory i ON p.product_id = i.product_id
-        WHERE i.current_stock <= i.reorder_point
+        JOIN inventory i ON p.product_id = i.product_id AND i.user_id = :uid
+        WHERE p.user_id = :uid AND i.current_stock <= i.reorder_point
         ORDER BY i.current_stock ASC
-    """))
+    """), {"uid": current_user.id})
     rows = result.fetchall()
     columns = result.keys()
     return [dict(zip(columns, row)) for row in rows]
 
 
 @router.get("/by-category")
-def get_inventory_by_category(db: Session = Depends(get_db)):
-    """Get stock summary by category."""
+def get_inventory_by_category(
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get stock summary by category for authenticated user."""
+    if not current_user:
+        return []
     result = db.execute(text("""
         SELECT p.category,
                COUNT(*) as product_count,
@@ -124,18 +149,25 @@ def get_inventory_by_category(db: Session = Depends(get_db)):
                ROUND(AVG(i.current_stock), 1) as avg_stock,
                SUM(CASE WHEN i.current_stock <= i.reorder_point THEN 1 ELSE 0 END) as low_stock_count
         FROM products p
-        JOIN inventory i ON p.product_id = i.product_id
+        JOIN inventory i ON p.product_id = i.product_id AND i.user_id = :uid
+        WHERE p.user_id = :uid
         GROUP BY p.category
         ORDER BY total_stock DESC
-    """))
+    """), {"uid": current_user.id})
     rows = result.fetchall()
     columns = result.keys()
     return [dict(zip(columns, row)) for row in rows]
 
 
 @router.get("/expiring-soon")
-def get_expiring_soon(db: Session = Depends(get_db)):
-    """Get products expiring within 7 days (based on shelf life + last restock)."""
+def get_expiring_soon(
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get products expiring within 7 days for authenticated user."""
+    if not current_user:
+        return []
+    uid = current_user.id
     is_pg = (db.bind.dialect.name == "postgresql")
     if is_pg:
         query = """
@@ -144,8 +176,9 @@ def get_expiring_soon(db: Session = Depends(get_db)):
                    (CURRENT_DATE - CAST(i.last_restock_date AS DATE)) as days_since_restock,
                    (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) as days_remaining
             FROM products p
-            JOIN inventory i ON p.product_id = i.product_id
-            WHERE (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) <= 7
+            JOIN inventory i ON p.product_id = i.product_id AND i.user_id = :uid
+            WHERE p.user_id = :uid
+              AND (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) <= 7
               AND (p.shelf_life_days - (CURRENT_DATE - CAST(i.last_restock_date AS DATE))) > -30
             ORDER BY days_remaining ASC
         """
@@ -156,29 +189,39 @@ def get_expiring_soon(db: Session = Depends(get_db)):
                    julianday('now') - julianday(i.last_restock_date) as days_since_restock,
                    p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) as days_remaining
             FROM products p
-            JOIN inventory i ON p.product_id = i.product_id
-            WHERE p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) <= 7
+            JOIN inventory i ON p.product_id = i.product_id AND i.user_id = :uid
+            WHERE p.user_id = :uid
+              AND p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) <= 7
               AND p.shelf_life_days - (julianday('now') - julianday(i.last_restock_date)) > -30
             ORDER BY days_remaining ASC
         """
-    result = db.execute(text(query))
+    result = db.execute(text(query), {"uid": uid})
     rows = result.fetchall()
     columns = result.keys()
     return [dict(zip(columns, row)) for row in rows]
 
 
 @router.get("/categories")
-def get_categories(db: Session = Depends(get_db)):
-    """Get list of all categories."""
-    result = db.execute(text("SELECT DISTINCT category FROM products ORDER BY category"))
+def get_categories(
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get list of categories for authenticated user."""
+    if not current_user:
+        return []
+    result = db.execute(text("SELECT DISTINCT category FROM products WHERE user_id = :uid ORDER BY category"), {"uid": current_user.id})
     return [row[0] for row in result.fetchall()]
 
 
 @router.post("")
-def add_product(product: ProductCreate, db: Session = Depends(get_db)):
-    """Add a new product to inventory."""
-    # Generate next product ID safely without colliding with existing dataset IDs
-    existing_ids = set(db.execute(text("SELECT product_id FROM products")).scalars().all())
+def add_product(
+    product: ProductCreate,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add a new product to inventory for authenticated user."""
+    uid = current_user.id
+    existing_ids = set(db.execute(text("SELECT product_id FROM products WHERE user_id = :uid"), {"uid": uid}).scalars().all())
     p_nums = [int(pid[1:]) for pid in existing_ids if pid.startswith("P") and pid[1:].isdigit()]
     if p_nums:
         next_num = max(p_nums) + 1
@@ -190,34 +233,31 @@ def add_product(product: ProductCreate, db: Session = Depends(get_db)):
         next_num += 1
         new_id = f"P{next_num:04d}"
 
-    # Look up supplier_id if supplier name or id is given
     sup_id = None
     if product.supplier:
         sup_row = db.execute(
-            text("SELECT supplier_id FROM suppliers WHERE name = :sup OR supplier_id = :sup LIMIT 1"),
-            {"sup": product.supplier}
+            text("SELECT supplier_id FROM suppliers WHERE user_id = :uid AND (name = :sup OR supplier_id = :sup) LIMIT 1"),
+            {"uid": uid, "sup": product.supplier}
         ).fetchone()
         if sup_row:
             sup_id = sup_row[0]
 
-    # Insert product
     db.execute(text("""
-        INSERT INTO products (product_id, name, category, price, cost, supplier, supplier_id, shelf_life_days, unit)
-        VALUES (:pid, :name, :cat, :price, :cost, :supplier, :sup_id, :shelf, :unit)
+        INSERT INTO products (user_id, product_id, name, category, price, cost, supplier, supplier_id, shelf_life_days, unit)
+        VALUES (:uid, :pid, :name, :cat, :price, :cost, :supplier, :sup_id, :shelf, :unit)
     """), {
-        "pid": new_id, "name": product.name, "cat": product.category,
+        "uid": uid, "pid": new_id, "name": product.name, "cat": product.category,
         "price": product.price, "cost": product.cost or round(product.price * 0.55, 2),
         "supplier": product.supplier or "Unknown", "sup_id": sup_id,
         "shelf": product.shelf_life_days, "unit": product.unit
     })
 
     today_str = datetime.now().strftime("%Y-%m-%d")
-    # Insert inventory record
     db.execute(text("""
-        INSERT INTO inventory (product_id, current_stock, max_stock, reorder_point, last_restock_date, warehouse_location)
-        VALUES (:pid, :stock, :max, :reorder, :today, 'Aisle-1-Shelf-A')
+        INSERT INTO inventory (user_id, product_id, current_stock, max_stock, reorder_point, last_restock_date, warehouse_location)
+        VALUES (:uid, :pid, :stock, :max, :reorder, :today, 'Aisle-1-Shelf-A')
     """), {
-        "pid": new_id, "stock": product.initial_stock,
+        "uid": uid, "pid": new_id, "stock": product.initial_stock,
         "max": product.max_stock, "reorder": product.reorder_point,
         "today": today_str
     })
@@ -227,22 +267,26 @@ def add_product(product: ProductCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/restock/{product_id}")
-def restock_product(product_id: str, quantity: int = 50, db: Session = Depends(get_db)):
-    """Restock a product."""
-    # Check product exists
-    prod = db.execute(text("SELECT product_id FROM products WHERE product_id = :pid"), {"pid": product_id}).fetchone()
+def restock_product(
+    product_id: str,
+    quantity: int = 50,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """Restock a product for authenticated user."""
+    uid = current_user.id
+    prod = db.execute(text("SELECT product_id FROM products WHERE user_id = :uid AND product_id = :pid"), {"uid": uid, "pid": product_id}).fetchone()
     if not prod:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Product not found in your inventory")
 
     today_str = datetime.now().strftime("%Y-%m-%d")
     db.execute(text("""
         UPDATE inventory
         SET current_stock = CASE WHEN current_stock + :qty > max_stock THEN max_stock ELSE current_stock + :qty END,
             last_restock_date = :today
-        WHERE product_id = :pid
-    """), {"pid": product_id, "qty": quantity, "today": today_str})
+        WHERE user_id = :uid AND product_id = :pid
+    """), {"uid": uid, "pid": product_id, "qty": quantity, "today": today_str})
     db.commit()
 
-    # Get updated stock
-    updated = db.execute(text("SELECT current_stock FROM inventory WHERE product_id = :pid"), {"pid": product_id}).scalar()
+    updated = db.execute(text("SELECT current_stock FROM inventory WHERE user_id = :uid AND product_id = :pid"), {"uid": uid, "pid": product_id}).scalar()
     return {"message": "Restocked", "product_id": product_id, "new_stock": updated}

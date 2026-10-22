@@ -115,14 +115,16 @@ def compute_association_rules(item_freq, pair_freq, n_baskets, min_confidence=0.
     return sorted(rules, key=lambda x: x["lift"], reverse=True)
 
 
-def train():
-    sales = load_table("sales")
-    products = load_table("products")
+def train(user_id=None, save_dir=None):
+    sales = load_table("sales", user_id=user_id)
+    products = load_table("products", user_id=user_id)
+    target_dir = save_dir or (os.path.join(SAVE_DIR, user_id) if user_id else SAVE_DIR)
+    os.makedirs(target_dir, exist_ok=True)
 
     if sales.empty:
         print("  No sales data available for recommendations.")
         result = {"rules": [], "suggestions": [], "total_rules": 0, "total_baskets": 0}
-        joblib.dump(result, os.path.join(SAVE_DIR, "recommendations.joblib"))
+        joblib.dump(result, os.path.join(target_dir, "recommendations.joblib"))
         return result
 
     product_names = dict(zip(products["product_id"], products["name"])) if not products.empty and "product_id" in products.columns and "name" in products.columns else {}
@@ -170,7 +172,7 @@ def train():
         "total_baskets": len(baskets)
     }
 
-    joblib.dump(result, os.path.join(SAVE_DIR, "recommendations.joblib"))
+    joblib.dump(result, os.path.join(target_dir, "recommendations.joblib"))
     print(f"  Found {len(rules)} association rules")
     print(f"  Top {len(suggestions)} product suggestions generated")
     return result

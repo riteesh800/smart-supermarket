@@ -1,5 +1,5 @@
 """
-Customer API routes
+Customer API routes — Strictly Isolated Per User
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,11 +10,15 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 import sys, os, io, csv
+import joblib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
-from database import get_db
+from database import get_db, User
+from auth import get_current_user, require_current_user
 
 router = APIRouter(prefix="/api/customers", tags=["customers"])
+
+ML_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "ml_models", "saved")
 
 
 class CustomerCreate(BaseModel):
@@ -27,13 +31,22 @@ class CustomerCreate(BaseModel):
 
 
 @router.get("")
-def get_customers(page: int = 1, limit: int = 50, search: Optional[str] = None,
-                  tier: Optional[str] = None, db: Session = Depends(get_db)):
-    """Get paginated customer list with optional search/filter."""
-    query = "SELECT * FROM customers WHERE 1=1"
-    params = {}
+def get_customers(
+    page: int = 1,
+    limit: int = 50,
+    search: Optional[str] = None,
+    tier: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get paginated customer list for authenticated user with optional search/filter."""
+    if not current_user:
+        return {"items": [], "total": 0, "page": 1, "pages": 1}
 
-    # Sanitize pagination parameters
+    uid = current_user.id
+    query = "SELECT * FROM customers WHERE user_id = :uid"
+    params = {"uid": uid}
+
     page = max(1, page)
     limit = max(1, min(limit, 500))
 
@@ -44,8 +57,7 @@ def get_customers(page: int = 1, limit: int = 50, search: Optional[str] = None,
         query += " AND membership_tier = :tier"
         params["tier"] = tier
 
-    # Count — separate query to avoid fragile string replacement
-    count_sql = "SELECT COUNT(*) FROM customers WHERE 1=1"
+    count_sql = "SELECT COUNT(*) FROM customers WHERE user_id = :uid"
     if search:
         count_sql += " AND (first_name LIKE :search OR last_name LIKE :search OR customer_id LIKE :search OR email LIKE :search)"
     if tier:
@@ -66,19 +78,25 @@ def get_customers(page: int = 1, limit: int = 50, search: Optional[str] = None,
 
 
 @router.get("/export")
-def export_customers_csv(db: Session = Depends(get_db)):
-    """Export all customers as CSV download."""
+def export_customers_csv(
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Export all customers for authenticated user as CSV download."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Please sign in to export your customer data.")
+
     result = db.execute(text("""
         SELECT c.customer_id, c.first_name, c.last_name, c.age, c.gender,
                c.membership_tier, c.email, c.phone, c.zip_code,
                c.loyalty_points, c.preferred_section, c.join_date
         FROM customers c
+        WHERE c.user_id = :uid
         ORDER BY c.customer_id
-    """))
+    """), {"uid": current_user.id})
     rows = result.fetchall()
     columns = list(result.keys())
 
-    # Build CSV in memory
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(columns)
@@ -94,11 +112,12 @@ def export_customers_csv(db: Session = Depends(get_db)):
 
 
 @router.get("/segments")
-def get_segments():
-    """Get customer segmentation results."""
-    import joblib
-    model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                              "ml_models", "saved", "customer_segments.joblib")
+def get_segments(current_user: Optional[User] = Depends(get_current_user)):
+    """Get customer segmentation results for authenticated user."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Please sign in to view customer segmentation.")
+
+    model_path = os.path.join(ML_DIR, current_user.id, "customer_segments.joblib")
     if not os.path.exists(model_path):
         raise HTTPException(status_code=404, detail="Segmentation model not trained yet. Load data and retrain models first.")
     data = joblib.load(model_path)
@@ -111,45 +130,57 @@ def get_segments():
 
 
 @router.get("/segments/all")
-def get_all_segmented():
-    """Get all customers with segment data (for scatter plot)."""
-    import joblib
-    model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                              "ml_models", "saved", "customer_segments.joblib")
+def get_all_segmented(current_user: Optional[User] = Depends(get_current_user)):
+    """Get all customers with segment data for authenticated user."""
+    if not current_user:
+        return []
+
+    model_path = os.path.join(ML_DIR, current_user.id, "customer_segments.joblib")
     if not os.path.exists(model_path):
         return []
     data = joblib.load(model_path)
-    # Return subset of fields for visualization
     customers = []
-    for c in data["segmented_data"]:
+    for c in data.get("segmented_data", []):
         customers.append({
             "customer_id": c["customer_id"],
-            "name": f"{c['first_name']} {c['last_name']}",
-            "segment": c["segment"],
-            "recency": c["recency"],
-            "frequency": c["frequency"],
-            "monetary": round(c["monetary"], 2),
-            "membership_tier": c["membership_tier"]
+            "name": f"{c.get('first_name', '')} {c.get('last_name', '')}",
+            "segment": c.get("segment", "Unknown"),
+            "recency": c.get("recency", 0),
+            "frequency": c.get("frequency", 0),
+            "monetary": round(float(c.get("monetary") or 0), 2),
+            "membership_tier": c.get("membership_tier", "Standard")
         })
     return customers
 
 
 @router.get("/top")
-def get_top_customers():
-    """Get top high-value customers."""
-    import joblib
-    model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                              "ml_models", "saved", "customer_segments.joblib")
+def get_top_customers(current_user: Optional[User] = Depends(get_current_user)):
+    """Get top high-value customers for authenticated user."""
+    if not current_user:
+        return []
+
+    model_path = os.path.join(ML_DIR, current_user.id, "customer_segments.joblib")
     if not os.path.exists(model_path):
         return []
     data = joblib.load(model_path)
-    return data["top_customers"]
+    return data.get("top_customers", [])
 
 
 @router.get("/demographics")
-def get_demographics(db: Session = Depends(get_db)):
-    """Get customer demographic breakdowns."""
-    # Age distribution (buckets)
+def get_demographics(
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get customer demographic breakdowns for authenticated user."""
+    if not current_user:
+        return {
+            "age_distribution": [],
+            "gender_distribution": [],
+            "tier_distribution": [],
+            "section_preferences": [],
+        }
+
+    uid = current_user.id
     age = db.execute(text("""
         SELECT age_group, COUNT(*) as count
         FROM (
@@ -164,6 +195,7 @@ def get_demographics(db: Session = Depends(get_db)):
                     ELSE '65+'
                 END as age_group
             FROM customers
+            WHERE user_id = :uid
         ) sub
         GROUP BY age_group
         ORDER BY
@@ -176,28 +208,25 @@ def get_demographics(db: Session = Depends(get_db)):
                 WHEN age_group = '65+' THEN 6
                 ELSE 7
             END
-    """))
+    """), {"uid": uid})
     age_data = [dict(zip(["age_group", "count"], row)) for row in age.fetchall()]
 
-    # Gender distribution
     gender = db.execute(text("""
-        SELECT gender, COUNT(*) as count FROM customers GROUP BY gender ORDER BY count DESC
-    """))
+        SELECT gender, COUNT(*) as count FROM customers WHERE user_id = :uid GROUP BY gender ORDER BY count DESC
+    """), {"uid": uid})
     gender_data = [dict(zip(["gender", "count"], row)) for row in gender.fetchall()]
 
-    # Tier distribution
     tier = db.execute(text("""
-        SELECT membership_tier, COUNT(*) as count FROM customers GROUP BY membership_tier
+        SELECT membership_tier, COUNT(*) as count FROM customers WHERE user_id = :uid GROUP BY membership_tier
         ORDER BY CASE membership_tier WHEN 'Platinum' THEN 1 WHEN 'Gold' THEN 2 WHEN 'Silver' THEN 3 ELSE 4 END
-    """))
+    """), {"uid": uid})
     tier_data = [dict(zip(["tier", "count"], row)) for row in tier.fetchall()]
 
-    # Preferred sections
     sections = db.execute(text("""
         SELECT preferred_section, COUNT(*) as count FROM customers
-        WHERE preferred_section IS NOT NULL
+        WHERE user_id = :uid AND preferred_section IS NOT NULL
         GROUP BY preferred_section ORDER BY count DESC
-    """))
+    """), {"uid": uid})
     section_data = [dict(zip(["section", "count"], row)) for row in sections.fetchall()]
 
     return {
@@ -209,27 +238,38 @@ def get_demographics(db: Session = Depends(get_db)):
 
 
 @router.get("/retention")
-def get_retention(db: Session = Depends(get_db)):
-    """Get monthly active customer counts (retention proxy)."""
+def get_retention(
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get monthly active customer counts for authenticated user."""
+    if not current_user:
+        return []
+
     result = db.execute(text("""
         SELECT SUBSTR(s.timestamp, 1, 7) as month,
                COUNT(DISTINCT s.customer_id) as active_customers,
                COUNT(DISTINCT s.basket_id) as total_baskets,
                SUM(s.total_price) as total_spend
         FROM sales s
+        WHERE s.user_id = :uid
         GROUP BY month
         ORDER BY month
-    """))
+    """), {"uid": current_user.id})
     rows = result.fetchall()
     columns = result.keys()
     return [dict(zip(columns, row)) for row in rows]
 
 
 @router.post("")
-def add_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
-    """Add a new customer."""
-    # Generate next customer ID safely without colliding with existing dataset IDs
-    existing_ids = set(db.execute(text("SELECT customer_id FROM customers")).scalars().all())
+def add_customer(
+    customer: CustomerCreate,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add a new customer for authenticated user."""
+    uid = current_user.id
+    existing_ids = set(db.execute(text("SELECT customer_id FROM customers WHERE user_id = :uid"), {"uid": uid}).scalars().all())
     c_nums = [int(cid[1:]) for cid in existing_ids if cid.startswith("C") and cid[1:].isdigit()]
     if c_nums:
         next_num = max(c_nums) + 1
@@ -245,9 +285,10 @@ def add_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     today_str = datetime.now().strftime("%Y-%m-%d")
 
     db.execute(text("""
-        INSERT INTO customers (customer_id, first_name, last_name, age, gender, membership_tier, email, join_date)
-        VALUES (:cid, :fname, :lname, :age, :gender, :tier, :email, :join_date)
+        INSERT INTO customers (user_id, customer_id, first_name, last_name, age, gender, membership_tier, email, join_date)
+        VALUES (:uid, :cid, :fname, :lname, :age, :gender, :tier, :email, :join_date)
     """), {
+        "uid": uid,
         "cid": new_id, "fname": customer.first_name, "lname": customer.last_name,
         "age": customer.age, "gender": customer.gender, "tier": customer.membership_tier,
         "email": email, "join_date": today_str

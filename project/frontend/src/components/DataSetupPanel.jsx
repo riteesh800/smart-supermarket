@@ -136,6 +136,10 @@ export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard })
   useEffect(() => { loadStatus(); }, [loadStatus]);
 
   async function handleFile(file) {
+    if (!isLoggedIn) {
+      setMessage({ type: 'error', text: 'Please sign in to your account before uploading dataset files.' });
+      return;
+    }
     if (!file || !file.name.endsWith('.csv')) {
       setMessage({ type: 'error', text: 'Please upload a .csv file' });
       return;
@@ -211,6 +215,10 @@ export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard })
   }
 
   async function handleReset() {
+    if (!isLoggedIn) {
+      setMessage({ type: 'error', text: 'Please sign in to your account to manage store data.' });
+      return;
+    }
     const confirmed = await confirmDialog({
       title: 'SmartMart AI',
       subtitle: 'Reset Confirmation',
@@ -237,6 +245,10 @@ export default function DataSetupPanel({ onFlagsUpdate, onNavigateToDashboard })
   }
 
   async function handleLoadDemo() {
+    if (!isLoggedIn) {
+      setMessage({ type: 'error', text: 'Please sign in to load demo data for your account.' });
+      return;
+    }
     setImporting(true);
     setMessage(null);
     try {
