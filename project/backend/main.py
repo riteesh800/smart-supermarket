@@ -3,7 +3,8 @@ FastAPI main application
 AI-Driven Smart Supermarket System — Portable Edition
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import sys
@@ -47,6 +48,23 @@ app.include_router(ml.router)
 app.include_router(suppliers.router)
 app.include_router(upload.router)
 app.include_router(chatbot.router)
+
+
+# ──────────────────────────── OAUTH ROUTE ALIASES ────────────────────────────
+@app.get("/auth/google")
+def auth_google_alias(request: Request):
+    """Direct alias for /api/auth/google."""
+    query = str(request.query_params)
+    url = f"/api/auth/google?{query}" if query else "/api/auth/google"
+    return RedirectResponse(url=url, status_code=307)
+
+
+@app.get("/auth/google/callback")
+def auth_google_callback_alias(request: Request):
+    """Direct alias for /api/auth/google/callback."""
+    query = str(request.query_params)
+    url = f"/api/auth/google/callback?{query}" if query else "/api/auth/google/callback"
+    return RedirectResponse(url=url, status_code=307)
 
 
 @app.on_event("startup")

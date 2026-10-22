@@ -199,7 +199,7 @@ const FEATURES = [
 ];
 
 export default function HomePage({ onNavigate, flags, onRefreshFlags }) {
-  const { user, isLoggedIn, logout, updateUserState } = useAuth();
+  const { user, isLoggedIn, logout, updateUserState, oauthNotice } = useAuth();
   const [activeFeatureIndex, setActiveFeatureIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [status, setStatus] = useState(null);
@@ -211,6 +211,13 @@ export default function HomePage({ onNavigate, flags, onRefreshFlags }) {
   const [authInitialTab, setAuthInitialTab] = useState('login');
 
   const activeFeature = FEATURES[activeFeatureIndex];
+
+  // Auto-open AuthModal if redirected from Google OAuth with an alert/action notice
+  useEffect(() => {
+    if (oauthNotice) {
+      setAuthModalOpen(true);
+    }
+  }, [oauthNotice]);
 
   // Fetch current live data stats
   const fetchStatus = () => {

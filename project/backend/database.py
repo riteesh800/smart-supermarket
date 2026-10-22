@@ -5,7 +5,7 @@ Loads CSV data and provides session management
 
 import os
 import pandas as pd
-from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, ForeignKey, event
+from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, ForeignKey, event, UniqueConstraint
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 try:
@@ -157,6 +157,45 @@ class UserSession(Base):
     __tablename__ = "user_sessions"
     token = Column(String, primary_key=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    created_at = Column(Float, nullable=False)
+    expires_at = Column(Float, nullable=False)
+
+
+class OAuthAccount(Base):
+    __tablename__ = "oauth_accounts"
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = Column(String, nullable=False, default="google")
+    provider_user_id = Column(String, nullable=False, index=True)  # Stable Google sub claim
+    email = Column(String, nullable=False)
+    email_verified = Column(Integer, default=1)
+    created_at = Column(String, nullable=False)
+    updated_at = Column(String, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_id", name="uq_provider_user_id"),
+    )
+
+
+class OAuthState(Base):
+    __tablename__ = "oauth_states"
+    state = Column(String, primary_key=True)
+    code_verifier = Column(String, nullable=False)
+    nonce = Column(String, nullable=False)
+    redirect_uri = Column(String, nullable=False)
+    dest = Column(String, default="/")
+    created_at = Column(Float, nullable=False)
+    expires_at = Column(Float, nullable=False)
+
+
+class AccountLinkingTicket(Base):
+    __tablename__ = "account_linking_tickets"
+    ticket = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    provider = Column(String, nullable=False, default="google")
+    provider_user_id = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    avatar_url = Column(String, nullable=True)
     created_at = Column(Float, nullable=False)
     expires_at = Column(Float, nullable=False)
 

@@ -147,6 +147,14 @@ export const api = {
   login: (email, password) => postJSON(`${API_BASE}/auth/login`, { email, password }),
   loginGoogle: (email, name, avatarUrl, idToken) =>
     postJSON(`${API_BASE}/auth/google`, { email, name, avatar_url: avatarUrl, id_token: idToken }),
+  getGoogleConfigStatus: () => fetchJSON(`${API_BASE}/auth/google/config-status`),
+  getGoogleAuthUrl: (prompt = 'select_account', dest = '/') =>
+    fetchJSON(`${API_BASE}/auth/google/url?prompt=${encodeURIComponent(prompt)}&dest=${encodeURIComponent(dest)}`),
+  initiateGoogleOAuth: (prompt = 'select_account', dest = '/') => {
+    window.location.href = `${API_BASE}/auth/google?prompt=${encodeURIComponent(prompt)}&dest=${encodeURIComponent(dest)}`;
+  },
+  linkGoogleAccount: (ticket, password) =>
+    postJSON(`${API_BASE}/auth/google/link`, { ticket, password }),
   getMe: (token) => fetchJSON(`${API_BASE}/auth/me`, { token }),
   saveUserState: (stateData, token) => postJSON(`${API_BASE}/auth/save-state`, { state_data: stateData }, { token }),
   logout: (token) => postJSON(`${API_BASE}/auth/logout`, {}, { token }),
