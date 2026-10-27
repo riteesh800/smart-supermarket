@@ -178,14 +178,24 @@ def get_user_from_token(token: Optional[str], db: Session) -> Optional[User]:
 
 
 def find_user_by_email(db: Session, email_str: str) -> Optional[User]:
-    """Look up user by raw email or canonical normalized Gmail ID."""
+    """Look up user by raw email or canonical normalized Gmail ID with fallback."""
     if not email_str:
         return None
     raw = email_str.strip().lower()
     canon = normalize_email(raw)
-    return db.query(User).filter(
-        (User.canonical_email == canon) | (User.email == raw) | (User.email == canon)
-    ).first()
+    try:
+        return db.query(User).filter(
+            (User.canonical_email == canon) | (User.email == raw) | (User.email == canon)
+        ).first()
+    except Exception:
+        db.rollback()
+        try:
+            return db.query(User).filter(
+                (User.email == raw) | (User.email == canon)
+            ).first()
+        except Exception:
+            db.rollback()
+            return None
 
 
 def restore_user_data_flags(db: Session, user: User):
@@ -220,8 +230,9 @@ def resolve_redirect_uri(request: Request) -> str:
     """Return the exact configured redirect URI or fallback to standard backend callback."""
     if GOOGLE_REDIRECT_URI:
         return GOOGLE_REDIRECT_URI
-    base = str(request.base_url).rstrip("/")
-    return f"{base}/api/auth/google/callback"
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.url.netloc)
+    return f"{proto}://{host}/api/auth/google/callback"
 
 
 def cleanup_expired_states(db: Session):
@@ -428,225 +439,274 @@ async def google_oauth_callback(
     - Implements account resolution logic (Cases 1, 2, 3, 4)
     - Establishes SmartMart session and redirects to frontend
     """
-    # 1. Handle user cancellation or provider error
-    if error:
-        if error == "access_denied":
-            msg = "Google sign-in was canceled."
+    try:
+        # 1. Handle user cancellation or provider error
+        if error:
+            if error == "access_denied":
+                msg = "Google sign-in was canceled."
+                return RedirectResponse(
+                    url=f"{FRONTEND_URL}/?auth_status=error&error_code=access_denied&message={quote(msg)}",
+                    status_code=302
+                )
+            err_msg = error_description or error or "Google authorization was not completed."
             return RedirectResponse(
-                url=f"{FRONTEND_URL}/?auth_status=error&error_code=access_denied&message={quote(msg)}",
+                url=f"{FRONTEND_URL}/?auth_status=error&error_code={quote(error)}&message={quote(err_msg)}",
                 status_code=302
             )
-        err_msg = error_description or error or "Google authorization was not completed."
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&error_code={quote(error)}&message={quote(err_msg)}",
-            status_code=302
-        )
 
-    if not code or not state:
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Missing authorization code or state parameter.')}",
-            status_code=302
-        )
+        if not code or not state:
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Missing authorization code or state parameter.')}",
+                status_code=302
+            )
 
-    # 2. Validate and consume OAuth state (one-time use)
-    oauth_state = db.query(OAuthState).filter(OAuthState.state == state).first()
-    if not oauth_state or time.time() > oauth_state.expires_at:
-        if oauth_state:
+        # 2. Validate and consume OAuth state (one-time use)
+        oauth_state = None
+        try:
+            oauth_state = db.query(OAuthState).filter(OAuthState.state == state).first()
+        except Exception as state_err:
+            print(f"[-] Notice checking oauth_state: {state_err}")
+            db.rollback()
+
+        if not oauth_state or time.time() > oauth_state.expires_at:
+            if oauth_state:
+                try:
+                    db.delete(oauth_state)
+                    db.commit()
+                except Exception:
+                    db.rollback()
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('OAuth session invalid or expired. Please try again.')}",
+                status_code=302
+            )
+
+        code_verifier = oauth_state.code_verifier
+        expected_nonce = oauth_state.nonce
+        redirect_uri = oauth_state.redirect_uri
+        dest = oauth_state.dest or "/"
+        try:
             db.delete(oauth_state)
             db.commit()
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&message={quote('OAuth session invalid or expired. Please try again.')}",
-            status_code=302
-        )
+        except Exception:
+            db.rollback()
 
-    code_verifier = oauth_state.code_verifier
-    expected_nonce = oauth_state.nonce
-    redirect_uri = oauth_state.redirect_uri
-    dest = oauth_state.dest or "/"
-    db.delete(oauth_state)
-    db.commit()
-
-    # 3. Exchange authorization code for tokens at Google's endpoint
-    token_url = "https://oauth2.googleapis.com/token"
-    token_payload = {
-        "code": code,
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-        "redirect_uri": redirect_uri,
-        "grant_type": "authorization_code",
-        "code_verifier": code_verifier,
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(token_url, data=token_payload)
-        if resp.status_code != 200:
-            error_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
-            desc = error_json.get("error_description") or error_json.get("error") or f"Token exchange failed ({resp.status_code})"
-            return RedirectResponse(
-                url=f"{FRONTEND_URL}/?auth_status=error&message={quote(desc)}",
-                status_code=302
-            )
-        token_data = resp.json()
-    except Exception as e:
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Failed to communicate with Google authentication servers.')}",
-            status_code=302
-        )
-
-    id_token_str = token_data.get("id_token")
-    if not id_token_str:
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Google did not return an identity token.')}",
-            status_code=302
-        )
-
-    # 4. Cryptographically verify Google ID token
-    claims = verify_google_token(id_token_str, GOOGLE_CLIENT_ID)
-    if not claims:
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Google identity token verification failed.')}",
-            status_code=302
-        )
-
-    # Validate OpenID Connect nonce
-    if claims.get("nonce") and claims.get("nonce") != expected_nonce:
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&message={quote('ID token nonce verification mismatch.')}",
-            status_code=302
-        )
-
-    # Validate email_verified
-    email_verified = claims.get("email_verified")
-    if email_verified is not True and str(email_verified).lower() not in ("true", "1"):
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Your Google email address is not verified.')}",
-            status_code=302
-        )
-
-    google_sub = claims.get("sub")
-    raw_google_email = (claims.get("email") or "").strip().lower()
-    canonical_google_email = normalize_email(raw_google_email)
-    google_email = raw_google_email
-    google_name = claims.get("name") or derive_name_from_email(google_email)
-    google_avatar = claims.get("picture")
-
-    if not google_sub or not google_email:
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Google account information is incomplete.')}",
-            status_code=302
-        )
-
-    now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-
-    # 5. Database Account-Resolution Logic (Section 3 & 5)
-    # Check if Google sub is already linked
-    oauth_acc = db.query(OAuthAccount).filter(
-        OAuthAccount.provider == "google",
-        OAuthAccount.provider_user_id == google_sub
-    ).first()
-
-    if oauth_acc:
-        # Case 1: Existing Google-linked user
-        user = db.query(User).filter(User.id == oauth_acc.user_id).first()
-        if not user:
-            return RedirectResponse(
-                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('User account associated with this Google identity was not found.')}",
-                status_code=302
-            )
-
-        user.last_login_at = now_str
-        if google_avatar and not user.avatar_url:
-            user.avatar_url = google_avatar
-        db.commit()
-
-        token = create_user_session(db, user.id)
-        restore_user_data_flags(db, user)
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=success&auth_token={token}&dest={quote(dest)}",
-            status_code=302
-        )
-
-    # Check if user exists with this email / canonical Gmail ID
-    existing_user = find_user_by_email(db, raw_google_email)
-
-    if not existing_user:
-        # Case 2: New user -> automatically register
-        user_id = secrets.token_hex(16)
-        initial_state = {
-            "has_data": False,
-            "active_panel": "home",
-            "registered_at": now_str,
+        # 3. Exchange authorization code for tokens at Google's endpoint
+        token_url = "https://oauth2.googleapis.com/token"
+        token_payload = {
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+            "code_verifier": code_verifier,
         }
 
-        new_user = User(
-            id=user_id,
-            email=google_email,
-            canonical_email=canonical_google_email,
-            name=google_name,
-            auth_provider="google",
-            password_hash=None,
-            avatar_url=google_avatar,
-            created_at=now_str,
-            last_login_at=now_str,
-            state_data=json.dumps(initial_state),
-        )
-        db.add(new_user)
-        db.flush()
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(token_url, data=token_payload)
+            if resp.status_code != 200:
+                error_json = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                desc = error_json.get("error_description") or error_json.get("error") or f"Token exchange failed ({resp.status_code})"
+                return RedirectResponse(
+                    url=f"{FRONTEND_URL}/?auth_status=error&message={quote(desc)}",
+                    status_code=302
+                )
+            token_data = resp.json()
+        except Exception as e:
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Failed to communicate with Google authentication servers.')}",
+                status_code=302
+            )
 
-        new_oauth = OAuthAccount(
-            id=secrets.token_hex(16),
-            user_id=new_user.id,
+        id_token_str = token_data.get("id_token")
+        if not id_token_str:
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Google did not return an identity token.')}",
+                status_code=302
+            )
+
+        # 4. Cryptographically verify Google ID token
+        claims = verify_google_token(id_token_str, GOOGLE_CLIENT_ID)
+        if not claims:
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Google identity token verification failed.')}",
+                status_code=302
+            )
+
+        # Validate OpenID Connect nonce
+        if claims.get("nonce") and claims.get("nonce") != expected_nonce:
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('ID token nonce verification mismatch.')}",
+                status_code=302
+            )
+
+        # Validate email_verified
+        email_verified = claims.get("email_verified")
+        if email_verified is not True and str(email_verified).lower() not in ("true", "1"):
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Your Google email address is not verified.')}",
+                status_code=302
+            )
+
+        google_sub = claims.get("sub")
+        raw_google_email = (claims.get("email") or "").strip().lower()
+        canonical_google_email = normalize_email(raw_google_email)
+        google_email = raw_google_email
+        google_name = claims.get("name") or derive_name_from_email(google_email)
+        google_avatar = claims.get("picture")
+
+        if not google_sub or not google_email:
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&message={quote('Google account information is incomplete.')}",
+                status_code=302
+            )
+
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+        # 5. Database Account-Resolution Logic (Section 3 & 5)
+        # Check if Google sub is already linked
+        oauth_acc = None
+        try:
+            oauth_acc = db.query(OAuthAccount).filter(
+                OAuthAccount.provider == "google",
+                OAuthAccount.provider_user_id == google_sub
+            ).first()
+        except Exception as oa_err:
+            print(f"[-] Notice checking oauth_acc: {oa_err}")
+            db.rollback()
+
+        if oauth_acc:
+            # Case 1: Existing Google-linked user
+            user = db.query(User).filter(User.id == oauth_acc.user_id).first()
+            if not user:
+                return RedirectResponse(
+                    url=f"{FRONTEND_URL}/?auth_status=error&message={quote('User account associated with this Google identity was not found.')}",
+                    status_code=302
+                )
+
+            user.last_login_at = now_str
+            if google_avatar and not user.avatar_url:
+                user.avatar_url = google_avatar
+            db.commit()
+
+            token = create_user_session(db, user.id)
+            restore_user_data_flags(db, user)
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=success&auth_token={token}&dest={quote(dest)}",
+                status_code=302
+            )
+
+        # Check if user exists with this email / canonical Gmail ID
+        existing_user = find_user_by_email(db, raw_google_email)
+
+        if not existing_user:
+            # Case 2: New user -> automatically register
+            user_id = secrets.token_hex(16)
+            initial_state = {
+                "has_data": False,
+                "active_panel": "home",
+                "registered_at": now_str,
+            }
+
+            new_user = User(
+                id=user_id,
+                email=google_email,
+                canonical_email=canonical_google_email,
+                name=google_name,
+                auth_provider="google",
+                password_hash=None,
+                avatar_url=google_avatar,
+                created_at=now_str,
+                last_login_at=now_str,
+                state_data=json.dumps(initial_state),
+            )
+            db.add(new_user)
+            try:
+                db.flush()
+            except Exception as insert_err:
+                db.rollback()
+                print(f"[-] Notice on User flush, retrying standard fields: {insert_err}")
+                new_user = User(
+                    id=user_id,
+                    email=google_email,
+                    name=google_name,
+                    auth_provider="google",
+                    created_at=now_str,
+                    last_login_at=now_str,
+                )
+                db.add(new_user)
+                db.flush()
+
+            new_oauth = OAuthAccount(
+                id=secrets.token_hex(16),
+                user_id=new_user.id,
+                provider="google",
+                provider_user_id=google_sub,
+                email=google_email,
+                email_verified=1,
+                created_at=now_str,
+                updated_at=now_str,
+            )
+            db.add(new_oauth)
+            db.commit()
+
+            token = create_user_session(db, new_user.id)
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=success&auth_token={token}&dest={quote(dest)}",
+                status_code=302
+            )
+
+        # User exists with email. Check if linked to a different Google sub
+        existing_oauth = None
+        try:
+            existing_oauth = db.query(OAuthAccount).filter(
+                OAuthAccount.user_id == existing_user.id,
+                OAuthAccount.provider == "google"
+            ).first()
+        except Exception:
+            db.rollback()
+
+        if existing_oauth and existing_oauth.provider_user_id != google_sub:
+            # Case 4: A different Google identity is already linked to this email
+            msg = "This email is already associated with a different Google account. Please use your original login method."
+            return RedirectResponse(
+                url=f"{FRONTEND_URL}/?auth_status=error&error_code=identity_mismatch&message={quote(msg)}",
+                status_code=302
+            )
+
+        # Case 3: Email belongs to an existing password-based account.
+        # Safeguard: Do not link silently. Require explicit user authentication!
+        ticket_str = secrets.token_urlsafe(32)
+        linking_ticket = AccountLinkingTicket(
+            ticket=ticket_str,
+            user_id=existing_user.id,
             provider="google",
             provider_user_id=google_sub,
             email=google_email,
-            email_verified=1,
-            created_at=now_str,
-            updated_at=now_str,
+            avatar_url=google_avatar,
+            created_at=time.time(),
+            expires_at=time.time() + 600,  # 10 minutes
         )
-        db.add(new_oauth)
+        db.add(linking_ticket)
         db.commit()
 
-        token = create_user_session(db, new_user.id)
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=success&auth_token={token}&dest={quote(dest)}",
+            url=f"{FRONTEND_URL}/?auth_status=linking_required&email={quote(google_email)}&ticket={ticket_str}&dest={quote(dest)}",
             status_code=302
         )
 
-    # User exists with email. Check if linked to a different Google sub
-    existing_oauth = db.query(OAuthAccount).filter(
-        OAuthAccount.user_id == existing_user.id,
-        OAuthAccount.provider == "google"
-    ).first()
-
-    if existing_oauth and existing_oauth.provider_user_id != google_sub:
-        # Case 4: A different Google identity is already linked to this email
-        msg = "This email is already associated with a different Google account. Please use your original login method."
+    except Exception as e:
+        import traceback
+        print(f"[GOOGLE AUTH CALLBACK CRITICAL ERROR]: {traceback.format_exc()}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        err_msg = f"Sign-in encountered an unexpected issue: {str(e)}"
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/?auth_status=error&error_code=identity_mismatch&message={quote(msg)}",
+            url=f"{FRONTEND_URL}/?auth_status=error&message={quote(err_msg)}",
             status_code=302
         )
-
-    # Case 3: Email belongs to an existing password-based account.
-    # Safeguard: Do not link silently. Require explicit user authentication!
-    ticket_str = secrets.token_urlsafe(32)
-    linking_ticket = AccountLinkingTicket(
-        ticket=ticket_str,
-        user_id=existing_user.id,
-        provider="google",
-        provider_user_id=google_sub,
-        email=google_email,
-        avatar_url=google_avatar,
-        created_at=time.time(),
-        expires_at=time.time() + 600,  # 10 minutes
-    )
-    db.add(linking_ticket)
-    db.commit()
-
-    return RedirectResponse(
-        url=f"{FRONTEND_URL}/?auth_status=linking_required&email={quote(google_email)}&ticket={ticket_str}&dest={quote(dest)}",
-        status_code=302
-    )
 
 
 @router.post("/google/link")

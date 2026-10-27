@@ -25,6 +25,8 @@ def _get_pg_engine(url: str):
     if clean.startswith("postgres://"):
         clean = clean.replace("postgres://", "postgresql://", 1)
 
+    is_pooler = ":6543" in clean or "pooler.supabase.com" in clean
+
     # Try explicit driver prefixes to prevent ModuleNotFoundError
     candidates = []
     if not clean.startswith("postgresql+"):
@@ -35,7 +37,23 @@ def _get_pg_engine(url: str):
     last_err = None
     for target in candidates:
         try:
-            eng = create_engine(target, echo=False, pool_pre_ping=True, pool_recycle=300)
+            kwargs = {
+                "echo": False,
+                "pool_pre_ping": True,
+            }
+            if is_pooler:
+                # Supabase Transaction Pooler (port 6543 / PgBouncer):
+                # Disables prepared statement caching to prevent PgBouncer transaction mode errors (f405),
+                # and uses NullPool to prevent connection pooling conflicts.
+                from sqlalchemy.pool import NullPool
+                kwargs["poolclass"] = NullPool
+                kwargs["connect_args"] = {"prepare_threshold": None}
+            else:
+                kwargs["pool_recycle"] = 300
+
+            eng = create_engine(target, **kwargs)
+            with eng.connect() as conn:
+                pass
             return eng
         except Exception as e:
             last_err = e
@@ -47,8 +65,6 @@ def _init_engine():
     if DATABASE_URL and DATABASE_URL.strip():
         try:
             eng = _get_pg_engine(DATABASE_URL)
-            with eng.connect() as conn:
-                pass
             print("✅ Successfully connected to PostgreSQL (Supabase)!")
             return eng
         except Exception as e:

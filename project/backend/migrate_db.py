@@ -26,6 +26,10 @@ def run_migrations():
         print("   - oauth_states")
         print("   - account_linking_tickets")
         print("   - products, customers, sales, inventory, suppliers")
+
+        # Run column-level migrations and multi-tenant schema alignment
+        from migrate_multitenant import run_multitenant_migration
+        run_multitenant_migration(engine)
         print("[OK] Migration completed successfully!")
     except Exception as e:
         print(f"[-] Error applying migrations: {e}")
